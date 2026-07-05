@@ -1,0 +1,144 @@
+/* ══════════════════════════════════════════════
+   MobileServicesPopup.css — Native Bottom Sheet
+   ══════════════════════════════════════════════ */
+
+.msp-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+}
+
+.msp-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.msp-balloon {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px 48px 20px; /* Extra bottom padding for mobile safe area */
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.msp-balloon.is-open {
+  transform: translateY(0);
+}
+
+/* Gray Handle */
+.msp-handle {
+  width: 40px;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  margin: 0 auto 16px auto;
+}
+
+/* Header */
+.msp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.msp-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.msp-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.msp-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.msp-close-btn:active {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+/* Grid Layout */
+.msp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 8px;
+}
+
+/* Item */
+.msp-item {
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.msp-item:active {
+  transform: scale(0.9);
+}
+
+.msp-item-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  font-size: 28px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: transparent !important;
+}
+
+.msp-item-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.msp-item-emoji {
+  font-size: 28px;
+}
+
+.msp-item-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+  line-height: 1.2;
+}

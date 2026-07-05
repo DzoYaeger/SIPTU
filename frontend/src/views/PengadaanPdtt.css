@@ -1,0 +1,25 @@
+.pdtt-action-btn {
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.pdtt-action-edit {
+  color: #2563eb !important;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.pdtt-action-price {
+  color: #059669 !important;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.pdtt-helper-line {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+

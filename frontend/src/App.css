@@ -1,0 +1,825 @@
+/* ══════════════════════════════════════════════
+   App.css — Global Component Styles
+   SIPTUULTRA v2 — Elegant Minimal
+   ══════════════════════════════════════════════ */
+
+/* ── App Layout ── */
+.app-layout {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.app-content {
+  padding: var(--space-lg) var(--space-lg) var(--space-2xl);
+  background: var(--color-bg-subtle);
+  min-height: calc(100vh - 64px);
+}
+
+.page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ══════════════════════════════════════════════
+   Module Section — wrapper untuk tiap halaman
+   ══════════════════════════════════════════════ */
+.module-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Module Toolbar (title + actions row) ── */
+.module-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+/* ── Module Title — H1 level ── */
+.module-title {
+  margin: 0 !important;
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h1) !important;
+  font-weight: 700 !important;
+  color: var(--color-text) !important;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* ── Module Subtitle ── */
+.module-subtitle {
+  margin: 4px 0 0 !important;
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+  font-weight: 400 !important;
+  color: var(--color-text-secondary) !important;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════════
+   Content Cards
+   ══════════════════════════════════════════════ */
+.content-card {
+  width: 100%;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+.content-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border);
+}
+
+.content-card .ant-card-body {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Card Title — H3 level */
+.card-title {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  margin: 0 !important;
+  letter-spacing: -0.01em;
+}
+
+.card-description {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+  line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════════
+   Stat Cards — summary numbers
+   ══════════════════════════════════════════════ */
+.stat-card {
+  background: var(--color-bg) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xs) !important;
+  transition: box-shadow var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md) !important;
+  border-color: var(--color-border) !important;
+  transform: translateY(-2px);
+}
+
+.stat-card .ant-statistic-title {
+  font-family: var(--ff-body);
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-card .ant-statistic-content {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.stat-card .ant-statistic-content-prefix .anticon {
+  font-size: 18px;
+  color: var(--color-primary);
+  margin-right: var(--space-sm);
+}
+
+/* ══════════════════════════════════════════════
+   Table Card
+   ══════════════════════════════════════════════ */
+.table-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.table-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.table-card .ant-table {
+  background: transparent;
+}
+
+.table-card .ant-table-thead > tr > th {
+  font-family: var(--ff-body);
+  font-size: var(--fs-overline);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.table-card .ant-table-tbody > tr > td {
+  font-family: var(--ff-body);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.table-card .ant-table-row:hover > td {
+  background: var(--color-bg-accent) !important;
+}
+
+.table-helper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ── Global Ant Design Table tweaks ── */
+.ant-table-thead > tr > th {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-overline) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  background: var(--color-bg-subtle) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.ant-table-tbody > tr > td {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  color: var(--color-text) !important;
+}
+
+.ant-table-row:hover > td {
+  background: var(--color-bg-accent) !important;
+}
+
+.ant-table {
+  border-radius: var(--radius-md) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Form Pages
+   ══════════════════════════════════════════════ */
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.form-card {
+  background: var(--color-bg) !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.form-card .ant-card-body {
+  padding: var(--space-xl) !important;
+}
+
+/* ── Module Form ── */
+.module-form .ant-form-item-label > label {
+  font-family: var(--ff-body);
+  font-size: var(--fs-h5);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.module-form .ant-input,
+.module-form .ant-input-textarea,
+.module-form .ant-select-selector,
+.module-form .ant-picker {
+  font-family: var(--ff-body);
+  font-size: var(--fs-body);
+  border-radius: var(--radius-md) !important;
+}
+
+.module-form .ant-input:focus,
+.module-form .ant-input-focused {
+  box-shadow: var(--shadow-glow) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Action Panel (Dashboard)
+   ══════════════════════════════════════════════ */
+.action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.action-guidelines {
+  font-family: var(--ff-body);
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--color-bg-muted);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+}
+
+.action-modal .ant-modal-header {
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.action-modal .ant-modal-body {
+  background: var(--color-bg);
+}
+
+.action-modal .ant-modal-footer {
+  background: var(--color-bg-subtle);
+}
+
+.action-modal .ant-form-item-label > label {
+  font-family: var(--ff-body);
+  font-size: var(--fs-h5);
+  color: var(--color-text);
+}
+
+.action-modal .ant-input,
+.action-modal .ant-input-textarea {
+  font-family: var(--ff-body);
+  font-size: var(--fs-body);
+}
+
+/* ══════════════════════════════════════════════
+   KGB Module
+   ══════════════════════════════════════════════ */
+.kgb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+
+.kgb-meta__sk {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
+
+.history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+
+.history-entry__meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--fs-xs);
+}
+
+.kgb-modal .ant-modal-body {
+  padding-top: 20px;
+}
+
+.kgb-modal .ant-modal-title {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  color: var(--color-text);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.history-card {
+  padding: var(--space-md) 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.history-card:hover {
+  border-color: var(--color-border);
+  background: var(--color-bg-accent);
+  transform: translateX(3px);
+}
+
+.history-card__value {
+  margin: 0;
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.history-card__note {
+  margin: 0;
+  font-family: var(--ff-body);
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ══════════════════════════════════════════════
+   Revision Module
+   ══════════════════════════════════════════════ */
+.revision-modal .ant-modal-body {
+  padding-top: 20px;
+}
+
+.revision-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.detail-headline {
+  margin: 0;
+  font-family: var(--ff-body);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+}
+
+.revision-grid {
+  margin-top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.revision-grid__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.revision-table .ant-table-tbody > tr > td {
+  vertical-align: top;
+}
+
+/* ══════════════════════════════════════════════
+   Admin Module Grid
+   ══════════════════════════════════════════════ */
+.admin-module-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.admin-module-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) 20px;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.admin-module-row:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+  background: var(--color-bg);
+}
+
+.admin-module-row.is-parent {
+  background: var(--color-bg-accent);
+  border-color: #c7d2fe;
+}
+
+.admin-module-row.is-child {
+  margin-left: var(--space-lg);
+}
+
+.admin-module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 65%;
+}
+
+.admin-module-desc {
+  margin: 0;
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+}
+
+.admin-module-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+/* ══════════════════════════════════════════════
+   Admin Access Control
+   ══════════════════════════════════════════════ */
+.admin-access-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+/* ══════════════════════════════════════════════
+   Loading State
+   ══════════════════════════════════════════════ */
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+}
+
+/* ══════════════════════════════════════════════
+   Global Ant Design Overrides — Elegant & Clean
+   ══════════════════════════════════════════════ */
+
+/* ── Ant Design Typography Normalization ── */
+.ant-typography h1,
+h1.ant-typography {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h1) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.ant-typography h2,
+h2.ant-typography {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h2) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
+}
+
+.ant-typography h3,
+h3.ant-typography {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 600 !important;
+}
+
+.ant-typography h4,
+h4.ant-typography {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h4) !important;
+  font-weight: 600 !important;
+}
+
+.ant-typography h5,
+h5.ant-typography {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h5) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Buttons ── */
+.ant-btn {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-h5) !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.ant-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-btn:active {
+  transform: translateY(0);
+}
+
+.ant-btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+
+/* ── Tags ── */
+.ant-tag {
+  font-family: var(--ff-body) !important;
+  border-radius: var(--radius-full) !important;
+  font-size: var(--fs-overline) !important;
+  padding: 2px 10px !important;
+  font-weight: 600 !important;
+  border: none !important;
+}
+
+/* ── Modal ── */
+.ant-modal .ant-modal-content {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-lg) !important;
+  overflow: hidden;
+}
+
+.ant-modal .ant-modal-header {
+  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--space-md) var(--space-lg) !important;
+  background: var(--color-bg) !important;
+}
+
+.ant-modal .ant-modal-title {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  letter-spacing: -0.01em;
+}
+
+.ant-modal .ant-modal-body {
+  padding: var(--space-lg) !important;
+}
+
+.ant-modal .ant-modal-footer {
+  border-top: 1px solid var(--color-border-light);
+  padding: var(--space-md) var(--space-lg) !important;
+  background: var(--color-bg-subtle) !important;
+}
+
+/* ── Cards ── */
+.ant-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border-light) !important;
+}
+
+.ant-card-head-title {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+}
+
+/* ── Input focus ── */
+.ant-input:focus,
+.ant-input-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-glow) !important;
+}
+
+/* ── Input font ── */
+.ant-input,
+.ant-select-selector,
+.ant-picker-input input,
+.ant-input-number-input {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  color: var(--color-text) !important;
+}
+
+/* ── Form labels ── */
+.ant-form-item-label > label {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-h5) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+}
+
+/* ── Drawer ── */
+.ant-drawer .ant-drawer-header {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.ant-drawer .ant-drawer-title {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+}
+
+/* ── Tabs ── */
+.ant-tabs .ant-tabs-tab {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-h5) !important;
+  font-weight: 500 !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
+}
+
+.ant-tabs .ant-tabs-ink-bar {
+  background: var(--color-primary) !important;
+  height: 2px !important;
+  border-radius: 2px 2px 0 0;
+}
+
+/* ── Descriptions ── */
+.ant-descriptions .ant-descriptions-item-label {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-overline) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ant-descriptions .ant-descriptions-item-content {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  color: var(--color-text) !important;
+}
+
+/* ── Pagination ── */
+.ant-pagination .ant-pagination-item-active {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-light) !important;
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: var(--color-primary) !important;
+}
+
+/* ── Select dropdown ── */
+.ant-select-item {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+}
+
+/* ── Menu ── */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Search & Filter Row
+   ══════════════════════════════════════════════ */
+.data-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  width: 100%;
+}
+
+.data-filter-row > .ant-space {
+  flex-wrap: wrap;
+}
+
+/* ══════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .page-shell {
+    padding: 0 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: var(--space-xl) var(--space-sm) calc(64px + var(--space-xl));
+  }
+
+  .module-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .ant-table {
+    min-width: 700px;
+  }
+
+  .data-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .data-filter-row .ant-input-search,
+  .data-filter-row .ant-input-affix-wrapper,
+  .data-filter-row .ant-select,
+  .data-filter-row .ant-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .data-filter-row .ant-space {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ant-tabs-nav-list {
+    flex-wrap: nowrap !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-content {
+    padding: var(--space-md) 10px calc(64px + var(--space-lg));
+  }
+}

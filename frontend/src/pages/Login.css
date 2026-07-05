@@ -1,0 +1,326 @@
+/* ══════════════════════════════════════════════
+   Login.css — Halaman Login
+   SIPTUULTRA v2 — Menggunakan global design tokens
+   Font: Inter (body) via index.css global import
+   ══════════════════════════════════════════════ */
+
+/* Tidak ada @import font di sini — Inter + Plus Jakarta Sans
+   sudah diimpor secara global di index.css */
+
+/* ══════════════════════════════════════════════
+   Layout
+   ══════════════════════════════════════════════ */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-subtle);
+  font-family: var(--ff-body);
+  padding: 20px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 340px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 32px 28px;
+  box-shadow: var(--shadow-md);
+  animation: loginSlideUp 0.4s var(--ease-out);
+}
+
+@keyframes loginSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════
+   Header / Branding
+   ══════════════════════════════════════════════ */
+.login-form-header {
+  text-align: center;
+  margin-bottom: var(--space-lg);
+}
+
+.login-logo {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  display: block;
+}
+
+.login-form-header h2 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  letter-spacing: -0.015em;
+  line-height: var(--lh-heading);
+}
+
+.login-form-header p {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════════
+   Ant Design Form Overrides
+   ══════════════════════════════════════════════ */
+.login-page .ant-form-item-label > label {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-h5) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+}
+
+.login-page .ant-input-affix-wrapper {
+  background: var(--color-bg-subtle) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 8px 12px !important;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.login-page .ant-input-affix-wrapper:hover {
+  border-color: var(--color-border) !important;
+  background: var(--color-bg) !important;
+}
+
+.login-page .ant-input-affix-wrapper-focused {
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-glow) !important;
+  background: var(--color-bg) !important;
+}
+
+.login-page .ant-input {
+  background: transparent !important;
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  color: var(--color-text) !important;
+}
+
+.login-page .ant-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.login-page .ant-input-prefix {
+  color: var(--color-text-muted);
+  margin-right: 10px;
+}
+
+.login-page .ant-checkbox-wrapper {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ══════════════════════════════════════════════
+   Captcha Slider
+   ══════════════════════════════════════════════ */
+.modern-captcha-container {
+  margin: var(--space-md) 0;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  height: 44px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.captcha-text-bg {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.captcha-slider {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 40px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 2;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--duration-normal) var(--ease-out);
+  border: 1px solid var(--color-border);
+}
+
+.captcha-slider:active {
+  cursor: grabbing;
+}
+
+.captcha-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-primary);
+  opacity: 0.12;
+  border-radius: var(--radius-md);
+  z-index: 0;
+}
+
+.captcha-slider.verified {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+
+/* ══════════════════════════════════════════════
+   Submit Button
+   ══════════════════════════════════════════════ */
+.login-submit-btn {
+  width: 100%;
+  height: 44px !important;
+  background: var(--color-primary) !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  margin-top: var(--space-sm);
+  transition: all var(--duration-fast) var(--ease-out) !important;
+  box-shadow: 0 4px 12px -4px rgba(79, 70, 229, 0.4) !important;
+}
+
+.login-submit-btn:not(:disabled):hover {
+  background: var(--color-primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.45) !important;
+}
+
+.login-submit-btn:active {
+  transform: translateY(0) !important;
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════
+   Extra Options & Links
+   ══════════════════════════════════════════════ */
+.login-extra-options {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.forgot-link {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.forgot-link:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.apk-download-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--ff-body);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.apk-download-btn:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* ══════════════════════════════════════════════
+   Responsive — Mobile
+   ══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .login-page {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .login-container {
+    max-width: 100%;
+    width: 100%;
+    padding: var(--space-2xl) var(--space-lg);
+    border-radius: 0;
+    min-height: 100vh;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    animation: none;
+  }
+
+  .login-form-header h2 {
+    font-size: var(--fs-h1);
+    margin-bottom: 6px;
+  }
+
+  .login-logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: var(--space-md);
+  }
+
+  .login-page .ant-input-affix-wrapper {
+    padding: 10px 14px !important;
+  }
+
+  .login-submit-btn {
+    height: 50px !important;
+    font-size: var(--fs-h4) !important;
+    margin-top: var(--space-md);
+  }
+
+  .modern-captcha-container {
+    height: 50px;
+    margin: var(--space-md) 0;
+  }
+
+  .captcha-slider {
+    width: 46px;
+  }
+
+  .apk-download-btn {
+    margin-top: var(--space-lg);
+    font-size: var(--fs-sm);
+  }
+}

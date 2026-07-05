@@ -1,0 +1,429 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\AssetController;
+use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\LoanController;
+use App\Http\Controllers\Api\RequestController;
+use App\Http\Controllers\Api\ItHelpdeskTicketController;
+use App\Http\Controllers\Api\KgbController;
+use App\Http\Controllers\Api\AdminArchiveUnitController;
+use App\Http\Controllers\Api\ArchiveUnitController;
+use App\Http\Controllers\Api\AdminNotificationSettingsController;
+use App\Http\Controllers\Api\ArchiveLoanController;
+use App\Http\Controllers\Api\GeminiChatController;
+use App\Http\Controllers\Api\PushNotificationController;
+use App\Http\Controllers\Api\BmnLoanController;
+use App\Http\Controllers\Api\ExitPermitController;
+use App\Http\Controllers\Api\ServiceHistoryController;
+use App\Http\Controllers\Api\AdminCommandCenterController;
+use App\Http\Controllers\Api\ValidatorUsageReportController;
+use App\Http\Controllers\Api\InventoryRequestController;
+use App\Http\Controllers\Api\InventoryStockCardController;
+use App\Http\Controllers\Api\LetterController;
+use App\Http\Controllers\Api\VitalArchiveController;
+use App\Http\Controllers\Api\BmnMaintenanceReportController;
+use App\Http\Controllers\Api\PdttItemController;
+use App\Http\Controllers\Api\ProcurementProposalController;
+use App\Http\Controllers\Api\AgendaController;
+use App\Http\Controllers\Api\EmployeeCalendarController;
+use App\Http\Controllers\Api\SuratTugasController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\LpjController;
+use App\Http\Controllers\Api\QueueDisplayController;
+use App\Http\Controllers\Api\VisitorQueueController;
+use App\Http\Controllers\Api\NewsPostController;
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| SECURITY NOTES:
+| - APP_DEBUG must be set to false in production .env
+| - Set CORS_ORIGINS in .env for production domains
+| - Rate limiters: "login" = 5/min, "public-api" = 30/min
+|
+*/
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user()->load('employee');
+});
+
+// ─── Authentication (rate-limited) ──────────────────────────────────
+Route::middleware('throttle:login')->group(function () {
+    Route::post('/login', [UserController::class, 'login'])->name('login');
+});
+
+Route::post('/forgot-password', [UserController::class, 'requestPasswordReset']);
+Route::post('/reset-password', [UserController::class, 'resetPassword']);
+
+// ─── Public endpoints (rate-limited) ────────────────────────────────
+Route::middleware('throttle:public-api')->group(function () {
+    // Archive Loans (public)
+    Route::post('/public/archive-loans', [ArchiveLoanController::class, 'storePublic']);
+    Route::get('/public/archive-loans/{token}', [ArchiveLoanController::class, 'showPublic']);
+    Route::get('/public/archive-loans/{token}/pdf', [ArchiveLoanController::class, 'downloadPdfPublic']);
+    Route::post('/public/archive-loans/{token}/return-request', [ArchiveLoanController::class, 'requestReturnPublic']);
+
+    // BMN Loans (public)
+    Route::get('/public/bmn-assets', [BmnLoanController::class, 'listAssetsPublic']);
+    Route::get('/public/bmn-employees', [BmnLoanController::class, 'listEmployeesPublic']);
+    Route::get('/public/bmn-loans/schedule', [BmnLoanController::class, 'schedulePublic']);
+    Route::post('/public/bmn-loans', [BmnLoanController::class, 'storePublic']);
+    Route::get('/public/bmn-loans/{token}', [BmnLoanController::class, 'showPublic']);
+    Route::get('/public/bmn-loans/{token}/pdf', [BmnLoanController::class, 'downloadLoanPdf']);
+    Route::post('/public/bmn-loans/{token}/return', [BmnLoanController::class, 'returnRequestPublic']);
+
+    // Room Booking (Peminjaman Ruangan) — public
+    Route::get('/public/room-loans/rooms', [BmnLoanController::class, 'listRoomsPublic']);
+    Route::get('/public/room-loans/schedule', [BmnLoanController::class, 'roomSchedulePublic']);
+    Route::post('/public/room-loans', [BmnLoanController::class, 'storeRoomLoanPublic']);
+
+    // Public Calendar Agendas
+    Route::get('/public/agendas', [AgendaController::class, 'publicCalendar']);
+
+    // IT Helpdesk (public)
+    Route::post('/public/it-helpdesk-tickets/{id}/confirm', [ItHelpdeskTicketController::class, 'confirm']);
+    Route::get('/public/it-helpdesk-tickets/{id}/details', [ItHelpdeskTicketController::class, 'showPublic']);
+    Route::post('/public/it-helpdesk-tickets', [ItHelpdeskTicketController::class, 'storePublic']);
+    Route::get('/public/it-helpdesk-tickets/{id}/pdf', [ItHelpdeskTicketController::class, 'downloadTicketPdf']);
+
+    // Inventory Requests — SPB (public)
+    Route::post('/public/inventory-requests', [InventoryRequestController::class, 'storePublic']);
+    Route::get('/public/inventory-requests/{token}', [InventoryRequestController::class, 'showPublic']);
+    Route::put('/public/inventory-requests/{token}/approve', [InventoryRequestController::class, 'approvePublic']);
+    Route::put('/public/inventory-requests/{token}/reject', [InventoryRequestController::class, 'rejectPublic']);
+
+    // Letters file proxy (works even if /public/storage symlink is unavailable)
+    Route::get('/public/letters/files/{id}/{kind}', [LetterController::class, 'serveFile'])
+        ->whereNumber('id')
+        ->whereIn('kind', ['surat', 'bukti']);
+
+    // Public inventory listing — limited fields only (id, name, unit, quantity)
+    Route::get('/public/inventories', [InventoryController::class, 'publicIndex']);
+
+    // Surat Tugas (public)
+    Route::post('/public/surat-tugas', [SuratTugasController::class, 'storePublic']);
+    Route::get('/public/siamparan/sarana', [SuratTugasController::class, 'siamparanSarana']);
+    Route::get('/public/surat-tugas/{id}/protokol-kerja', [SuratTugasController::class, 'downloadProtokolKerja'])->whereNumber('id');
+    Route::post('/public/surat-tugas/{id}/sign-protokol', [SuratTugasController::class, 'publicSignProtokolKerja'])->whereNumber('id');
+    Route::post('/public/surat-tugas/{id}/sign-protokol-kepala', [SuratTugasController::class, 'publicSignProtokolKepala'])->whereNumber('id');
+    Route::get('/public/verify-document/{token}', [SuratTugasController::class, 'verifyDocument']);
+    Route::get('/public/surat-tugas/mak-suggestions', [SuratTugasController::class, 'getMakSuggestions']);
+
+    // Public Visitor Queue Registration
+    Route::post('/public/visitor-queues', [VisitorQueueController::class, 'storePublic']);
+
+    // Exit Permit (public via NIP, no auth)
+    Route::post('/public/exit-permits/lookup', [ExitPermitController::class, 'publicLookupByNip']);
+    Route::post('/public/exit-permits/exit', [ExitPermitController::class, 'publicRecordExitByNip']);
+    Route::post('/public/exit-permits/geofence-ping', [ExitPermitController::class, 'publicGeofencePing']);
+    Route::get('/public/exit-permits/{id}/details', [ExitPermitController::class, 'showPublic'])->whereNumber('id');
+    Route::put('/public/exit-permits/{id}/return', [ExitPermitController::class, 'publicRecordReturnByNip'])->whereNumber('id');
+    Route::get('/public/exit-permits/group/{group_id}', [ExitPermitController::class, 'publicGroupMembers']);
+
+    // Public Employee Search
+    Route::get('/public/employees/search', [\App\Http\Controllers\Api\EmployeeController::class, 'publicSearch']);
+
+    // Employee template download (public, no auth needed)
+    Route::get('/employees/template', [EmployeeController::class, 'template']);
+
+    // BMN asset template download (public, no auth needed)
+    Route::get('/bmn/assets/template', [AssetController::class, 'template']);
+
+});
+
+// ─── Queue Display polling (generous rate limit for TV) ─────────────
+Route::middleware('throttle:queue-polling')->group(function () {
+    Route::get('/public/queue-display', [QueueDisplayController::class, 'publicShow']);
+});
+
+// ─── Protected routes (auth:sanctum + password.reset) ────────────────────────────────
+Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
+    // Dashboard stats (requires login)
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/dashboard/activities', [DashboardController::class, 'recentActivities']);
+    Route::get('/news', [NewsPostController::class, 'publicIndex']);
+    Route::get('/news/{slug}', [NewsPostController::class, 'publicShow']);
+
+    // User routes
+    Route::post('/logout', [UserController::class, 'logout']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    Route::put('/user/password', [UserController::class, 'changePassword']);
+    Route::post('/user/profile/photo', [UserController::class, 'uploadPhoto']);
+
+    // Push Notifications
+    Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);
+    Route::post('/push-unsubscribe', [PushNotificationController::class, 'unsubscribe']);
+    Route::post('/push-test', [PushNotificationController::class, 'testNotification']);
+
+    // AI Assistant (Moved inside auth for session access)
+    Route::post('/ai/chat', [\App\Http\Controllers\Api\AIAssistantController::class, 'chat']);
+
+    // ─── Admin-only routes ──────────────────────────────────────────
+    Route::middleware('admin')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::apiResource('admin/users', \App\Http\Controllers\Api\AdminUserController::class)
+            ->names([
+                'index' => 'admin.users.index',
+                'store' => 'admin.users.store',
+                'show' => 'admin.users.show',
+                'update' => 'admin.users.update',
+                'destroy' => 'admin.users.destroy',
+            ]);
+        Route::get('/admin/modules', [\App\Http\Controllers\Api\AdminModuleController::class, 'index']);
+        Route::get('/admin/command-center', [AdminCommandCenterController::class, 'index']);
+        Route::get('/admin/ai-audit', [AdminCommandCenterController::class, 'aiAudit']);
+        Route::get('/admin/export-report', [AdminCommandCenterController::class, 'exportReport']);
+        Route::get('/admin/notification-settings', [AdminNotificationSettingsController::class, 'index']);
+        Route::put('/admin/notification-settings', [AdminNotificationSettingsController::class, 'update']);
+        Route::get('/admin/news-posts', [NewsPostController::class, 'index']);
+        Route::post('/admin/news-posts', [NewsPostController::class, 'store']);
+        Route::put('/admin/news-posts/{id}', [NewsPostController::class, 'update'])->whereNumber('id');
+        Route::delete('/admin/news-posts/{id}', [NewsPostController::class, 'destroy'])->whereNumber('id');
+        Route::put('/admin/exit-permits/{id}/manual-return', [ExitPermitController::class, 'adminRecordReturn'])->whereNumber('id');
+        Route::get('/admin/archive-units', [AdminArchiveUnitController::class, 'index']);
+        Route::put('/admin/archive-units/keasipan', [AdminArchiveUnitController::class, 'updateKearsipan']);
+        Route::put('/admin/archive-units/kearsipan', [AdminArchiveUnitController::class, 'updateKearsipan']);
+        Route::put('/admin/archive-units/{id}', [AdminArchiveUnitController::class, 'update']);
+    });
+
+    // Validator usage report and dashboard
+    Route::get('/validator/usage-report', [ValidatorUsageReportController::class, 'index']);
+    Route::get('/validator/dashboard', [\App\Http\Controllers\Api\ValidatorDashboardController::class, 'getDashboardData']);
+
+    // Hero slider settings (for Layanan Mandiri)
+    Route::get('/hero-slider', [AdminNotificationSettingsController::class, 'heroSlider']);
+    Route::get('/hero-slider/config', [AdminNotificationSettingsController::class, 'heroSliderConfig']);
+    Route::put('/hero-slider', [AdminNotificationSettingsController::class, 'updateHeroSlider']);
+    Route::post('/hero-slider/upload', [AdminNotificationSettingsController::class, 'uploadHeroSliderImage']);
+
+    // Archive Units (for loans)
+    Route::get('/archive-units', [ArchiveUnitController::class, 'index']);
+
+    // Archive Loans
+    Route::get('/archive-loans', [ArchiveLoanController::class, 'index']);
+    Route::get('/archive-loans/borrowers', [ArchiveLoanController::class, 'borrowers']);
+    Route::get('/archive-loans/report', [ArchiveLoanController::class, 'report']);
+    Route::get('/archive-loans/report/pdf', [ArchiveLoanController::class, 'reportPdf']);
+    Route::get('/archive-loans/report/excel', [ArchiveLoanController::class, 'reportExcel']);
+    Route::post('/archive-loans', [ArchiveLoanController::class, 'store']);
+    Route::put('/archive-loans/{id}/approve', [ArchiveLoanController::class, 'approve']);
+    Route::put('/archive-loans/{id}/return', [ArchiveLoanController::class, 'approveReturn']);
+    Route::delete('/archive-loans/{id}', [ArchiveLoanController::class, 'destroy']);
+
+    // Employee routes
+    Route::post('/employees/import', [EmployeeController::class, 'import']);
+    
+    // Calendar Agendas
+    Route::apiResource('agendas', AgendaController::class);
+    
+    // Employee Calendar (combines agendas + surat tugas)
+    Route::get('/employee-calendar', [AgendaController::class, 'employeeCalendar']);
+    Route::get('/kepegawaian-kalender', [AgendaController::class, 'employeeCalendar']); // Alias for web compatibility
+
+    Route::apiResource('employees', EmployeeController::class);
+    Route::put('/employees/{id}/phone', [EmployeeController::class, 'updatePhone']);
+    Route::post('/employees/{id}/photo', [EmployeeController::class, 'uploadPhoto']);
+
+    // KGB routes
+    Route::apiResource('employees.kgb', KgbController::class);
+
+    // RISPEG routes
+    Route::get('/rispeg/daily', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'index']);
+    Route::post('/rispeg/daily', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'store']);
+    Route::post('/rispeg/daily/bulk', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'bulkStore']);
+    Route::get('/rispeg/dashboard-stats', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'dashboard']);
+    Route::get('/rispeg/export-pdf', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'exportPdf']);
+    Route::get('/rispeg/default-month', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'getDefaultMonth']);
+    Route::post('/rispeg/default-month', [App\Http\Controllers\Api\EmployeeDailyControlController::class, 'setDefaultMonth']);
+
+    // Exit Permit routes (Monitoring Izin Keluar)
+    Route::get('/exit-permits/my-active', [ExitPermitController::class, 'myActive']);
+    Route::post('/exit-permits/exit', [ExitPermitController::class, 'recordExit']);
+    Route::put('/exit-permits/{id}/return', [ExitPermitController::class, 'recordReturn']);
+    Route::get('/exit-permits', [ExitPermitController::class, 'index']);
+    Route::post('/exit-permits/geofence-ping', [ExitPermitController::class, 'geofencePing']);
+    Route::get('/exit-permits/{id}', [ExitPermitController::class, 'show'])->whereNumber('id');
+    Route::get('/exit-permits/stats', [ExitPermitController::class, 'stats']);
+    Route::get('/exit-permits/word-parameters', [ExitPermitController::class, 'wordTemplateParameters']);
+    Route::get('/exit-permits/{id}/generate-word', [ExitPermitController::class, 'generateWord'])->whereNumber('id');
+    Route::get('/my-service-history', [ServiceHistoryController::class, 'index']);
+    Route::get('/my-service-history/{serviceType}/{historyId}', [ServiceHistoryController::class, 'show'])
+        ->where('historyId', '.*');
+    Route::put('/exit-permits/{id}/nomor-surat', [ExitPermitController::class, 'updateNomorSurat'])->whereNumber('id');
+    Route::put('/exit-permits/{id}/permit-type', [ExitPermitController::class, 'updatePermitType'])->whereNumber('id');
+    Route::put('/exit-permits/{id}/update-times', [ExitPermitController::class, 'updateTimes'])->whereNumber('id');
+    Route::get('/admin/exit-permit-settings', [ExitPermitController::class, 'getSettings']);
+    Route::put('/admin/exit-permit-settings', [ExitPermitController::class, 'updateSettings']);
+    Route::delete('/exit-permits/{id}', [ExitPermitController::class, 'destroy']);
+
+    // Asset routes
+    Route::apiResource('assets', AssetController::class);
+    Route::post('/bmn/assets/import', [AssetController::class, 'import']);
+
+    // BMN Loans - Route spesifik harus sebelum route dengan parameter {id}
+    Route::get('/bmn-loans', [BmnLoanController::class, 'index']);
+    Route::get('/bmn-loans/schedule', [BmnLoanController::class, 'schedulePublic']);
+    Route::post('/bmn-loans', [BmnLoanController::class, 'store']);
+    Route::get('/bmn-loans/{id}', [BmnLoanController::class, 'show']);
+    Route::post('/bmn-loans/{id}/resend-notifications', [BmnLoanController::class, 'resendNotifications']);
+    Route::put('/bmn-loans/{id}/approve', [BmnLoanController::class, 'approve']);
+    Route::put('/bmn-loans/{id}/return', [BmnLoanController::class, 'return']);
+    Route::delete('/bmn-loans/{id}', [BmnLoanController::class, 'destroy']);
+    
+    // BMN Aliases & Export Routes
+    Route::get('/bmn/loans', [BmnLoanController::class, 'index']); // Alias for report
+    Route::get('/bmn/assets/{id}/loans', [BmnLoanController::class, 'getLoansByAsset']);
+    Route::get('/employees/{id}/bmn-loans', [BmnLoanController::class, 'getLoansByEmployee']);
+    Route::get('/bmn/assets/{id}/loans/pdf', [BmnLoanController::class, 'exportLoansByAssetPdf']);
+    Route::get('/bmn/assets/{id}/loans/excel', [BmnLoanController::class, 'exportLoansByAssetExcel']);
+    Route::get('/bmn/loans/pdf', [BmnLoanController::class, 'exportLoansByDatePdf']);
+    Route::get('/bmn/loans/excel', [BmnLoanController::class, 'exportLoansByDateExcel']);
+    Route::get('/employees/{id}/bmn-loans/pdf', [BmnLoanController::class, 'exportLoansByEmployeePdf']);
+    Route::get('/employees/{id}/bmn-loans/excel', [BmnLoanController::class, 'exportLoansByEmployeeExcel']);
+
+    // BMN Maintenance / Complaint
+    Route::get('/bmn-maintenance-reports', [BmnMaintenanceReportController::class, 'index']);
+    Route::post('/bmn-maintenance-reports', [BmnMaintenanceReportController::class, 'store']);
+    Route::put('/bmn-maintenance-reports/{id}', [BmnMaintenanceReportController::class, 'update']);
+    Route::put('/bmn-maintenance-reports/{id}/approve', [BmnMaintenanceReportController::class, 'approve']);
+    Route::put('/bmn-maintenance-reports/{id}/reject', [BmnMaintenanceReportController::class, 'reject']);
+    Route::put('/bmn-maintenance-reports/{id}/complete', [BmnMaintenanceReportController::class, 'complete']);
+
+    // Pengadaan PDTT
+    Route::get('/pdtt-items', [PdttItemController::class, 'index']);
+    Route::get('/pdtt-items/report', [PdttItemController::class, 'report']);
+    Route::post('/pdtt-items', [PdttItemController::class, 'store']);
+    Route::put('/pdtt-items/{id}', [PdttItemController::class, 'update']);
+    Route::delete('/pdtt-items/{id}', [PdttItemController::class, 'destroy']);
+    Route::post('/pdtt-items/{id}/price', [PdttItemController::class, 'updatePrice']);
+    Route::post('/pdtt-items/{id}/toggle-requestable', [PdttItemController::class, 'toggleRequestable']);
+    Route::get('/pdtt-items/requestable', [PdttItemController::class, 'requestableItems']);
+    Route::apiResource('pdtt-authorized-users', \App\Http\Controllers\Api\PdttAuthorizedUserController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/pdtt-service-config', [\App\Http\Controllers\Api\PdttAuthorizedUserController::class, 'serviceConfig']);
+    Route::put('/pdtt-service-config', [\App\Http\Controllers\Api\PdttAuthorizedUserController::class, 'updateServiceConfig']);
+
+    // Pengusulan Pengadaan Barang (Realtime awal)
+    Route::get('/procurement-proposals', [ProcurementProposalController::class, 'index']);
+    Route::post('/procurement-proposals', [ProcurementProposalController::class, 'store']);
+    Route::put('/procurement-proposals/{id}', [ProcurementProposalController::class, 'update']);
+    Route::delete('/procurement-proposals/{id}', [ProcurementProposalController::class, 'destroy']);
+    Route::post('/procurement-proposals/{id}/lock', [ProcurementProposalController::class, 'lock']);
+    Route::post('/procurement-proposals/{id}/unlock', [ProcurementProposalController::class, 'unlock']);
+    Route::post('/procurement-proposals/{id}/submit-price', [ProcurementProposalController::class, 'submitPrice']);
+
+    // Permintaan Pengadaan dari Master PDTT
+    Route::get('/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'index']);
+    Route::post('/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'store']);
+    Route::get('/admin/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'indexAdmin']);
+    Route::put('/admin/procurement-requests/{id}/status', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'updateStatus']);
+    Route::delete('/admin/procurement-requests/{id}', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'destroyAdmin']);
+    Route::post('/admin/procurement-requests/cross-tab-report', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'crossTabReport']);
+
+    // Proses Pengadaan PBJ
+    Route::apiResource('procurement-pbjs', \App\Http\Controllers\Api\ProcurementPbjController::class)->except(['create', 'edit', 'show']);
+
+    // Inventory routes
+    Route::apiResource('inventories', InventoryController::class);
+    Route::get('/inventory-stock-cards', [InventoryStockCardController::class, 'index']);
+    Route::post('/inventory-stock-cards', [InventoryStockCardController::class, 'store']);
+
+    // Inventory Requests (admin)
+    Route::get('/inventory-requests', [InventoryRequestController::class, 'index']);
+    Route::put('/inventory-requests/{id}/approve', [InventoryRequestController::class, 'approve']);
+    Route::put('/inventory-requests/{id}/reject', [InventoryRequestController::class, 'reject']);
+
+    // Loan routes
+    Route::apiResource('loans', LoanController::class);
+    Route::put('/loans/{id}/approve', [LoanController::class, 'approve']);
+    Route::put('/loans/{id}/return', [LoanController::class, 'return']);
+
+    // Request routes
+    Route::apiResource('requests', RequestController::class);
+    Route::put('/requests/{id}/approve', [RequestController::class, 'approve']);
+    Route::put('/requests/{id}/reject', [RequestController::class, 'reject']);
+
+    // IT Helpdesk Ticket routes - Spesifik routes harus sebelum apiResource
+    Route::get('/it-helpdesk-tickets', [ItHelpdeskTicketController::class, 'index']);
+    Route::post('/it-helpdesk-tickets', [ItHelpdeskTicketController::class, 'store']);
+    Route::get('/it-helpdesk-tickets/{id}', [ItHelpdeskTicketController::class, 'show']);
+    Route::put('/it-helpdesk-tickets/{id}/approve', [ItHelpdeskTicketController::class, 'approve']);
+    Route::put('/it-helpdesk-tickets/{id}/reject', [ItHelpdeskTicketController::class, 'reject']);
+    Route::put('/it-helpdesk-tickets/{id}/complete', [ItHelpdeskTicketController::class, 'complete']);
+    Route::put('/it-helpdesk-tickets/{id}/confirm', [ItHelpdeskTicketController::class, 'confirm']);
+    Route::delete('/it-helpdesk-tickets/{id}', [ItHelpdeskTicketController::class, 'destroy']);
+
+    // ─── Letter routes (Pencatatan Surat Masuk & Keluar) ─────────────
+    Route::get('/letters/units', [LetterController::class, 'units']);
+    Route::get('/letters', [LetterController::class, 'index']);
+    Route::post('/letters', [LetterController::class, 'store']);
+    Route::put('/letters/{id}', [LetterController::class, 'update']);
+    Route::delete('/letters/{id}', [LetterController::class, 'destroy']);
+    Route::get('/letters/export-pdf', [LetterController::class, 'exportPdf']);
+    Route::post('/letters/{id}/bukti', [LetterController::class, 'uploadBukti']);
+    Route::post('/letters/{id}/file-surat', [LetterController::class, 'uploadFileSurat']);
+    // ─── Vital Archive routes ─────────────
+    Route::get('/vital-archives/export-pdf', [VitalArchiveController::class, 'exportPdf']);
+    Route::get('/vital-archives', [VitalArchiveController::class, 'index']);
+    Route::post('/vital-archives', [VitalArchiveController::class, 'store']);
+    Route::put('/vital-archives/{id}', [VitalArchiveController::class, 'update']);
+    Route::delete('/vital-archives/{id}', [VitalArchiveController::class, 'destroy']);
+    // ─── Surat Tugas ─────────────
+    Route::post('/surat-tugas', [SuratTugasController::class, 'store']);
+    Route::get('/surat-tugas/word-parameters', [SuratTugasController::class, 'wordTemplateParameters']);
+    Route::get('/surat-tugas/templates', [SuratTugasController::class, 'listTemplates']);
+    Route::get('/surat-tugas', [SuratTugasController::class, 'index']);
+    Route::get('/surat-tugas/{id}', [SuratTugasController::class, 'show'])->whereNumber('id');
+    Route::put('/surat-tugas/{id}/approve', [SuratTugasController::class, 'approve']);
+    Route::put('/surat-tugas/{id}/reject', [SuratTugasController::class, 'reject']);
+    Route::put('/surat-tugas/{id}/complete', [SuratTugasController::class, 'completeData']);
+    Route::put('/surat-tugas/{id}/user-update', [SuratTugasController::class, 'updateUserData']);
+    Route::post('/surat-tugas/{id}/send-siamparan', [SuratTugasController::class, 'resendSiamparan']);
+    Route::post('/surat-tugas/{id}/resend-lengkap', [SuratTugasController::class, 'resendLengkapNotification']);
+    Route::post('/surat-tugas/{id}/reset-to-draft', [SuratTugasController::class, 'resetToDraft']);
+    Route::get('/surat-tugas/{id}/documents', [SuratTugasController::class, 'listDocuments'])->whereNumber('id');
+    Route::get('/surat-tugas/{id}/documents/{docId}/download', [SuratTugasController::class, 'downloadCachedDocument'])->whereNumber(['id', 'docId']);
+    Route::delete('/surat-tugas/{id}/documents/{docId}', [SuratTugasController::class, 'deleteCachedDocument'])->whereNumber(['id', 'docId']);
+    Route::get('/surat-tugas/{id}/download', [SuratTugasController::class, 'generateTemplate'])->whereNumber('id');
+    Route::post('/surat-tugas/{id}/sign-protokol', [SuratTugasController::class, 'signProtokolKerja'])->whereNumber('id');
+    Route::post('/surat-tugas/{id}/request-signature', [SuratTugasController::class, 'requestSignature'])->whereNumber('id');
+    Route::delete('/surat-tugas/{id}', [SuratTugasController::class, 'destroy']);
+    Route::get('/surat-tugas/mak-suggestions', [SuratTugasController::class, 'getMakSuggestions']);
+
+    // ─── LPJ (Laporan Pertanggungjawaban) ─────────────
+    Route::get('/lpj', [LpjController::class, 'index']);
+    Route::get('/lpj/{suratTugasId}', [LpjController::class, 'show'])->whereNumber('suratTugasId');
+    Route::post('/lpj/{suratTugasId}', [LpjController::class, 'store'])->whereNumber('suratTugasId');
+    Route::put('/lpj/{suratTugasId}/items', [LpjController::class, 'updateItems'])->whereNumber('suratTugasId');
+    Route::post('/lpj/{suratTugasId}/mark-manual', [LpjController::class, 'markManual'])->whereNumber('suratTugasId');
+    Route::post('/lpj/{suratTugasId}/exclude', [LpjController::class, 'exclude'])->whereNumber('suratTugasId');
+    Route::delete('/lpj/{suratTugasId}', [LpjController::class, 'destroy'])->whereNumber('suratTugasId');
+
+    // ─── Notifications & FCM ─────────────
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::put('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    Route::put('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::put('/fcm-token', [\App\Http\Controllers\Api\NotificationController::class, 'updateFcmToken']);
+
+    // ─── Queue Display (Admin) ─────────────
+    Route::get('/queue-display/admin', [QueueDisplayController::class, 'adminShow']);
+    Route::put('/queue-display/call-next', [QueueDisplayController::class, 'callNext']);
+    Route::put('/queue-display/recall', [QueueDisplayController::class, 'recall']);
+    Route::put('/queue-display/recall-all', [QueueDisplayController::class, 'recallAll']);
+    Route::put('/queue-display/set-number', [QueueDisplayController::class, 'setNumber']);
+    Route::put('/queue-display/set-officer', [QueueDisplayController::class, 'setOfficer']);
+    Route::put('/queue-display/update-ticker', [QueueDisplayController::class, 'updateTicker']);
+    Route::put('/queue-display/toggle-status', [QueueDisplayController::class, 'toggleStatus']);
+    Route::put('/queue-display/reset', [QueueDisplayController::class, 'resetQueue']);
+    Route::post('/queue-display/upload-photo', [QueueDisplayController::class, 'uploadPhoto']);
+    Route::post('/queue-display/upload-slide', [QueueDisplayController::class, 'uploadSlide']);
+    Route::put('/queue-display/update-slideshow', [QueueDisplayController::class, 'updateSlideshow']);
+
+    Route::get('/visitor-queues', [VisitorQueueController::class, 'indexAdmin']);
+    Route::put('/visitor-queues/{id}/call', [VisitorQueueController::class, 'callVisitor']);
+    Route::put('/visitor-queues/{id}/serve', [VisitorQueueController::class, 'serveVisitor']);
+});

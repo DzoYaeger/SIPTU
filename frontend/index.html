@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="SIPTU — SISTEM INFORMASI PELAYANAN TATA USAHA" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SIPTU" />
+    <link rel="apple-touch-icon" href="/logo/favicon.png" />
+
+    <!-- Manifest & Icon -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/logo/favicon.png" />
+
+    <title>SIPTU | SISTEM INFORMASI PELAYANAN TATA USAHA</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then((reg) => {
+              // Auto-update check every 60 minutes
+              setInterval(() => reg.update(), 60 * 60 * 1000);
+
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                      // New version available — subtle notification
+                      if (confirm('Versi baru SIPTU tersedia. Muat ulang sekarang?')) {
+                        window.location.reload();
+                      }
+                    }
+                  });
+                }
+              });
+            })
+            .catch((err) => console.warn('SW registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>

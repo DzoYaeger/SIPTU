@@ -1,0 +1,19 @@
+# Letakkan file ini di: public_html/storage/.htaccess
+
+# Enable rewrite engine
+RewriteEngine On
+RewriteBase /storage/
+
+# If request is for an existing file, serve it
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# If request is for a directory, serve index if exists
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.php -f
+RewriteRule ^ %{REQUEST_URI}/index.php [L]
+
+# For hero-slider folder, fallback to PHP handler
+RewriteCond %{REQUEST_URI} ^/storage/hero-slider/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^hero-slider/(.*)$ hero-slider/index.php [L,QSA]

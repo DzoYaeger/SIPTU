@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Biarkan folder core_api diakses secara normal (jangan ditarik ke React)
+  RewriteCond %{REQUEST_URI} ^/core_api/ [NC]
+  RewriteRule .* - [L]
+
+  # 2. Sisanya untuk React SPA
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>

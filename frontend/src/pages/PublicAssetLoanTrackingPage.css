@@ -1,0 +1,223 @@
+/* PublicAssetLoanTrackingPage.css */
+
+:root {
+    --palt-primary: var(--color-primary);
+    --palt-primary-dark: var(--color-primary-hover);
+    --palt-secondary: var(--color-info);
+    --palt-bg: var(--color-bg-subtle);
+    --palt-card-bg: var(--color-bg);
+}
+
+.palt-page {
+    min-height: 100vh;
+    background: radial-gradient(circle at 0% 0%, var(--color-primary-light) 0%, var(--color-bg-subtle) 50%),
+                radial-gradient(circle at 100% 100%, var(--color-bg-accent) 0%, var(--color-bg-subtle) 50%);
+    padding: 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    font-family: var(--ff-body);
+}
+
+.palt-container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Header Section */
+.palt-header-wrap {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.palt-header__title {
+    font-size: 42px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+    letter-spacing: -2px;
+    font-family: var(--ff-heading);
+}
+
+.palt-header__sub {
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+/* Hero Status Dashboard */
+.palt-status-board {
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
+    border-radius: 32px;
+    padding: 40px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 25px 50px -12px var(--color-primary-ring);
+    position: relative;
+    overflow: hidden;
+}
+
+.palt-status-board::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+}
+
+.palt-status-main { display: flex; align-items: center; gap: 24px; z-index: 1; }
+.palt-status-icon-wrap {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.palt-status-info h2 { font-size: 14px; font-weight: 700; color: var(--color-primary-light); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+.palt-status-info .status-text { font-size: 32px; font-weight: 700; margin: 0; }
+.palt-status-info .spa-badge { font-size: 12px; background: rgba(255, 255, 255, 0.15); padding: 4px 12px; border-radius: 8px; display: inline-block; margin-top: 8px; font-family: monospace; }
+
+/* Grid Layout */
+.palt-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24px;
+}
+
+/* Cards */
+.palt-glass-card {
+    background: var(--palt-card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--color-border);
+    border-radius: 28px;
+    padding: 30px;
+    box-shadow: var(--shadow-md);
+}
+
+.palt-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.palt-card-title i { color: var(--palt-primary); font-size: 20px; }
+
+/* Borrower Info */
+.palt-borrower-box {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.palt-label-group { display: flex; flex-direction: column; gap: 4px; }
+.palt-label-group label { font-size: 11px; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; }
+.palt-label-group span { font-size: 16px; font-weight: 700; color: var(--color-text); }
+.palt-label-group p { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+
+/* Assets Visual List */
+.palt-assets-visual {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.palt-asset-item-v2 {
+    background: var(--color-bg);
+    padding: 20px;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    display: flex;
+    gap: 16px;
+    transition: all 0.3s;
+}
+
+.palt-asset-item-v2:hover {
+    border-color: var(--palt-primary);
+    box-shadow: 0 10px 20px var(--color-primary-ring);
+}
+
+.palt-asset-v-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--color-primary-light);
+    color: var(--palt-primary);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.palt-asset-v-body h4 { font-size: 15px; font-weight: 700; color: var(--color-text); margin: 0 0 4px 0; }
+.palt-asset-v-body code { font-size: 11px; background: var(--color-bg-muted); color: var(--color-text-secondary); padding: 2px 8px; border-radius: 4px; }
+
+/* Custom Vertical Steps */
+.palt-timeline-v2 { padding-left: 10px; }
+.ant-steps-item-container { padding-bottom: 24px !important; }
+
+/* Buttons */
+.palt-action-footer {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.palt-btn-glass {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 12px 30px;
+    border-radius: 16px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.palt-btn-glass:hover {
+    background: var(--color-bg-muted);
+    border-color: var(--color-border);
+    transform: scale(1.02);
+}
+
+.palt-btn-primary {
+    background: var(--palt-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 10px 20px var(--color-primary-ring);
+}
+
+.palt-btn-primary:hover {
+    background: var(--palt-primary-dark);
+    box-shadow: 0 15px 30px var(--color-primary-ring);
+}
+
+@media (max-width: 850px) {
+    .palt-content-grid { grid-template-columns: 1fr; }
+    .palt-status-board { flex-direction: column; text-align: center; gap: 30px; }
+    .palt-status-main { flex-direction: column; }
+    .palt-header__title { font-size: 32px; }
+}

@@ -1,0 +1,127 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+/.idea
+/.vscode
+
+# Production builds
+/build
+/dist
+dist/
+build/
+web-build/
+
+# Archives and compressed files
+*.zip
+*.rar
+*.tar.gz
+*.tgz
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Laravel specific
+/backend/vendor/
+/backend/.env
+/backend/storage/*.key
+/backend/.idea
+/backend/.vscode
+/backend/.phpunit.result.cache
+/backend/homestead.yaml
+/backend/homestead.json
+/backend/npm-debug.log*
+/backend/yarn-error.log*
+/backend/.vagrant
+/backend/.env.testing
+/backend/.php_cs.cache
+/backend/docker-compose.override.yml
+
+# Laravel storage
+/backend/storage/debugbar/
+/backend/storage/logs/laravel.log
+/backend/storage/logs/*.log
+
+# SQLite database file
+*.sqlite
+*.sqlite3
+
+# Node.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# React
+*.tgz
+
+# Testing
+/backend/phpunit.xml
+/backend/.phpunit.result.cache
+/backend/coverage/
+/backend/homestead.yaml
+/backend/homestead.json
+/backend/Procfile
+/backend/webpack.mix.js
+/backend/.babelrc
+
+# Temporary files
+*~
+*#
+*.tmp
+
+# Editor files
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE specific files
+.idea/
+*.iml
+*.iws
+/out/
+
+# Database dump
+*.sql
+*.sql.gz
+*.sql.zip
+
+# Composer
+/composer.phar
+/composer.lock
+
+# Vagrant
+.vagrant/
+
+# PHPUnit
+/_ide_helper.php
+/.phpstorm.meta.php
+
+# Laravel Sail
+.docker/

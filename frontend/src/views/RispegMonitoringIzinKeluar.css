@@ -1,0 +1,62 @@
+/* ═══════════════════════════════════════════════
+   RispegMonitoringIzinKeluar  — prefix: mik-*
+   ═══════════════════════════════════════════════ */
+
+.mik-page {
+    padding: 0;
+}
+
+/* Stat Cards */
+.mik-stat-card {
+    border-radius: 14px !important;
+    background: #fff !important;
+    border: 1px solid #f0f0f0 !important;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.mik-stat-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.mik-stat-card--warning {
+    border-color: #fecaca !important;
+    background: #fef2f2 !important;
+}
+
+.mik-stat-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Top Employee Card */
+.mik-top-card {
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #ede9fe, #faf5ff) !important;
+    border: 1px solid #ddd6fe !important;
+}
+
+.mik-top-employee {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mik-top-employee__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    flex-shrink: 0;
+}

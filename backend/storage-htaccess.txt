@@ -1,0 +1,10 @@
+# Letakkan file ini di: public_html/storage/hero-slider/.htaccess
+# Tujuannya: redirect request gambar ke folder core_api
+
+RewriteEngine On
+RewriteBase /
+
+# Jika file tidak ada di current folder, redirect ke core_api/public/storage/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /core_api/public/storage/hero-slider/$1 [L]

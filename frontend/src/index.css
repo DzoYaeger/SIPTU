@@ -1,0 +1,261 @@
+/* ══════════════════════════════════════════════
+   Design System — CSS Custom Properties
+   SIPTUULTRA v2 — Elegant Minimal
+   ══════════════════════════════════════════════ */
+
+/* ── Google Fonts (Removed for offline-secure corporate mode) ── */
+
+/* ── Tailwind CSS (use prefix tw- to avoid Ant Design conflicts) ── */
+@import "tailwindcss" prefix(tw);
+
+:root {
+  /* ── Font Families ── */
+  --ff-heading: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ff-body:    "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ff-mono:    SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+  /* ── Typography Scale ── */
+  --fs-h1:       20px;   /* Page title — satu per halaman */
+  --fs-h2:       16px;   /* Section title */
+  --fs-h3:       14px;   /* Card title, modal title */
+  --fs-h4:       13px;   /* Sub-section, drawer title */
+  --fs-h5:       12px;   /* Label, badge */
+  --fs-body:     13px;   /* Konten umum */
+  --fs-sm:       12px;   /* Helper text */
+  --fs-xs:       11px;   /* Metadata, caption */
+  --fs-overline: 10px;   /* Tabel header, label uppercase */
+
+  /* ── Line Heights ── */
+  --lh-heading: 1.25;
+  --lh-body:    1.4;
+  --lh-tight:   1.15;
+
+  /* ── Global Font Defaults ── */
+  font-family: var(--ff-body);
+  line-height: var(--lh-body);
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* ══════════════════════════════════════════════
+     Color Palette — Slate + Indigo Elegant
+     ══════════════════════════════════════════════ */
+
+  /* Background */
+  --color-bg:          #ffffff;
+  --color-bg-subtle:   #f8fafc;   /* Slate 50 — warm white */
+  --color-bg-muted:    #f1f5f9;   /* Slate 100 */
+  --color-bg-accent:   #eef2ff;   /* Indigo 50 */
+
+  /* Text */
+  --color-text:           #1a1f2e;   /* Slate dark — premium */
+  --color-text-secondary: #64748b;   /* Slate 500 */
+  --color-text-muted:     #94a3b8;   /* Slate 400 */
+
+  /* Primary Brand — Indigo */
+  --color-primary:       #4F46E5;   /* Indigo 600 */
+  --color-primary-hover: #4338CA;   /* Indigo 700 */
+  --color-primary-light: #EEF2FF;   /* Indigo 50 */
+  --color-primary-ring:  rgba(79, 70, 229, 0.15);
+
+  /* Border */
+  --color-border:       #e2e8f0;   /* Slate 200 */
+  --color-border-light: #f1f5f9;   /* Slate 100 */
+
+  /* Status */
+  --color-success: #10B981;   /* Emerald 500 */
+  --color-warning: #F59E0B;   /* Amber 500 */
+  --color-danger:  #EF4444;   /* Red 500 */
+  --color-info:    #3B82F6;   /* Blue 500 */
+
+  /* ── Spacing ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+
+  /* ── Radii ── */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-full: 9999px;
+
+  /* ── Shadows — sangat subtle ── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 0 3px var(--color-primary-ring);
+
+  /* ── Transitions ── */
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:  150ms;
+  --duration-normal: 200ms;
+  --duration-slow:  300ms;
+
+  /* Set defaults */
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+/* ── Box Sizing ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ── Body ── */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--color-bg);
+  font-family: var(--ff-body);
+  color: var(--color-text);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ── Links ── */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ── Headings Global ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ff-heading);
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+  margin-top: 0;
+}
+
+h1 { font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.015em; }
+h3 { font-size: var(--fs-h3); font-weight: 600; letter-spacing: -0.01em; }
+h4 { font-size: var(--fs-h4); font-weight: 600; }
+h5 { font-size: var(--fs-h5); font-weight: 600; letter-spacing: 0.01em; }
+
+/* ── Global smooth scrolling ── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Selection highlight ── */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* ══════════════════════════════════════════════
+   Utility — Typography Classes
+   ══════════════════════════════════════════════ */
+
+.text-h1 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+}
+
+.text-h2 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+}
+
+.text-h3 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+}
+
+.text-h4 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h4);
+  font-weight: 600;
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+}
+
+.text-h5 {
+  font-family: var(--ff-heading);
+  font-size: var(--fs-h5);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: var(--lh-heading);
+  color: var(--color-text);
+}
+
+.text-body {
+  font-family: var(--ff-body);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: var(--lh-body);
+  color: var(--color-text);
+}
+
+.text-sm {
+  font-family: var(--ff-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  color: var(--color-text-secondary);
+}
+
+.text-xs {
+  font-family: var(--ff-body);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  color: var(--color-text-muted);
+}
+
+.text-overline {
+  font-family: var(--ff-body);
+  font-size: var(--fs-overline);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted     { color: var(--color-text-muted); }
+.text-primary   { color: var(--color-primary); }
+.text-success   { color: var(--color-success); }
+.text-warning   { color: var(--color-warning); }
+.text-danger    { color: var(--color-danger); }
+
+/* ── Responsive Typography ── */
+@media (max-width: 768px) {
+  :root {
+    --fs-h1: 22px;
+    --fs-h2: 18px;
+    --fs-h3: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --fs-h1: 20px;
+    --fs-h2: 16px;
+    --fs-h3: 15px;
+  }
+}

@@ -1,0 +1,62 @@
+.public-loan {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: #f5efe6;
+}
+
+.public-loan__centered {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: #f5efe6;
+}
+
+.public-loan__card {
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(38, 65, 92, 0.1);
+  border-radius: 16px;
+}
+
+.public-loan__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.public-loan__value {
+  margin: 0;
+}
+
+.public-loan__status-tag {
+  align-self: flex-start;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.public-loan__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .public-loan {
+    padding: 16px;
+  }
+
+  .public-loan__card {
+    padding: 16px;
+  }
+}
+
+.public-loan__loading-text {
+  display: inline-block;
+  margin-top: 12px;
+}

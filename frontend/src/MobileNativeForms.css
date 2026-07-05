@@ -1,0 +1,114 @@
+/* ══════════════════════════════════════════════
+   MobileNativeForms.css — Global Native Form UI
+   ══════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* ── 1. Edge-to-Edge Layout for Cards ── */
+  .ant-card {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .ant-card-body {
+    padding: 16px 12px !important;
+  }
+
+  .app-content {
+    /* Remove padding to allow edge-to-edge forms, but keep bottom padding for bottom nav */
+    padding: var(--space-xl) 0 calc(64px + var(--space-xl)) !important;
+    background-color: #ffffff;
+  }
+
+  /* ── 2. Larger Inputs (Touch Friendly) ── */
+  .ant-input,
+  .ant-input-password,
+  .ant-input-number-input,
+  .ant-select-selector,
+  .ant-picker {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important; /* Prevents iOS Safari zoom */
+    border: 1px solid #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  .ant-input:focus,
+  .ant-select-selector:focus-within,
+  .ant-picker-focused {
+    border-color: #2563eb !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+  }
+
+  .ant-input-affix-wrapper {
+    border-radius: 12px !important;
+    padding: 0 11px !important;
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  /* Fix for textareas */
+  textarea.ant-input {
+    height: auto !important;
+    min-height: 100px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  /* ── 3. Clean Labels ── */
+  .ant-form-item-label > label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    height: auto !important;
+    margin-bottom: 4px;
+  }
+
+  .ant-form-item {
+    margin-bottom: 20px !important;
+  }
+
+  /* ── 4. Sticky Bottom Action Bar ── */
+  /* Add this class to a wrapper div containing your submit buttons */
+  .mobile-sticky-bottom-action {
+    position: fixed;
+    bottom: 0; /* Or 64px if BottomNav is present, but usually forms take full screen or don't have bottom nav */
+    left: 0;
+    width: 100%;
+    padding: 16px 20px env(safe-area-inset-bottom, 20px) 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  /* If the bottom nav is active on this page, push it up */
+  body:has(.mobile-bottom-nav) .mobile-sticky-bottom-action {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 16px;
+  }
+
+  .mobile-sticky-bottom-action .ant-btn {
+    height: 52px !important;
+    border-radius: 16px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    width: 100%;
+  }
+
+  /* Ensure the last element before sticky action has enough bottom margin so it's not hidden */
+  .mobile-form-padding-bottom {
+    padding-bottom: 120px !important;
+  }
+
+  /* Hide Desktop Breadcrumbs on Mobile Forms */
+  .ant-breadcrumb {
+    display: none !important;
+  }
+}

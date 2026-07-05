@@ -1,0 +1,286 @@
+/* ══════════════════════════════════════════════════════════════
+   Inventory Request Approval Page — Admin / Verifikator
+   ══════════════════════════════════════════════════════════════ */
+
+
+.irap {
+    min-height: 100vh;
+    background: #f8fafc;
+    font-family: var(--ff-body);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Hero ── */
+.irap__hero {
+    background: linear-gradient(135deg, #0f766e, #14b8a6, #2dd4bf);
+    padding: 40px 24px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.irap__hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 500px 250px at 15% 85%, rgba(255, 255, 255, 0.10), transparent),
+        radial-gradient(ellipse 300px 150px at 80% 20%, rgba(255, 255, 255, 0.08), transparent);
+    pointer-events: none;
+}
+
+.irap__hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.irap__hero h1 {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.03em;
+}
+
+.irap__hero p {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13.5px;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* ── Status Badge ── */
+.irap__status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+.irap__status-badge--pengajuan {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.irap__status-badge--disetujui {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.irap__status-badge--ditolak {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* ── Body ── */
+.irap__body {
+    max-width: 640px;
+    margin: -28px auto 60px;
+    padding: 0 20px;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── Card ── */
+.irap__card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    animation: irapSlideUp 0.35s ease both;
+}
+
+@keyframes irapSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.irap__card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Info rows ── */
+.irap__info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 13.5px;
+    border-bottom: 1px solid #f8fafc;
+}
+
+.irap__info-row:last-child {
+    border-bottom: none;
+}
+
+.irap__info-label {
+    color: #64748b;
+}
+
+.irap__info-value {
+    font-weight: 500;
+    color: #1e293b;
+    text-align: right;
+    max-width: 60%;
+}
+
+/* ── Item table ── */
+.irap__item-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.irap__item-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.irap__item-table th:first-child {
+    border-radius: 8px 0 0 8px;
+}
+
+.irap__item-table th:last-child {
+    border-radius: 0 8px 8px 0;
+}
+
+.irap__item-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.irap__item-table tr:last-child td {
+    border-bottom: none;
+}
+
+.irap__qty-requested {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #ede9fe;
+    color: #6366f1;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12.5px;
+}
+
+.irap__qty-input {
+    width: 80px !important;
+}
+
+/* ── Signature preview ── */
+.irap__sig-preview {
+    background: #f8fafc;
+    border: 1px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+
+.irap__sig-preview img {
+    max-width: 200px;
+    max-height: 100px;
+}
+
+/* ── Action Buttons ── */
+.irap__actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.irap__approve-btn {
+    flex: 1;
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28) !important;
+}
+
+.irap__reject-btn {
+    height: 48px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    min-width: 120px;
+}
+
+/* ── Already processed ── */
+.irap__processed {
+    text-align: center;
+    padding: 24px;
+}
+
+.irap__processed-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .irap__hero {
+        padding: 32px 16px 48px;
+    }
+
+    .irap__hero h1 {
+        font-size: 19px;
+    }
+
+    .irap__body {
+        padding: 0 14px;
+    }
+
+    .irap__card {
+        padding: 18px 14px;
+    }
+
+    .irap__info-row {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .irap__info-value {
+        text-align: left;
+        max-width: 100%;
+    }
+
+    .irap__actions {
+        flex-direction: column;
+    }
+}

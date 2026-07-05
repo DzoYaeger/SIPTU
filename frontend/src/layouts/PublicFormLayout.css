@@ -1,0 +1,14 @@
+.public-form-layout {
+    min-height: 100vh;
+    width: 100%;
+    background: #f8f9fb;
+}
+
+.public-form-content {
+    width: 100%;
+    min-height: 100vh;
+}
+
+.public-form-header {
+    display: none;
+}
