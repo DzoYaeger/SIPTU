@@ -122,69 +122,6 @@
 }
 
 /* ══════════════════════════════════════════════
-   Captcha Slider
-   ══════════════════════════════════════════════ */
-.modern-captcha-container {
-  margin: var(--space-md) 0;
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  height: 44px;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.captcha-text-bg {
-  font-family: var(--ff-body);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  user-select: none;
-}
-
-.captcha-slider {
-  position: absolute;
-  left: 4px;
-  top: 4px;
-  bottom: 4px;
-  width: 40px;
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  z-index: 2;
-  box-shadow: var(--shadow-sm);
-  transition: background var(--duration-normal) var(--ease-out);
-  border: 1px solid var(--color-border);
-}
-
-.captcha-slider:active {
-  cursor: grabbing;
-}
-
-.captcha-progress {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--color-primary);
-  opacity: 0.12;
-  border-radius: var(--radius-md);
-  z-index: 0;
-}
-
-.captcha-slider.verified {
-  background: var(--color-success);
-  border-color: var(--color-success);
-  color: #fff;
-}
-
-/* ══════════════════════════════════════════════
    Submit Button
    ══════════════════════════════════════════════ */
 .login-submit-btn {
@@ -308,15 +245,6 @@
     height: 50px !important;
     font-size: var(--fs-h4) !important;
     margin-top: var(--space-md);
-  }
-
-  .modern-captcha-container {
-    height: 50px;
-    margin: var(--space-md) 0;
-  }
-
-  .captcha-slider {
-    width: 46px;
   }
 
   .apk-download-btn {

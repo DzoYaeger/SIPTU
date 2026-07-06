@@ -13,6 +13,7 @@ import PublicAssetLoanTrackingPage from "./pages/PublicAssetLoanTrackingPage.jsx
 import PublicArchiveLoanRequestPage from "./pages/PublicArchiveLoanRequestPage.jsx";
 import PublicArchiveLoanInfoPage from "./pages/PublicArchiveLoanInfoPage.jsx";
 import PublicExitPermitPage from "./pages/PublicExitPermitPage.jsx";
+import PublicResolveUnfinishedExitPermitPage from "./pages/PublicResolveUnfinishedExitPermitPage.jsx";
 import ItHelpdeskForm from "./pages/ItHelpdeskForm.jsx";
 import ItHelpdeskReporterSignature from "./pages/ItHelpdeskReporterSignature.jsx";
 import InventoryRequestApprovalPage from "./pages/InventoryRequestApprovalPage.jsx";
@@ -63,6 +64,7 @@ function App() {
       path.startsWith("/loan/") ||
       path.startsWith("/peminjaman-aset/track/") ||
       path.startsWith("/permintaan-persediaan/approve/") ||
+      path.startsWith("/public/exit-permit/resolve-unfinished") ||
       path.startsWith("/sign-protokol") ||
       path.startsWith("/verifikasi/") ||
       path.startsWith("/it-helpdesk/") ||
@@ -202,6 +204,7 @@ function App() {
     location.pathname.startsWith("/loan/") ||
     location.pathname.startsWith("/peminjaman-aset/track/") ||
     location.pathname.startsWith("/permintaan-persediaan/approve/") ||
+    location.pathname.startsWith("/public/exit-permit/resolve-unfinished") ||
     location.pathname.startsWith("/sign-protokol/") ||
     location.pathname.startsWith("/verifikasi/") ||
     location.pathname === "/izin-keluar" ||
@@ -289,6 +292,10 @@ function App() {
         element={<PublicArchiveLoanInfoPage />}
       />
       <Route path="/izin-keluar" element={<PublicExitPermitPage />} />
+      <Route
+        path="/public/exit-permit/resolve-unfinished"
+        element={<PublicResolveUnfinishedExitPermitPage />}
+      />
       <Route path="/sign-protokol/:id/:token" element={<SignProtokolPage type="ketua" />} />
       <Route path="/sign-protokol-kepala/:id/:token" element={<SignProtokolPage type="kepala" />} />
       <Route path="/verifikasi/:token" element={<VerifyDocumentPage />} />

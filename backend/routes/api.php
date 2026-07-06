@@ -123,6 +123,7 @@ Route::middleware('throttle:public-api')->group(function () {
     Route::post('/public/exit-permits/geofence-ping', [ExitPermitController::class, 'publicGeofencePing']);
     Route::get('/public/exit-permits/{id}/details', [ExitPermitController::class, 'showPublic'])->whereNumber('id');
     Route::put('/public/exit-permits/{id}/return', [ExitPermitController::class, 'publicRecordReturnByNip'])->whereNumber('id');
+    Route::post('/public/exit-permits/{id}/resolve-unfinished', [ExitPermitController::class, 'publicResolveUnfinished'])->whereNumber('id');
     Route::get('/public/exit-permits/group/{group_id}', [ExitPermitController::class, 'publicGroupMembers']);
 
     // Public Employee Search

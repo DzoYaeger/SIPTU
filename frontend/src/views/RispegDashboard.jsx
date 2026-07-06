@@ -47,10 +47,8 @@ const VIOLATION_TYPES = [
     key: "late",
     label: "Terlambat Masuk",
     icon: <ClockCircleOutlined />,
-    color: "#ff6b35",
-    gradientFrom: "#ff6b35",
-    gradientTo: "#f7440b",
-    bg: "#fff4e6",
+    color: "#f97316", // Amber/Orange
+    bg: "#fff7ed",
     hasMins: true,
     countKey: "total_late_entries",
     minKey: "total_late_minutes",
@@ -59,10 +57,8 @@ const VIOLATION_TYPES = [
     key: "earlyExit",
     label: "Pulang Cepat",
     icon: <FallOutlined />,
-    color: "#20c997",
-    gradientFrom: "#20c997",
-    gradientTo: "#12b886",
-    bg: "#e6fcf5",
+    color: "#10b981", // Emerald
+    bg: "#f0fdfa",
     hasMins: true,
     countKey: "total_early_exits",
     minKey: "total_early_minutes",
@@ -71,22 +67,18 @@ const VIOLATION_TYPES = [
     key: "uniform",
     label: "Tidak Berseragam",
     icon: <SafetyCertificateOutlined />,
-    color: "#4dabf7",
-    gradientFrom: "#4dabf7",
-    gradientTo: "#228be6",
-    bg: "#e7f5ff",
+    color: "#3b82f6", // Blue
+    bg: "#eff6ff",
     hasMins: false,
     countKey: "total_uniform_violations",
     minKey: null,
   },
   {
     key: "assembly",
-    label: "Tidak Apel Pagi",
+    label: "terlambat Absen Apel pagi",
     icon: <ApartmentOutlined />,
-    color: "#cc5de8",
-    gradientFrom: "#cc5de8",
-    gradientTo: "#ae3ec9",
-    bg: "#f3f0ff",
+    color: "#8b5cf6", // Purple
+    bg: "#f5f3ff",
     hasMins: false,
     countKey: "total_assembly_violations",
     minKey: null,
@@ -95,10 +87,8 @@ const VIOLATION_TYPES = [
     key: "missedIn",
     label: "Lupa Absen Masuk",
     icon: <ExclamationCircleOutlined />,
-    color: "#22b8cf",
-    gradientFrom: "#22b8cf",
-    gradientTo: "#0c8599",
-    bg: "#e3fafc",
+    color: "#06b6d4", // Cyan
+    bg: "#ecfeff",
     hasMins: false,
     countKey: "total_missed_checkins",
     minKey: null,
@@ -107,10 +97,8 @@ const VIOLATION_TYPES = [
     key: "missedOut",
     label: "Lupa Absen Pulang",
     icon: <WarningOutlined />,
-    color: "#f06595",
-    gradientFrom: "#f06595",
-    gradientTo: "#c2255c",
-    bg: "#fff0f6",
+    color: "#f43f5e", // Rose
+    bg: "#fff1f2",
     hasMins: false,
     countKey: "total_missed_checkouts",
     minKey: null,
@@ -118,109 +106,94 @@ const VIOLATION_TYPES = [
 ];
 
 const VIOLATION_CONFIG = {
-  "Terlambat Masuk": { color: "#ff6b35", bg: "#fff4e6", icon: <ClockCircleOutlined /> },
-  "Pulang Cepat":    { color: "#20c997", bg: "#e6fcf5", icon: <FallOutlined /> },
-  "Tidak Berseragam":{ color: "#4dabf7", bg: "#e7f5ff", icon: <SafetyCertificateOutlined /> },
-  "Tidak Apel":      { color: "#cc5de8", bg: "#f3f0ff", icon: <ApartmentOutlined /> },
-  "Lupa Absen Masuk":{ color: "#22b8cf", bg: "#e3fafc", icon: <ExclamationCircleOutlined /> },
-  "Lupa Absen Pulang":{ color: "#f06595", bg: "#fff0f6", icon: <WarningOutlined /> },
+  "Terlambat Masuk": { color: "#f97316", bg: "#fff7ed", icon: <ClockCircleOutlined /> },
+  "Pulang Cepat":    { color: "#10b981", bg: "#f0fdfa", icon: <FallOutlined /> },
+  "Tidak Berseragam":{ color: "#3b82f6", bg: "#eff6ff", icon: <SafetyCertificateOutlined /> },
+  "terlambat Absen Apel":{ color: "#8b5cf6", bg: "#f5f3ff", icon: <ApartmentOutlined /> },
+  "Lupa Absen Masuk":{ color: "#06b6d4", bg: "#ecfeff", icon: <ExclamationCircleOutlined /> },
+  "Lupa Absen Pulang":{ color: "#f43f5e", bg: "#fff1f2", icon: <WarningOutlined /> },
 };
 
 const getViolationStyle = (text) => {
   for (const [key, style] of Object.entries(VIOLATION_CONFIG)) {
     if (text.startsWith(key)) return style;
   }
-  return { color: "#e03131", bg: "#fff5f5", icon: <ExclamationCircleOutlined /> };
+  return { color: "#ef4444", bg: "#fef2f2", icon: <ExclamationCircleOutlined /> };
 };
 
 // ── Violation Summary Card ───────────────────────────────────────────
 const ViolationCard = ({ type, totalCount, totalMins }) => {
+  const accentColor = type.color;
   return (
     <div
       style={{
-        background: `linear-gradient(135deg, ${type.gradientFrom} 0%, ${type.gradientTo} 100%)`,
-        borderRadius: 16,
-        padding: "20px 18px",
+        background: "#ffffff",
+        borderRadius: 12,
+        padding: "16px 18px",
         position: "relative",
-        overflow: "hidden",
         height: "100%",
-        boxShadow: `0 4px 20px ${type.color}40`,
+        border: "1px solid #e2e8f0",
+        borderLeft: `4px solid ${accentColor}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
         cursor: "default",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.transform = "translateY(-3px)";
-        e.currentTarget.style.boxShadow = `0 8px 30px ${type.color}60`;
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0,0,0,0.05)";
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = `0 4px 20px ${type.color}40`;
+        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
       }}
     >
-      {/* Background decorative circle */}
-      <div
-        style={{
-          position: "absolute",
-          top: -20,
-          right: -20,
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.12)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: -30,
-          right: 20,
-          width: 60,
-          height: 60,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.08)",
-        }}
-      />
+      <div>
+        {/* Icon & Label row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: `${accentColor}15`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              color: accentColor,
+              flexShrink: 0,
+            }}
+          >
+            {type.icon}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#475569", // slate-600
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {type.label}
+          </div>
+        </div>
 
-      {/* Icon */}
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: "rgba(255,255,255,0.25)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 16,
-          color: "#fff",
-          marginBottom: 12,
-        }}
-      >
-        {type.icon}
-      </div>
-
-      {/* Label */}
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "rgba(255,255,255,0.85)",
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          marginBottom: 6,
-        }}
-      >
-        {type.label}
-      </div>
-
-      {/* Count */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: type.hasMins ? 8 : 0 }}>
-        <span style={{ fontSize: 36, fontWeight: 800, color: "#fff", lineHeight: 1 }}>
-          {totalCount}
-        </span>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>
-          kali
-        </span>
+        {/* Count */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: type.hasMins ? 8 : 0 }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}>
+            {totalCount}
+          </span>
+          <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
+            kali
+          </span>
+        </div>
       </div>
 
       {/* Duration (only for terlambat & pulang cepat) */}
@@ -229,15 +202,18 @@ const ViolationCard = ({ type, totalCount, totalMins }) => {
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 5,
-            background: "rgba(255,255,255,0.2)",
-            borderRadius: 20,
-            padding: "3px 10px",
+            gap: 4,
+            background: `${accentColor}10`,
+            borderRadius: 6,
+            padding: "4px 8px",
+            alignSelf: "flex-start",
+            marginTop: 8,
+            maxWidth: "100%",
           }}
         >
-          <ClockCircleOutlined style={{ fontSize: 11, color: "rgba(255,255,255,0.9)" }} />
-          <span style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>
-            {Number(totalMins).toFixed(2)} menit total
+          <ClockCircleOutlined style={{ fontSize: 10, color: accentColor }} />
+          <span style={{ fontSize: 11, color: accentColor, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {Number(totalMins).toFixed(2)} mnt
           </span>
         </div>
       )}
@@ -246,69 +222,105 @@ const ViolationCard = ({ type, totalCount, totalMins }) => {
 };
 
 // ── Overview Stat Card ───────────────────────────────────────────────
-const StatCard = ({ icon, title, value, suffix, name, gradient, small }) => (
-  <Card
-    variant="borderless"
-    style={{
-      borderRadius: 14,
-      height: "100%",
-      background: gradient,
-      border: "none",
-      overflow: "hidden",
-      position: "relative",
-    }}
-    styles={{ body: { padding: small ? "16px 14px" : "20px 16px", position: "relative", zIndex: 1 } }}
-  >
-    <div style={{ position: "absolute", top: -15, right: -15, width: 70, height: 70, borderRadius: "50%", background: "rgba(255,255,255,0.1)" }} />
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-      <div style={{ flex: 1 }}>
-        <Typography.Text style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 600, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>
-          {title}
-        </Typography.Text>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: name ? 8 : 0 }}>
-          <span style={{ fontSize: small ? 22 : 28, fontWeight: 800, color: "#fff", lineHeight: 1 }}>
-            {value}
-          </span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>{suffix}</span>
-        </div>
-        {name && (
-          <Tag
+const StatCard = ({ icon, title, value, suffix, name, color, small }) => {
+  const accentColor = color || "#4263eb";
+  return (
+    <Card
+      variant="borderless"
+      style={{
+        borderRadius: 12,
+        height: "100%",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderTop: `3px solid ${accentColor}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        overflow: "hidden",
+        transition: "transform 0.2s ease, box-shadow 0.2s ease",
+      }}
+      styles={{ body: { padding: small ? "14px 12px" : "16px 14px", position: "relative" } }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", minHeight: 88 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Typography.Text 
+              style={{ 
+                fontSize: 10, 
+                color: "#64748b", 
+                fontWeight: 700, 
+                display: "block", 
+                marginBottom: 6, 
+                textTransform: "uppercase", 
+                letterSpacing: "0.5px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {title}
+            </Typography.Text>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
+              <span style={{ fontSize: small ? 20 : 24, fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+                {value}
+              </span>
+              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>{suffix}</span>
+            </div>
+          </div>
+          
+          <div
             style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              color: "#fff",
-              borderRadius: 6,
-              fontSize: 11,
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: `${accentColor}15`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 15,
+              color: accentColor,
+              flexShrink: 0,
             }}
           >
-            <TrophyOutlined style={{ marginRight: 4 }} />
-            {name}
-          </Tag>
+            {icon}
+          </div>
+        </div>
+
+        {name && (
+          <Tooltip title={name} placement="top">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                padding: "4px 8px",
+                marginTop: 10,
+                maxWidth: "100%",
+                cursor: "pointer",
+              }}
+            >
+              <TrophyOutlined style={{ color: accentColor, fontSize: 11, flexShrink: 0 }} />
+              <span
+                style={{
+                  fontSize: 10.5,
+                  color: "#475569",
+                  fontWeight: 600,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                }}
+              >
+                {name}
+              </span>
+            </div>
+          </Tooltip>
         )}
       </div>
-      <div
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 10,
-          background: "rgba(255,255,255,0.2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 17,
-          color: "#fff",
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 // ── Distribution Bar ─────────────────────────────────────────────────
 const DistributionBar = ({ data, total }) => {
@@ -813,7 +825,7 @@ const RispegDashboard = () => {
                 title="Total Pelanggaran"
                 value={totalViolations}
                 suffix="kejadian"
-                gradient="linear-gradient(135deg, #e03131 0%, #c92a2a 100%)"
+                color="#ef4444"
               />
             </Col>
             <Col xs={12} sm={8} md={6} lg={4}>
@@ -822,7 +834,7 @@ const RispegDashboard = () => {
                 title="Pegawai Bermasalah"
                 value={totalEmployeesWithViolations}
                 suffix="orang"
-                gradient="linear-gradient(135deg, #e8590c 0%, #d9480f 100%)"
+                color="#f97316"
               />
             </Col>
             <Col xs={12} sm={8} md={6} lg={4}>
@@ -832,7 +844,7 @@ const RispegDashboard = () => {
                 value={stats?.summary?.top_points?.total_points || 0}
                 suffix="poin"
                 name={stats?.summary?.top_points?.name}
-                gradient="linear-gradient(135deg, #c2255c 0%, #a61e4d 100%)"
+                color="#d946ef"
               />
             </Col>
             <Col xs={12} sm={8} md={6} lg={4}>
@@ -841,7 +853,7 @@ const RispegDashboard = () => {
                 title="Total Menit Terlambat"
                 value={monthlyTotals.total_late_minutes || 0}
                 suffix="menit"
-                gradient="linear-gradient(135deg, #f59f00 0%, #e67700 100%)"
+                color="#eab308"
               />
             </Col>
             <Col xs={12} sm={8} md={6} lg={4}>
@@ -851,7 +863,7 @@ const RispegDashboard = () => {
                 value={stats?.summary?.most_late_entries?.total_late_entries || 0}
                 suffix="kali"
                 name={stats?.summary?.most_late_entries?.name}
-                gradient="linear-gradient(135deg, #ff6b35 0%, #f7440b 100%)"
+                color="#f43f5e"
               />
             </Col>
             <Col xs={12} sm={8} md={6} lg={4}>
@@ -861,7 +873,7 @@ const RispegDashboard = () => {
                 value={stats?.summary?.most_early_exits?.total_early_exits || 0}
                 suffix="kali"
                 name={stats?.summary?.most_early_exits?.name}
-                gradient="linear-gradient(135deg, #20c997 0%, #12b886 100%)"
+                color="#10b981"
               />
             </Col>
           </Row>

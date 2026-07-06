@@ -24,7 +24,35 @@ class UserController extends Controller
         $request->validate([
             'nip' => 'required|string',
             'password' => 'required|string',
+            'recaptcha_token' => 'required|string',
         ]);
+
+        if (!app()->runningUnitTests()) {
+            $recaptchaToken = $request->input('recaptcha_token');
+            $secretKey = env('RECAPTCHA_SECRET_KEY', '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe');
+
+            try {
+                $response = \Illuminate\Support\Facades\Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                    'secret' => $secretKey,
+                    'response' => $recaptchaToken,
+                    'remoteip' => $request->ip(),
+                ]);
+
+                if (!$response->successful() || !$response->json('success')) {
+                    throw ValidationException::withMessages([
+                        'recaptcha_token' => ['Verifikasi reCAPTCHA gagal. Silakan coba lagi.'],
+                    ]);
+                }
+            } catch (\Exception $e) {
+                if ($e instanceof ValidationException) {
+                    throw $e;
+                }
+                \Illuminate\Support\Facades\Log::error('reCAPTCHA verification error: ' . $e->getMessage());
+                throw ValidationException::withMessages([
+                    'recaptcha_token' => ['Gagal melakukan verifikasi keamanan. Silakan coba lagi.'],
+                ]);
+            }
+        }
 
         // Check if user exists by NIP
         $user = User::where('nip', $request->nip)->first();

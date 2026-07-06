@@ -430,6 +430,58 @@ class ExitPermitController extends Controller
     }
 
     /**
+     * PUBLIC: Resolve unfinished exit permit via hash link (no geofence).
+     */
+    public function publicResolveUnfinished(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'nip' => 'required|string|max:30',
+            'token' => 'required|string',
+            'return_time' => 'required|string|regex:/^\d{2}:\d{2}$/',
+        ]);
+
+        $permit = ExitPermit::findOrFail($id);
+        $nip = trim((string) $validated['nip']);
+        $token = trim((string) $validated['token']);
+
+        // Verify token
+        $expectedToken = sha1($permit->id . $permit->nip . $permit->created_at . 'siptusecret123');
+        if ($token !== $expectedToken || (string)$permit->nip !== $nip) {
+            return response()->json(['message' => 'Token verifikasi tidak valid atau tidak cocok.'], 403);
+        }
+
+        if ($permit->status === 'returned') {
+            return response()->json(['message' => 'Izin keluar ini sudah diselesaikan sebelumnya.'], 422);
+        }
+
+        $returnTime = $validated['return_time'] . ':00';
+        $exitTime = Carbon::parse($permit->date->format('Y-m-d') . ' ' . $permit->exit_time, 'Asia/Makassar');
+        $returnDateTime = Carbon::parse($permit->date->format('Y-m-d') . ' ' . $returnTime, 'Asia/Makassar');
+
+        if ($returnDateTime->lt($exitTime)) {
+            return response()->json(['message' => 'Jam kembali tidak boleh kurang dari jam keluar.'], 422);
+        }
+
+        $durationSeconds = $this->calculateEffectiveSeconds($permit->date, $exitTime, $returnDateTime);
+        $durationMinutes = (int) floor($durationSeconds / 60);
+
+        $permit->update([
+            'return_time' => $returnTime,
+            'duration_seconds' => $durationSeconds,
+            'duration_minutes' => $durationMinutes,
+            'status' => 'returned',
+            'return_recorded_by_admin' => false,
+            'return_recorded_by_user_id' => null,
+            'return_recorded_note' => 'Diselesaikan secara mandiri melalui link WhatsApp',
+        ]);
+
+        return response()->json([
+            'message' => 'Jam kembali berhasil disimpan.',
+            'permit' => $permit->fresh(),
+        ]);
+    }
+
+    /**
      * PROTECTED: Geofence Ping (Called periodically from PWA when an exit permit is active)
      */
     public function geofencePing(Request $request)

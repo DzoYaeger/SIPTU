@@ -8,6 +8,7 @@ use App\Console\Commands\CheckOverdueBmnLoans;
 use App\Console\Commands\CheckDueTodayBmnLoans;
 use App\Console\Commands\AutoResolveItHelpdeskTickets;
 use App\Console\Commands\SendDailyExitPermitSummary;
+use App\Console\Commands\CheckUnfinishedExitPermits;
 use App\Console\Commands\ResetQueueDaily;
 
 Artisan::command('inspire', function () {
@@ -30,6 +31,11 @@ Schedule::command(AutoResolveItHelpdeskTickets::class)
     ->withoutOverlapping();
 
 Schedule::command(SendDailyExitPermitSummary::class)
+    ->dailyAt('16:00')
+    ->timezone('Asia/Makassar')
+    ->withoutOverlapping();
+
+Schedule::command(CheckUnfinishedExitPermits::class)
     ->dailyAt('16:00')
     ->timezone('Asia/Makassar')
     ->withoutOverlapping();

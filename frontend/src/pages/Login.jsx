@@ -1,8 +1,9 @@
-import { LockOutlined, IdcardOutlined, AndroidOutlined, ArrowRightOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { LockOutlined, IdcardOutlined, AndroidOutlined } from '@ant-design/icons';
 import { Alert, Button, Checkbox, Form, Input, Modal, message } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import ReCaptcha from '../components/ReCaptcha.jsx';
 import './Login.css';
 
 const REMEMBER_CREDENTIAL_KEY = 'sipaus_remember_credentials';
@@ -22,84 +23,7 @@ const readRememberedCredentials = () => {
   }
 };
 
-const ModernCaptcha = ({ onVerify, verified }) => {
-  const [position, setPosition] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef(null);
-  const sliderRef = useRef(null);
-
-  const handleStart = (e) => {
-    if (verified) return;
-    setIsDragging(true);
-  };
-
-  const handleMove = useCallback((e) => {
-    if (!isDragging || verified) return;
-    const container = containerRef.current;
-    const slider = sliderRef.current;
-    if (!container || !slider) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    let x = clientX - containerRect.left - 25;
-
-    const maxMove = containerRect.width - slider.offsetWidth - 8;
-    if (x < 0) x = 0;
-    if (x > maxMove) x = maxMove;
-
-    setPosition(x);
-
-    if (x >= maxMove - 5) {
-      setIsDragging(false);
-      setPosition(maxMove);
-      onVerify(true);
-    }
-  }, [isDragging, verified, onVerify]);
-
-  const handleEnd = useCallback(() => {
-    if (verified) return;
-    setIsDragging(false);
-    if (position < (containerRef.current?.offsetWidth - 60)) {
-      setPosition(0);
-    }
-  }, [verified, position]);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove);
-      window.addEventListener('touchend', handleEnd);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleMove);
-      window.removeEventListener('touchend', handleEnd);
-    };
-  }, [isDragging, handleMove, handleEnd]);
-
-  return (
-    <div className="modern-captcha-container" ref={containerRef}>
-      <div 
-        className="captcha-progress" 
-        style={{ width: `${position + 46}px`, transition: isDragging ? 'none' : 'all 0.3s' }} 
-      />
-      <div className="captcha-text-bg">
-        {verified ? 'Verifikasi Berhasil' : 'Geser untuk Verifikasi'}
-      </div>
-      <div 
-        className={`captcha-slider ${verified ? 'verified' : ''}`}
-        ref={sliderRef}
-        onMouseDown={handleStart}
-        onTouchStart={handleStart}
-        style={{ left: `${position + 4}px`, transition: isDragging ? 'none' : 'all 0.3s' }}
-      >
-        {verified ? <CheckCircleFilled style={{ fontSize: '20px' }} /> : <ArrowRightOutlined />}
-      </div>
-    </div>
-  );
-};
+// Captcha slider removed in favor of Google reCAPTCHA v2
 
 const Login = () => {
   const { login, authLoading, requestPasswordReset, resetPassword } = useAuth();
@@ -112,7 +36,8 @@ const Login = () => {
   const [resetLoading, setResetLoading] = useState(false);
   const [forgotStep, setForgotStep] = useState('request');
   const [forgotMessage, setForgotMessage] = useState(null);
-  const [isVerified, setIsVerified] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const recaptchaRef = useRef(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,8 +62,8 @@ const Login = () => {
   }, [form, remembered]);
 
   const handleSubmit = async (values) => {
-    if (!isVerified) {
-      message.warning('Silakan geser verifikasi terlebih dahulu.');
+    if (!recaptchaToken) {
+      message.warning('Silakan selesaikan verifikasi reCAPTCHA terlebih dahulu.');
       return;
     }
 
@@ -152,7 +77,7 @@ const Login = () => {
       } else {
         window.localStorage.removeItem(REMEMBER_CREDENTIAL_KEY);
       }
-      await login(values.nip, values.password);
+      await login(values.nip, values.password, recaptchaToken);
       navigate(postLoginTarget);
     } catch (err) {
       let msg = err.message || 'Gagal masuk. Periksa kembali kredensial Anda.';
@@ -164,7 +89,8 @@ const Login = () => {
       }
       setError(msg);
       message.error(msg);
-      setIsVerified(false);
+      // Reset reCAPTCHA on login failure
+      recaptchaRef.current?.reset();
     }
   };
 
@@ -259,7 +185,11 @@ const Login = () => {
             </span>
           </div>
 
-          <ModernCaptcha onVerify={setIsVerified} verified={isVerified} />
+          <ReCaptcha 
+            ref={recaptchaRef}
+            onChange={setRecaptchaToken}
+            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+          />
 
           {error && (
             <Alert
@@ -276,7 +206,7 @@ const Login = () => {
             size="large" 
             className="login-submit-btn" 
             loading={authLoading}
-            disabled={!isVerified}
+            disabled={!recaptchaToken}
           >
             Masuk Sekarang
           </Button>

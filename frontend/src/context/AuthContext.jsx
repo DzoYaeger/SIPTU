@@ -256,12 +256,12 @@ export function AuthProvider({ children }) {
   );
 
   const login = useCallback(
-    async (nip, password) => {
+    async (nip, password, recaptchaToken) => {
       setAuthLoading(true);
       try {
         const response = await apiFetch("/login", {
           method: "POST",
-          body: JSON.stringify({ nip, password }),
+          body: JSON.stringify({ nip, password, recaptcha_token: recaptchaToken }),
         });
 
         if (!response.ok) {

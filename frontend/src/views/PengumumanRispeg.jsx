@@ -22,7 +22,7 @@ const VIOLATION_COLORS = {
   "Terlambat Masuk":  { color: "#ff6b35", bg: "#fff4e6" },
   "Pulang Cepat":     { color: "#20c997", bg: "#e6fcf5" },
   "Tidak Berseragam": { color: "#4dabf7", bg: "#e7f5ff" },
-  "Terlambat Apel Pagi":       { color: "#cc5de8", bg: "#f3f0ff" },
+  "terlambat Absen Apel pagi":       { color: "#cc5de8", bg: "#f3f0ff" },
   "Lupa Absen Masuk": { color: "#22b8cf", bg: "#e3fafc" },
   "Lupa Absen Pulang":{ color: "#f06595", bg: "#fff0f6" },
 };
@@ -639,7 +639,7 @@ const PengumumanRispeg = () => {
               { label: "Terlambat Masuk",     color: "#ff6b35", bg: "#fff4e6", poin: 1, desc: "Hadir melewati jam masuk yang ditentukan" },
               { label: "Pulang Cepat",        color: "#20c997", bg: "#e6fcf5", poin: 1, desc: "Pulang sebelum jam kerja selesai" },
               { label: "Tidak Berseragam",    color: "#4dabf7", bg: "#e7f5ff", poin: 1, desc: "Tidak mengenakan seragam dinas yang ditentukan" },
-              { label: "Terlambat Apel Pagi", color: "#cc5de8", bg: "#f3f0ff", poin: 1, desc: "Tidak hadir tepat waktu di apel pagi" },
+              { label: "terlambat Absen Apel pagi", color: "#cc5de8", bg: "#f3f0ff", poin: 1, desc: "Tidak hadir tepat waktu di apel pagi" },
               { label: "Lupa Absen Masuk",    color: "#22b8cf", bg: "#e3fafc", poin: 1, desc: "Tidak melakukan absensi saat datang" },
               { label: "Lupa Absen Pulang",   color: "#f06595", bg: "#fff0f6", poin: 1, desc: "Tidak melakukan absensi saat pulang" },
             ].map((item) => (

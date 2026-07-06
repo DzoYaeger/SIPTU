@@ -235,7 +235,7 @@ class EmployeeDailyControlController extends Controller
             if ($c->violation_entry) $violations[] = "Terlambat Masuk ({$c->entry_late_minutes} menit)";
             if ($c->violation_exit) $violations[] = "Pulang Cepat ({$c->exit_early_minutes} menit)";
             if ($c->violation_uniform) $violations[] = "Tidak Berseragam";
-            if ($c->violation_assembly) $violations[] = "Terlambat Apel Pagi";
+            if ($c->violation_assembly) $violations[] = "terlambat Absen Apel pagi";
             if ($c->violation_missed_checkin) $violations[] = "Lupa Absen Masuk";
             if ($c->violation_missed_checkout) $violations[] = "Lupa Absen Pulang";
 

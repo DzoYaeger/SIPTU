@@ -81,6 +81,7 @@ import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import PengumumanRispeg from "../views/PengumumanRispeg.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import "./AppLayout.css";
+import MobileAppShell from "./MobileAppShell.jsx";
 
 const { Title, Paragraph } = Typography;
 
@@ -254,6 +255,15 @@ function AppLayout() {
   const { message } = AntdApp.useApp();
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
   const [pendingRole, setPendingRole] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const isAdminUser = user?.base_role === "admin";
   const initialAppPath = useMemo(
@@ -519,24 +529,8 @@ function AppLayout() {
   );
 
 
-  return (
-    <Layout className="app-layout">
-      <NavbarMenu
-        activeKey={navActiveKey}
-        onMenuClick={handleMenuClick}
-        modules={modifiedModulesTree}
-        allowedSlugs={accessibleModules}
-        isAdmin={isAdminUser}
-        extraItems={extraMenuItems}
-        user={user}
-        currentRole={currentRole}
-        profileMenu={profileMenu}
-        isSwitchingRole={isSwitchingRole}
-        roleLabel={roleLabelFn(currentRole)}
-      />
-      <Content className="app-content">
-        <div className="page-shell">
-          <Routes>
+  const routesNode = (
+    <Routes>
             <Route
               path="/"
               element={<Navigate to={initialAppPath} replace />}
@@ -869,7 +863,46 @@ function AppLayout() {
             />
             <Route path="account-settings" element={<AccountSettings />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
+    </Routes>
+  );
+
+  if (isMobile) {
+    return (
+      <MobileAppShell
+        activeKey={navActiveKey}
+        onMenuClick={handleMenuClick}
+        modules={modifiedModulesTree}
+        allowedSlugs={accessibleModules}
+        isAdmin={isAdminUser}
+        user={user}
+        currentRole={currentRole}
+        profileMenu={profileMenu}
+        initialAppPath={initialAppPath}
+        logout={logout}
+      >
+        {routesNode}
+      </MobileAppShell>
+    );
+  }
+
+  return (
+    <Layout className="app-layout">
+      <NavbarMenu
+        activeKey={navActiveKey}
+        onMenuClick={handleMenuClick}
+        modules={modifiedModulesTree}
+        allowedSlugs={accessibleModules}
+        isAdmin={isAdminUser}
+        extraItems={extraMenuItems}
+        user={user}
+        currentRole={currentRole}
+        profileMenu={profileMenu}
+        isSwitchingRole={isSwitchingRole}
+        roleLabel={roleLabelFn(currentRole)}
+      />
+      <Content className="app-content">
+        <div className="page-shell">
+          {routesNode}
         </div>
       </Content>
     </Layout>
