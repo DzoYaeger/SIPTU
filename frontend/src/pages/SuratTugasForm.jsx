@@ -58,8 +58,8 @@ const LOKASI_OPTIONS = [
 
 /* ════════════ Step Definitions ════════════ */
 const STEPS = [
-  { key: "pegawai", title: "Nama Pegawai", subtitle: "Pilih pegawai yang akan ditugaskan", icon: <TeamOutlined />, color: "#6366f1", gradient: "linear-gradient(135deg, #6366f1, #818cf8)" },
-  { key: "tanggal", title: "Jadwal & Lokasi", subtitle: "Tentukan periode dan tujuan penugasan", icon: <CalendarOutlined />, color: "#8b5cf6", gradient: "linear-gradient(135deg, #8b5cf6, #a78bfa)" },
+  { key: "pegawai", title: "Nama Pegawai", subtitle: "Pilih pegawai yang akan ditugaskan", icon: <TeamOutlined />, color: "#0F5B99", gradient: "linear-gradient(135deg, #0F5B99, #4A90E2)" },
+  { key: "tanggal", title: "Jadwal & Lokasi", subtitle: "Tentukan periode dan tujuan penugasan", icon: <CalendarOutlined />, color: "#4A90E2", gradient: "linear-gradient(135deg, #4A90E2, #7ab2f3)" },
   { key: "anggaran", title: "MAK & Sarana", subtitle: "Lengkapi data anggaran dan sarana", icon: <DollarOutlined />, color: "#0ea5e9", gradient: "linear-gradient(135deg, #0ea5e9, #38bdf8)" },
   { key: "review", title: "Konfirmasi", subtitle: "Periksa kembali sebelum mengirim", icon: <CheckCircleOutlined />, color: "#10b981", gradient: "linear-gradient(135deg, #10b981, #34d399)" },
 ];
@@ -71,24 +71,24 @@ const injectStyles = () => {
   s.id = "stw-styles";
   s.textContent = `
     .stw-page { min-height:100vh; background:#f8f9fc; position:relative; overflow-x:hidden; }
-    .stw-page::before { content:''; position:absolute; top:-200px; right:-200px; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,.06),transparent 70%); pointer-events:none; }
+    .stw-page::before { content:''; position:absolute; top:-200px; right:-200px; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle,rgba(15,91,153,.06),transparent 70%); pointer-events:none; }
     .stw-container { position:relative; z-index:1; max-width:680px; margin:0 auto; padding:40px 20px 60px; }
 
     /* Header */
     .stw-header { text-align:center; margin-bottom:40px; animation:stw-fadeD .6s ease-out; }
     @keyframes stw-fadeD { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
-    .stw-logo { width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:26px;box-shadow:0 8px 24px rgba(99,102,241,.25);margin-bottom:16px; }
+    .stw-logo { width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#0F5B99,#4A90E2);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:26px;box-shadow:0 8px 24px rgba(15,91,153,.25);margin-bottom:16px; }
     .stw-header h2 { margin:0 0 4px!important; font-size:24px!important; font-weight:700!important; color:#1e293b!important; }
     .stw-header-sub { color:#94a3b8; font-size:14px; }
 
     /* Back */
     .stw-back { position:absolute;top:40px;left:20px;z-index:5;color:#94a3b8!important;border:1px solid #e2e8f0!important;background:#fff!important;border-radius:12px!important;box-shadow:0 1px 4px rgba(0,0,0,.04)!important;transition:all .2s ease!important; }
-    .stw-back:hover { color:#6366f1!important;border-color:#c7d2fe!important;transform:translateX(-2px)!important; }
+    .stw-back:hover { color:#0F5B99!important;border-color:#a5c9f5!important;transform:translateX(-2px)!important; }
 
     /* Progress */
     .stw-progress { display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px;animation:stw-fadeD .6s ease-out .1s both; }
     .stw-dot { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .5s cubic-bezier(.4,0,.2,1);position:relative;z-index:2;flex-shrink:0; }
-    .stw-dot.active { background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 16px rgba(99,102,241,.35);transform:scale(1.1); }
+    .stw-dot.active { background:linear-gradient(135deg,#0F5B99,#4A90E2);color:#fff;box-shadow:0 4px 16px rgba(15,91,153,.35);transform:scale(1.1); }
     .stw-dot.done { background:#10b981;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.3); }
     .stw-dot.pending { background:#f1f5f9;color:#cbd5e1;border:2px solid #e2e8f0; }
     .stw-line { width:60px;height:3px;border-radius:2px;transition:all .5s ease;flex-shrink:0; }
@@ -112,23 +112,23 @@ const injectStyles = () => {
     /* Form overrides */
     .stw-card .ant-form-item-label>label { font-weight:600;color:#334155;font-size:13px; }
     .stw-card .ant-select-selector,.stw-card .ant-input,.stw-card .ant-input-affix-wrapper,.stw-card .ant-picker { border-radius:14px!important;border-color:#e2e8f0!important;transition:all .3s ease!important;min-height:44px!important; }
-    .stw-card .ant-select-selector:hover,.stw-card .ant-input:hover,.stw-card .ant-input-affix-wrapper:hover,.stw-card .ant-picker:hover { border-color:#a5b4fc!important; }
-    .stw-card .ant-select-focused .ant-select-selector,.stw-card .ant-input:focus,.stw-card .ant-input-affix-wrapper-focused,.stw-card .ant-picker-focused { border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.1)!important; }
+    .stw-card .ant-select-selector:hover,.stw-card .ant-input:hover,.stw-card .ant-input-affix-wrapper:hover,.stw-card .ant-picker:hover { border-color:#93c5fd!important; }
+    .stw-card .ant-select-focused .ant-select-selector,.stw-card .ant-input:focus,.stw-card .ant-input-affix-wrapper-focused,.stw-card .ant-picker-focused { border-color:#0F5B99!important;box-shadow:0 0 0 3px rgba(15,91,153,.1)!important; }
 
     /* Nav */
     .stw-nav { display:flex;justify-content:space-between;gap:12px;margin-top:28px; }
-    .stw-bn { height:48px!important;border-radius:14px!important;font-weight:600!important;font-size:15px!important;border:none!important;padding:0 32px!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;box-shadow:0 4px 16px rgba(99,102,241,.3)!important;transition:all .3s ease!important; }
-    .stw-bn:hover { transform:translateY(-2px)!important;box-shadow:0 8px 24px rgba(99,102,241,.4)!important; }
+    .stw-bn { height:48px!important;border-radius:14px!important;font-weight:600!important;font-size:15px!important;border:none!important;padding:0 32px!important;background:linear-gradient(135deg,#0F5B99,#4A90E2)!important;box-shadow:0 4px 16px rgba(15,91,153,.3)!important;transition:all .3s ease!important; }
+    .stw-bn:hover { transform:translateY(-2px)!important;box-shadow:0 8px 24px rgba(15,91,153,.4)!important; }
     .stw-bp { height:48px!important;border-radius:14px!important;font-weight:600!important;font-size:15px!important;color:#64748b!important;border:1px solid #e2e8f0!important;padding:0 24px!important;transition:all .3s ease!important; }
-    .stw-bp:hover { color:#6366f1!important;border-color:#c7d2fe!important; }
+    .stw-bp:hover { color:#0F5B99!important;border-color:#a5c9f5!important; }
     .stw-bs { height:52px!important;border-radius:16px!important;font-weight:700!important;font-size:16px!important;border:none!important;background:linear-gradient(135deg,#10b981,#059669)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)!important;transition:all .3s ease!important; }
     .stw-bs:hover { transform:translateY(-2px)!important;box-shadow:0 10px 32px rgba(16,185,129,.4)!important; }
 
     /* Pegawai detail card */
     .stw-emp-card { display:flex;align-items:center;gap:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px;margin-bottom:8px;transition:all .3s ease;animation:stw-cardIn .3s ease-out both; }
     @keyframes stw-cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    .stw-emp-card:hover { border-color:#c7d2fe;background:#f0f0ff; }
-    .stw-emp-avatar { width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0; }
+    .stw-emp-card:hover { border-color:#a5c9f5;background:#e6f2fc; }
+    .stw-emp-avatar { width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#0F5B99,#4A90E2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0; }
     .stw-emp-info { flex:1;min-width:0; }
     .stw-emp-name { font-weight:600;color:#1e293b;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .stw-emp-nip { font-size:12px;color:#94a3b8;font-family:monospace; }
@@ -146,7 +146,7 @@ const injectStyles = () => {
     .stw-loc-pills { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
     .stw-loc-pill { padding:8px 16px;border-radius:24px;font-size:13px;cursor:pointer;border:1px solid;transition:all .25s ease;font-weight:500;user-select:none; }
     .stw-loc-pill:hover { transform:translateY(-1px); }
-    .stw-loc-pill.sel { border-color:#6366f1;background:#eef2ff;color:#4338ca; }
+    .stw-loc-pill.sel { border-color:#0F5B99;background:#e6f2fc;color:#0b4a7d; }
     .stw-loc-pill.idle { border-color:#e2e8f0;background:#fff;color:#64748b; }
 
     /* Review */
@@ -646,7 +646,7 @@ const SuratTugasForm = () => {
               </div>
             )}
             <Button type="primary" size="large" block icon={<RocketOutlined />} onClick={() => navigate("/app/layanan-mandiri")}
-              style={{ height: 48, borderRadius: 14, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", fontWeight: 600, marginTop: 24, boxShadow: "0 4px 16px rgba(99,102,241,.3)" }}>
+              style={{ height: 48, borderRadius: 14, background: "linear-gradient(135deg,#0F5B99,#4A90E2)", border: "none", fontWeight: 600, marginTop: 24, boxShadow: "0 4px 16px rgba(15,91,153,.3)" }}>
               Kembali ke Layanan Mandiri
             </Button>
             <Button size="large" block icon={<FileProtectOutlined />}
@@ -791,7 +791,7 @@ const SuratTugasForm = () => {
                             <div className="stw-emp-name">{emp.name}</div>
                             <div className="stw-emp-nip">
                               {emp.nip && <><IdcardOutlined style={{ marginRight: 4 }} />{emp.nip}</>}
-                              {emp.position && <span style={{ marginLeft: 8, color: "#a5b4fc", fontFamily: "inherit" }}>{emp.position}</span>}
+                              {emp.position && <span style={{ marginLeft: 8, color: "#6D94C5", fontFamily: "inherit" }}>{emp.position}</span>}
                             </div>
                           </div>
                           <button className="stw-emp-rm" onClick={() => removeEmployee(emp.id)}><CloseOutlined style={{ fontSize: 11 }} /></button>
@@ -804,7 +804,7 @@ const SuratTugasForm = () => {
                   <div style={{ marginTop: 24, padding: "20px", background: "#fdfefe", border: "1.5px dashed #e2e8f0", borderRadius: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", display: "flex", alignItems: "center", gap: 8 }}>
-                        <UserOutlined style={{ color: "#6366f1" }} /> Petugas Luar Database
+                        <UserOutlined style={{ color: "#0F5B99" }} /> Petugas Luar Database
                       </div>
                       <Button type="dashed" size="small" icon={<RocketOutlined />} onClick={() => setIsExtModalOpen(true)} style={{ borderRadius: 8, fontSize: 12 }}>
                         Tambah Petugas Luar
@@ -914,7 +914,7 @@ const SuratTugasForm = () => {
 
                   <div style={{ marginTop: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <CompassOutlined style={{ color: "#8b5cf6" }} /> Lokasi Tujuan Tugas
+                      <CompassOutlined style={{ color: "#4A90E2" }} /> Lokasi Tujuan Tugas
                     </div>
                     <Form.Item name="lokasi_hidden" hidden><Input /></Form.Item>
                     <div className="stw-loc-pills">
