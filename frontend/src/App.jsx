@@ -48,6 +48,27 @@ const PUBLIC_PATHS = [
   "/daftar-antrian",
 ];
 
+const SSOSelarasRedirect = () => {
+  const { token, user } = useAuth();
+
+  useEffect(() => {
+    if (token && user?.nip) {
+      window.location.href = `https://selaras.bpompalopo.com/auth/sso?token=${token}&user=${user.nip}`;
+    }
+  }, [token, user]);
+
+  if (!token) {
+    return <Navigate to="/login?redirect=/sso/selaras" replace />;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', height: '100vh', gap: '16px', background: '#0f172a', color: '#fff', fontFamily: 'sans-serif' }}>
+      <Spin size="large" />
+      <div style={{ fontSize: '16px', fontWeight: 'bold' }}>Mengalihkan ke Selaras...</div>
+    </div>
+  );
+};
+
 function App() {
   const { token, user, refreshProfile, currentRole } = useAuth();
   const location = useLocation();
@@ -213,6 +234,7 @@ function App() {
     location.pathname === "/login" ||
     location.pathname === "/app/kepegawaian-kalender" ||
     location.pathname === "/antrian-display" ||
+    location.pathname === "/sso/selaras" ||
     location.pathname.endsWith("/new");
 
   useEffect(() => {
@@ -354,6 +376,7 @@ function App() {
         path="/app/pengumuman-rispeg"
         element={token ? <PengumumanRispeg /> : <Navigate to="/login?redirect=/app/pengumuman-rispeg" replace />}
       />
+      <Route path="/sso/selaras" element={<SSOSelarasRedirect />} />
       <Route path="/app/*" element={protectedElement} />
       <Route path="*" element={<NotFound />} />
     </Routes>
