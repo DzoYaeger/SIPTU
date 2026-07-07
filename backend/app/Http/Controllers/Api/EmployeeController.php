@@ -243,7 +243,7 @@ class EmployeeController extends Controller
      */
     public function publicSearch(Request $request)
     {
-        $query = Employee::select('id', 'nip', 'name', 'function_area')
+        $query = Employee::select('id', 'nip', 'name', 'function_area', 'pangkat')
             ->where('status', 'active');
         
         if ($request->has('q') && $request->q) {
