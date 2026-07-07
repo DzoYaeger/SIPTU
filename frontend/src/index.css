@@ -53,11 +53,11 @@
   --color-text-secondary: #64748b;   /* Slate 500 */
   --color-text-muted:     #94a3b8;   /* Slate 400 */
 
-  /* Primary Brand — Indigo */
-  --color-primary:       #4F46E5;   /* Indigo 600 */
-  --color-primary-hover: #4338CA;   /* Indigo 700 */
-  --color-primary-light: #EEF2FF;   /* Indigo 50 */
-  --color-primary-ring:  rgba(79, 70, 229, 0.15);
+  /* Primary Brand — BPOM Royal Blue */
+  --color-primary:       #0F5B99;   /* BPOM Royal Blue */
+  --color-primary-hover: #0B4A7D;   /* Darker Blue */
+  --color-primary-light: #E6F2FC;   /* Very Light Blue */
+  --color-primary-ring:  rgba(15, 91, 153, 0.15);
 
   /* Border */
   --color-border:       #e2e8f0;   /* Slate 200 */

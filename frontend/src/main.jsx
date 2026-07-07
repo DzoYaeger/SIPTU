@@ -10,7 +10,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 
 const theme = {
   token: {
-    colorPrimary: '#6D94C5',
+    colorPrimary: '#0F5B99',
     colorBgLayout: '#F5EFE6',
     colorBgContainer: '#FFFFFF',
     colorText: '#1f2d3d',
