@@ -11,11 +11,17 @@
    Layout
    ══════════════════════════════════════════════ */
 .login-page {
+  /* Override global design tokens for this page to match BPOM logo colors */
+  --color-primary:       #0F5B99;   /* BPOM Royal Blue */
+  --color-primary-hover: #0B4A7D;   /* Darker Blue */
+  --color-primary-light: #E6F2FC;   /* Very Light Blue */
+  --color-primary-ring:  rgba(15, 91, 153, 0.15);
+
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-subtle);
+  background: radial-gradient(circle at 100% 0%, #e6f6f2 0%, #e8f1f7 40%, var(--color-bg-subtle) 100%);
   font-family: var(--ff-body);
   padding: 20px;
 }
@@ -136,13 +142,13 @@
   color: #fff !important;
   margin-top: var(--space-sm);
   transition: all var(--duration-fast) var(--ease-out) !important;
-  box-shadow: 0 4px 12px -4px rgba(79, 70, 229, 0.4) !important;
+  box-shadow: 0 4px 12px -4px rgba(15, 91, 153, 0.4) !important;
 }
 
 .login-submit-btn:not(:disabled):hover {
   background: var(--color-primary-hover) !important;
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.45) !important;
+  box-shadow: 0 8px 20px -6px rgba(15, 91, 153, 0.45) !important;
 }
 
 .login-submit-btn:active {

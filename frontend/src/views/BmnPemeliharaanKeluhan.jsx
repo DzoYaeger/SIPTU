@@ -23,6 +23,7 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   EditOutlined,
+  FilePdfOutlined,
   FileTextOutlined,
   MoreOutlined,
   SyncOutlined,
@@ -89,6 +90,39 @@ export default function BmnPemeliharaanKeluhan() {
   const [updateForm] = Form.useForm();
 
   const [reports, setReports] = useState([]);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const exportToPdf = async () => {
+    try {
+      setPdfLoading(true);
+      message.loading({ content: "Menyiapkan PDF...", key: "pdf_export" });
+      
+      const params = new URLSearchParams();
+      if (typeFilter !== "all") params.set("report_type", typeFilter);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (search.trim()) params.set("search", search.trim());
+      
+      const res = await apiFetch(`/bmn-maintenance-reports/export-pdf?${params.toString()}`);
+      if (!res.ok) throw new Error("Gagal mengunduh laporan PDF");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Laporan_Pemeliharaan_BMN_${dayjs().format("YYYYMMDD_HHmmss")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      
+      message.success({ content: "PDF berhasil diunduh.", key: "pdf_export" });
+    } catch (error) {
+      console.error("Export PDF error:", error);
+      message.error({ content: "Gagal mengunduh file PDF.", key: "pdf_export" });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -334,6 +368,15 @@ export default function BmnPemeliharaanKeluhan() {
             onSearch={fetchReports}
           />
           <Button onClick={fetchReports}>Refresh</Button>
+          <Button
+            type="primary"
+            danger
+            icon={<FilePdfOutlined />}
+            onClick={exportToPdf}
+            loading={pdfLoading}
+          >
+            Tarik PDF
+          </Button>
         </Space>
       </Card>
 

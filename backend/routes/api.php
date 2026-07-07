@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\EmployeeCalendarController;
 use App\Http\Controllers\Api\SuratTugasController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LpjController;
+use App\Http\Controllers\Api\ZoomController;
 use App\Http\Controllers\Api\QueueDisplayController;
 use App\Http\Controllers\Api\VisitorQueueController;
 use App\Http\Controllers\Api\NewsPostController;
@@ -288,6 +289,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::get('/employees/{id}/bmn-loans/excel', [BmnLoanController::class, 'exportLoansByEmployeeExcel']);
 
     // BMN Maintenance / Complaint
+    Route::get('/bmn-maintenance-reports/export-pdf', [BmnMaintenanceReportController::class, 'exportPdf']);
     Route::get('/bmn-maintenance-reports', [BmnMaintenanceReportController::class, 'index']);
     Route::post('/bmn-maintenance-reports', [BmnMaintenanceReportController::class, 'store']);
     Route::put('/bmn-maintenance-reports/{id}', [BmnMaintenanceReportController::class, 'update']);
@@ -427,4 +429,8 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::get('/visitor-queues', [VisitorQueueController::class, 'indexAdmin']);
     Route::put('/visitor-queues/{id}/call', [VisitorQueueController::class, 'callVisitor']);
     Route::put('/visitor-queues/{id}/serve', [VisitorQueueController::class, 'serveVisitor']);
+
+    // ─── Zoom Generator ─────────────
+    Route::get('/zoom/users', [ZoomController::class, 'listUsers']);
+    Route::post('/zoom/meetings', [ZoomController::class, 'createMeeting']);
 });

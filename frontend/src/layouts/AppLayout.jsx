@@ -31,6 +31,7 @@ import {
   FileProtectOutlined,
   DollarOutlined,
   SafetyCertificateOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { SafetyOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import NavbarMenu from "../components/NavbarMenu.jsx";
@@ -44,6 +45,7 @@ import BmnPermintaanPersediaanForm from "../views/BmnPermintaanPersediaanForm.js
 import BmnPermintaanPersediaanDetail from "../views/BmnPermintaanPersediaanDetail.jsx";
 import BmnLaporan from "../views/BmnLaporan.jsx";
 import BmnPemeliharaanKeluhan from "../views/BmnPemeliharaanKeluhan.jsx";
+import ZoomGenerator from "../views/ZoomGenerator.jsx";
 import PengadaanPdtt from "../views/PengadaanPdtt.jsx";
 import AdminPengajuanPdtt from "../views/AdminPengajuanPdtt.jsx";
 import PengelolaPegawaiPdtt from "../views/PengelolaPegawaiPdtt.jsx";
@@ -326,6 +328,7 @@ function AppLayout() {
     addChild(kepegawaianModule, "kepegawaian-kgb", "Kenaikan Gaji Berkala");
     addChild(kepegawaianModule, "kepegawaian-kalender", "Kalender Kegiatan");
     addChild(kepegawaianModule, "kepegawaian-surat-tugas", "Surat Tugas");
+    addChild(kepegawaianModule, "zoom-generator", "Zoom Generator");
 
     // New Rispeg Module
     const rispegModule = createModule("rispeg", "RISPEG");
@@ -407,6 +410,7 @@ function AppLayout() {
     "rispeg-izin-keluar": <ExportOutlined />,
     "rispeg-pengaturan-izin-keluar": <SettingOutlined />,
     "kepegawaian-surat-tugas": <FileProtectOutlined />,
+    "zoom-generator": <VideoCameraOutlined />,
     keuangan: <DollarOutlined />,
     "keuangan-lpj": <FileProtectOutlined />,
     "keuangan-revisi": <FormOutlined />,
@@ -601,6 +605,14 @@ function AppLayout() {
               element={
                 <ProtectedRoute moduleSlug="kepegawaian-surat-tugas">
                   <KepegawaianSuratTugas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="zoom-generator"
+              element={
+                <ProtectedRoute moduleSlug="zoom-generator">
+                  <ZoomGenerator />
                 </ProtectedRoute>
               }
             />

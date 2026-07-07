@@ -19,6 +19,7 @@ import {
   Col,
   Statistic,
   Divider,
+  Steps,
 } from "antd";
 import { buildMessageAdapter } from "../utils/notify.js";
 import {
@@ -34,6 +35,7 @@ import {
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
 import StatisticCard from "../components/StatisticCard.jsx";
+import "./BmnLaporan.css";
 
 const formatDate = (value) =>
   value ? dayjs(value).format("DD MMM YYYY") : "-";
@@ -54,6 +56,23 @@ const TagStatus = ({ status }) => {
       {status.toUpperCase()}
     </Tag>
   );
+};
+
+const getStepStatus = (status) => {
+  if (!status) return { current: 0, status: "wait" };
+  const normalized = status.toLowerCase();
+  
+  if (["rejected", "dikembalikan", "ditolak"].includes(normalized)) {
+    return { current: 1, status: "error", label: "Ditolak / Dikembalikan" };
+  }
+  if (["completed", "selesai", "dikembalikan"].includes(normalized)) {
+    return { current: 2, status: "finish", label: "Selesai" };
+  }
+  if (["approved", "disetujui", "in_progress", "active", "dipinjam"].includes(normalized)) {
+    return { current: 1, status: "process", label: "Disetujui & Diproses" };
+  }
+  // Default / pending / diajukan
+  return { current: 0, status: "process", label: "Diajukan / Menunggu" };
 };
 
 const BmnLaporan = () => {
@@ -88,6 +107,8 @@ const BmnLaporan = () => {
   const [employeeLoansLoading, setEmployeeLoansLoading] = useState(false);
 
   // Trace State
+  const [traceType, setTraceType] = useState("spb");
+  const [traceSearchVal, setTraceSearchVal] = useState("");
   const [requestResult, setRequestResult] = useState(null);
   const [loanResult, setLoanResult] = useState(null);
   const [traceLoading, setTraceLoading] = useState(false);
@@ -105,12 +126,8 @@ const BmnLaporan = () => {
       setLoadingInitial(true);
       try {
         const [assetsResponse, employeesResponse] = await Promise.all([
-          apiFetch(
-            "/assets?pageSize=1000",
-          ),
-          apiFetch(
-            "/employees",
-          ), // Assuming /employees endpoint based on typical structure, will verify if fails
+          apiFetch("/assets?pageSize=1000"),
+          apiFetch("/employees"),
         ]);
 
         const assetsData = await assetsResponse.json();
@@ -159,9 +176,7 @@ const BmnLaporan = () => {
     setSelectedAsset(asset);
     setAssetLoansLoading(true);
     try {
-      const response = await apiFetch(
-        `/bmn/assets/${assetId}/loans`,
-      );
+      const response = await apiFetch(`/bmn/assets/${assetId}/loans`);
       const data = await response.json();
       setAssetLoans(Array.isArray(data) ? data : data.data || []);
     } catch (error) {
@@ -174,17 +189,16 @@ const BmnLaporan = () => {
     }
   };
 
-  const handleDateFilter = async () => {
-    if (!dateRange || dateRange.length !== 2) return;
+  const filterByRange = useCallback(async (range) => {
+    if (!range || range.length !== 2) return;
+    setDateRange(range);
     setDateLoansLoading(true);
     try {
       const params = new URLSearchParams({
-        from: dateRange[0].format("YYYY-MM-DD"),
-        to: dateRange[1].format("YYYY-MM-DD"),
+        from: range[0].format("YYYY-MM-DD"),
+        to: range[1].format("YYYY-MM-DD"),
       });
-      const response = await apiFetch(
-        `/bmn/loans?${params.toString()}`,
-      );
+      const response = await apiFetch(`/bmn/loans?${params.toString()}`);
       const data = await response.json();
       setDateLoans(Array.isArray(data) ? data : data.data || []);
     } catch (error) {
@@ -195,6 +209,10 @@ const BmnLaporan = () => {
     } finally {
       setDateLoansLoading(false);
     }
+  }, [apiFetch, notification]);
+
+  const handleDateFilter = () => {
+    filterByRange(dateRange);
   };
 
   const handleEmployeeSelect = async (employeeId) => {
@@ -207,9 +225,7 @@ const BmnLaporan = () => {
     setSelectedEmployee(emp);
     setEmployeeLoansLoading(true);
     try {
-      const response = await apiFetch(
-        `/employees/${employeeId}/bmn-loans`,
-      );
+      const response = await apiFetch(`/employees/${employeeId}/bmn-loans`);
       const data = await response.json();
       setEmployeeLoans(Array.isArray(data) ? data : data.data || []);
     } catch (error) {
@@ -228,19 +244,14 @@ const BmnLaporan = () => {
     setTraceError(null);
     setRequestResult(null);
     setLoanResult(null);
-    // const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
     try {
       if (type === "spb") {
-        const response = await apiFetch(
-          `/bmn/requests/search?number=${number}`,
-        );
+        const response = await apiFetch(`/bmn/requests/search?number=${number}`);
         if (!response.ok) throw new Error("Nomor SPB tidak ditemukan");
         const data = await response.json();
         setRequestResult(data);
       } else {
-        const response = await apiFetch(
-          `/bmn/loans/search?number=${number}`,
-        );
+        const response = await apiFetch(`/bmn/loans/search?number=${number}`);
         if (!response.ok) throw new Error("Nomor SPA tidak ditemukan");
         const data = await response.json();
         setLoanResult(data);
@@ -255,13 +266,11 @@ const BmnLaporan = () => {
   const handleDownload = async (format, context) => {
     const key = format === "pdf" ? "pdf" : "excel";
     setDownloadLoading((prev) => ({ ...prev, [key]: true }));
-    // const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
     try {
       let url, fileName;
       const endpoint = format === "pdf" ? "pdf" : "excel";
 
-      // Construct URL based on context
       if (context === "asset" && selectedAsset) {
         url = `/bmn/assets/${selectedAsset.id}/loans/${endpoint}`;
         fileName = `Laporan_Aset_${selectedAsset.nama_barang || selectedAsset.name}`;
@@ -313,95 +322,116 @@ const BmnLaporan = () => {
 
   const renderByAsset = () => (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Card
-        variant="borderless"
-        style={{ background: "#f5f7fa", marginBottom: 16 }}
-      >
-        <Space
-          align="center"
-          style={{ width: "100%", justifyContent: "space-between" }}
-        >
-          <Space>
-            <CodeSandboxOutlined style={{ fontSize: 24, color: "#1890ff" }} />
-            <div>
-              <Typography.Text strong style={{ fontSize: 16 }}>
-                Pilih Barang
-              </Typography.Text>
-              <div style={{ fontSize: 12, color: "#666" }}>
-                Lihat riwayat peminjaman per item
+      <div className="selector-card">
+        <Row gutter={[16, 16]} align="middle" justify="space-between">
+          <Col xs={24} md={12}>
+            <Space size="middle">
+              <CodeSandboxOutlined style={{ fontSize: 32, color: "#0F5B99" }} />
+              <div>
+                <Typography.Text strong style={{ fontSize: 16 }}>
+                  Pilih Aset BMN
+                </Typography.Text>
+                <div style={{ fontSize: 13, color: "#64748b" }}>
+                  Lihat informasi detail dan riwayat peminjaman per item aset
+                </div>
               </div>
-            </div>
-          </Space>
-          <Select
-            showSearch
-            placeholder="Pilih aset"
-            onChange={handleAssetSelect}
-            loading={loadingInitial}
-            options={assets.map((a) => ({
-              value: a.id,
-              label: `${a.nama_barang || "Tanpa Nama"} ${a.nup ? `(NUP: ${a.nup})` : ""}`,
-            }))}
-            style={{ width: 400 }}
-            allowClear
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
-          />
-        </Space>
-      </Card>
+            </Space>
+          </Col>
+          <Col xs={24} md={12} style={{ textAlign: "right" }}>
+            <Select
+              showSearch
+              placeholder="Cari nama barang atau NUP..."
+              onChange={handleAssetSelect}
+              loading={loadingInitial}
+              options={assets.map((a) => ({
+                value: a.id,
+                label: `${a.nama_barang || "Tanpa Nama"} ${a.nup ? `(NUP: ${a.nup})` : ""}`,
+              }))}
+              style={{ width: "100%", maxWidth: 400 }}
+              allowClear
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Col>
+        </Row>
+      </div>
 
       {selectedAsset && (
         <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <Card variant="borderless" style={{ height: "100%" }}>
-              <Typography.Title level={5}>Informasi Barang</Typography.Title>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Nama Barang">
-                  {selectedAsset.nama_barang}
-                </Descriptions.Item>
-                <Descriptions.Item label="Merek">
-                  {selectedAsset.merek_barang || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="NUP">
-                  {selectedAsset.nup || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Kode BMN">
-                  {selectedAsset.kode_bmn || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Kategori">
-                  {selectedAsset.category || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Status Saat Ini">
-                  <Tag
-                    color={
-                      selectedAsset.status === "tersedia" ? "green" : "orange"
-                    }
-                  >
-                    {selectedAsset.status?.toUpperCase()}
-                  </Tag>
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+              <Card className="info-card-premium" title="Detail Aset" variant="borderless">
+                <Descriptions column={1} size="small" bordered>
+                  <Descriptions.Item label="Nama Barang">
+                    <strong>{selectedAsset.nama_barang}</strong>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Merek">
+                    {selectedAsset.merek_barang || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="NUP">
+                    {selectedAsset.nup || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Kode BMN">
+                    {selectedAsset.kode_bmn || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Kategori">
+                    {selectedAsset.category || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Status">
+                    <Tag
+                      color={
+                        selectedAsset.status === "tersedia" ? "green" : "orange"
+                      }
+                      style={{ borderRadius: 12 }}
+                    >
+                      {selectedAsset.status?.toUpperCase()}
+                    </Tag>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+
+              <Row gutter={[12, 12]}>
+                <Col span={12}>
+                  <Card size="small" className="stats-card-premium" style={{ textAlign: "center" }}>
+                    <Statistic title="Total Pinjam" value={assetLoans.length} />
+                  </Card>
+                </Col>
+                <Col span={12}>
+                  <Card size="small" className="stats-card-premium" style={{ textAlign: "center" }}>
+                    <Statistic
+                      title="Status Aktif"
+                      value={assetLoans.filter(l => l.status === 'active' || l.status === 'dipinjam').length}
+                      valueStyle={{ color: '#faad14' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            </Space>
           </Col>
-          <Col xs={24} md={16}>
+          
+          <Col xs={24} lg={16}>
             <Card
-              title="Riwayat Peminjaman"
+              className="info-card-premium"
+              title="Riwayat Transaksi Peminjaman"
               variant="borderless"
               extra={
                 <Space>
                   <Button
-                    size="small"
+                    className="btn-download-pdf"
                     icon={<PrinterOutlined />}
                     onClick={() => handleDownload("pdf", "asset")}
+                    loading={downloadLoading.pdf}
                   >
-                    PDF
+                    Tarik PDF
                   </Button>
                   <Button
-                    size="small"
+                    className="btn-download-excel"
                     icon={<FileExcelOutlined />}
                     onClick={() => handleDownload("excel", "asset")}
+                    loading={downloadLoading.excel}
                   >
-                    Excel
+                    Tarik Excel
                   </Button>
                 </Space>
               }
@@ -409,7 +439,7 @@ const BmnLaporan = () => {
               <Table
                 dataSource={assetLoans}
                 rowKey="id"
-                size="small"
+                size="middle"
                 loading={assetLoansLoading}
                 pagination={{ pageSize: 5 }}
                 columns={[
@@ -444,36 +474,79 @@ const BmnLaporan = () => {
 
   const renderByDate = () => (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Space>
-        <DatePicker.RangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          format="DD MMM YYYY"
-          style={{ width: 280 }}
-        />
-        <Button
-          type="primary"
-          icon={<SearchOutlined />}
-          onClick={handleDateFilter}
-        >
-          Tampilkan Laporan
-        </Button>
-      </Space>
+      <div className="selector-card">
+        <Row gutter={[16, 16]} align="middle" justify="space-between">
+          <Col xs={24} md={12}>
+            <Space wrap size="middle" align="center">
+              <DatePicker.RangePicker
+                value={dateRange}
+                onChange={setDateRange}
+                format="DD MMM YYYY"
+                style={{ width: 280 }}
+              />
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={handleDateFilter}
+                loading={dateLoansLoading}
+                style={{ background: "#0F5B99" }}
+              >
+                Tampilkan Laporan
+              </Button>
+            </Space>
+          </Col>
+          <Col xs={24} md={12} style={{ textAlign: "right" }}>
+            <Space wrap size="small">
+              <Typography.Text type="secondary" style={{ fontSize: 13, marginRight: 8 }}>
+                Filter Cepat:
+              </Typography.Text>
+              <Tag
+                color="blue"
+                className="quick-filter-tag"
+                onClick={() => filterByRange([dayjs().startOf("day"), dayjs().endOf("day")])}
+              >
+                Hari Ini
+              </Tag>
+              <Tag
+                color="cyan"
+                className="quick-filter-tag"
+                onClick={() => filterByRange([dayjs().startOf("week"), dayjs().endOf("week")])}
+              >
+                Minggu Ini
+              </Tag>
+              <Tag
+                color="purple"
+                className="quick-filter-tag"
+                onClick={() => filterByRange([dayjs().startOf("month"), dayjs().endOf("month")])}
+              >
+                Bulan Ini
+              </Tag>
+              <Tag
+                color="magenta"
+                className="quick-filter-tag"
+                onClick={() => filterByRange([dayjs().startOf("year"), dayjs().endOf("year")])}
+              >
+                Tahun Ini
+              </Tag>
+            </Space>
+          </Col>
+        </Row>
+      </div>
 
       {dateLoans.length > 0 ? (
         <>
           <Row gutter={[16, 16]}>
-            <Col span={6}>
+            <Col xs={24} sm={8}>
               <StatisticCard
                 title="Total Transaksi"
                 value={dateLoans.length}
                 icon={<BarChartOutlined />}
-                color="#1890ff"
+                color="#0F5B99"
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={8}>
               <StatisticCard
-                title="Dipinjam"
+                title="Sedang Dipinjam"
                 value={
                   dateLoans.filter(
                     (l) => l.status === "active" || l.status === "dipinjam",
@@ -483,13 +556,13 @@ const BmnLaporan = () => {
                 color="#faad14"
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={8}>
               <StatisticCard
-                title="Dikembalikan"
+                title="Telah Dikembalikan"
                 value={
                   dateLoans.filter(
                     (l) =>
-                      l.status === "completed" || l.status === "dikembalikan",
+                      l.status === "completed" || l.status === "dikembalikan" || l.status === "selesai",
                   ).length
                 }
                 icon={<UserOutlined />}
@@ -499,21 +572,26 @@ const BmnLaporan = () => {
           </Row>
 
           <Card
-            title={`Laporan Periode: ${dateRange[0]?.format("DD MMM")} - ${dateRange[1]?.format("DD MMM YYYY")}`}
+            className="info-card-premium"
+            title={`Laporan Periode: ${dateRange[0]?.format("DD MMM YYYY")} - ${dateRange[1]?.format("DD MMM YYYY")}`}
             variant="borderless"
             extra={
               <Space>
                 <Button
+                  className="btn-download-pdf"
                   icon={<PrinterOutlined />}
                   onClick={() => handleDownload("pdf", "date")}
+                  loading={downloadLoading.pdf}
                 >
-                  Cetak PDF
+                  Tarik PDF
                 </Button>
                 <Button
+                  className="btn-download-excel"
                   icon={<FileExcelOutlined />}
                   onClick={() => handleDownload("excel", "date")}
+                  loading={downloadLoading.excel}
                 >
-                  Unduh Excel
+                  Tarik Excel
                 </Button>
               </Space>
             }
@@ -527,11 +605,11 @@ const BmnLaporan = () => {
                   title: "Daftar Aset",
                   dataIndex: "assets",
                   render: (assets) => (
-                    <ul style={{ paddingLeft: 20, margin: 0 }}>
+                    <ul style={{ paddingLeft: 16, margin: 0 }}>
                       {(Array.isArray(assets) ? assets : []).map((a, idx) => (
                         <li key={idx}>
-                          {a.nama_barang || a.name || "-"}{" "}
-                          {a.nup ? `(NUP: ${a.nup})` : ""}
+                          <strong>{a.nama_barang || a.name || "-"}</strong>
+                          {a.nup ? ` (NUP: ${a.nup})` : ""}
                         </li>
                       ))}
                     </ul>
@@ -558,108 +636,113 @@ const BmnLaporan = () => {
           </Card>
         </>
       ) : (
-        <Empty description="Pilih rentang tanggal dan klik Tampilkan" />
+        <Empty description="Pilih rentang tanggal atau gunakan filter cepat untuk menampilkan laporan" />
       )}
     </Space>
   );
 
   const renderByEmployee = () => (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Card variant="borderless" style={{ background: "#f5f7fa" }}>
-        <Space
-          align="center"
-          style={{ justifyContent: "space-between", width: "100%" }}
-        >
-          <Space>
-            <UserOutlined style={{ fontSize: 24, color: "#722ed1" }} />
-            <div>
-              <Typography.Text strong style={{ fontSize: 16 }}>
-                Pilih Pegawai
-              </Typography.Text>
-              <div style={{ fontSize: 12, color: "#666" }}>
-                Lihat aset yang sedang atau pernah dipinjam
+      <div className="selector-card">
+        <Row gutter={[16, 16]} align="middle" justify="space-between">
+          <Col xs={24} md={12}>
+            <Space size="middle">
+              <UserOutlined style={{ fontSize: 32, color: "#722ed1" }} />
+              <div>
+                <Typography.Text strong style={{ fontSize: 16 }}>
+                  Pilih Pegawai
+                </Typography.Text>
+                <div style={{ fontSize: 13, color: "#64748b" }}>
+                  Lihat riwayat aset yang dipinjam oleh pegawai tertentu
+                </div>
               </div>
-            </div>
-          </Space>
-          <Select
-            showSearch
-            style={{ width: 300 }}
-            placeholder="Nama pegawai atau NIP..."
-            optionFilterProp="children"
-            onChange={handleEmployeeSelect}
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
-            options={employees.map((e) => ({
-              value: e.id,
-              label: `${e.nama || e.name} (${e.nip})`,
-            }))}
-          />
-        </Space>
-      </Card>
+            </Space>
+          </Col>
+          <Col xs={24} md={12} style={{ textAlign: "right" }}>
+            <Select
+              showSearch
+              style={{ width: "100%", maxWidth: 400 }}
+              placeholder="Ketik nama pegawai atau NIP..."
+              optionFilterProp="children"
+              onChange={handleEmployeeSelect}
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={employees.map((e) => ({
+                value: e.id,
+                label: `${e.nama || e.name} (${e.nip})`,
+              }))}
+            />
+          </Col>
+        </Row>
+      </div>
 
       {selectedEmployee && (
         <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <Card title="Profil Pegawai" variant="borderless">
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  marginBottom: 20,
-                }}
-              >
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: "50%",
-                    background: "#f0f0f0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 10,
-                  }}
-                >
-                  <UserOutlined style={{ fontSize: 32, color: "#999" }} />
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+              <Card className="info-card-premium" title="Profil Pegawai" variant="borderless">
+                <div className="avatar-badge-container">
+                  <div className="avatar-circle">
+                    <UserOutlined style={{ fontSize: 36, color: "#722ed1" }} />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0, textAlign: "center" }}>
+                    {selectedEmployee.nama || selectedEmployee.name}
+                  </Typography.Title>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    NIP. {selectedEmployee.nip}
+                  </Typography.Text>
                 </div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  {selectedEmployee.nama || selectedEmployee.name}
-                </Typography.Title>
-                <Typography.Text type="secondary">
-                  {selectedEmployee.nip}
-                </Typography.Text>
-              </div>
-              <Descriptions column={1} size="small" bordered>
-                <Descriptions.Item label="Jabatan">
-                  {selectedEmployee.position || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Unit">
-                  {selectedEmployee.department || "-"}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+                <Descriptions column={1} size="small" bordered>
+                  <Descriptions.Item label="Jabatan">
+                    {selectedEmployee.position || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Unit / Bidang">
+                    {selectedEmployee.department || "-"}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+
+              <Row gutter={[12, 12]}>
+                <Col span={12}>
+                  <Card size="small" className="stats-card-premium" style={{ textAlign: "center" }}>
+                    <Statistic title="Total Pinjam" value={employeeLoans.length} />
+                  </Card>
+                </Col>
+                <Col span={12}>
+                  <Card size="small" className="stats-card-premium" style={{ textAlign: "center" }}>
+                    <Statistic
+                      title="Sedang Pinjam"
+                      value={employeeLoans.filter(l => l.status === 'active' || l.status === 'dipinjam').length}
+                      valueStyle={{ color: '#faad14' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            </Space>
           </Col>
-          <Col xs={24} md={16}>
+          <Col xs={24} lg={16}>
             <Card
-              title="Aset Dipinjam"
+              className="info-card-premium"
+              title="Aset yang Dipinjam"
               variant="borderless"
               extra={
                 <Space>
                   <Button
-                    size="small"
+                    className="btn-download-pdf"
                     icon={<PrinterOutlined />}
                     onClick={() => handleDownload("pdf", "employee")}
+                    loading={downloadLoading.pdf}
                   >
-                    PDF
+                    Tarik PDF
                   </Button>
                   <Button
-                    size="small"
+                    className="btn-download-excel"
                     icon={<FileExcelOutlined />}
                     onClick={() => handleDownload("excel", "employee")}
+                    loading={downloadLoading.excel}
                   >
-                    Excel
+                    Tarik Excel
                   </Button>
                 </Space>
               }
@@ -667,10 +750,10 @@ const BmnLaporan = () => {
               <Table
                 dataSource={employeeLoans}
                 rowKey="id"
-                size="small"
+                size="middle"
                 loading={employeeLoansLoading}
                 columns={[
-                  { title: "Barang", dataIndex: "asset_name" },
+                  { title: "Barang BMN", dataIndex: "asset_name" },
                   {
                     title: "Tgl Pinjam",
                     dataIndex: "loan_date",
@@ -690,162 +773,208 @@ const BmnLaporan = () => {
     </Space>
   );
 
-  const renderTrace = () => (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Row gutter={24}>
-        <Col span={12}>
-          <Card variant="borderless" title="Lacak Dokumen">
-            <Tabs
-              defaultActiveKey="spb"
-              items={[
-                {
-                  key: "spb",
-                  label: "Status SPB",
-                  children: (
-                    <Form
-                      layout="vertical"
-                      onFinish={(v) => handleTrace("spb", v.val)}
-                    >
-                      <Form.Item
-                        name="val"
-                        rules={[
-                          { required: true, message: "Masukkan No. SPB" },
-                        ]}
-                      >
-                        <Input
-                          prefix={<FileSearchOutlined />}
-                          placeholder="Contoh: SPB/2024/..."
-                        />
-                      </Form.Item>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        block
-                        loading={traceLoading}
-                      >
-                        Cari SPB
-                      </Button>
-                    </Form>
-                  ),
-                },
-                {
-                  key: "spa",
-                  label: "Status SPA",
-                  children: (
-                    <Form
-                      layout="vertical"
-                      onFinish={(v) => handleTrace("spa", v.val)}
-                    >
-                      <Form.Item
-                        name="val"
-                        rules={[
-                          { required: true, message: "Masukkan No. SPA" },
-                        ]}
-                      >
-                        <Input
-                          prefix={<SearchOutlined />}
-                          placeholder="Contoh: SPA/2024/..."
-                        />
-                      </Form.Item>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        block
-                        loading={traceLoading}
-                      >
-                        Cari SPA
-                      </Button>
-                    </Form>
-                  ),
-                },
+  const renderTrace = () => {
+    const spbSteps = requestResult ? getStepStatus(requestResult.status) : null;
+    const spaSteps = loanResult ? getStepStatus(loanResult.status) : null;
+
+    return (
+      <Space direction="vertical" style={{ width: "100%" }} size="large">
+        <div className="trace-search-bar">
+          <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>
+            Penelusuran Dokumen SPB / SPA BMN
+          </Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
+            Masukkan Nomor Surat Permintaan Barang (SPB) atau Surat Peminjaman Aset (SPA) untuk melacak status dokumen saat ini.
+          </Typography.Paragraph>
+          <Space.Compact style={{ width: "100%", maxWidth: 650 }}>
+            <Select
+              value={traceType}
+              style={{ width: 140 }}
+              onChange={setTraceType}
+              options={[
+                { label: "Nomor SPB", value: "spb" },
+                { label: "Nomor SPA", value: "spa" },
               ]}
             />
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card
-            variant="borderless"
-            title="Hasil Penelusuran"
-            style={{ minHeight: 300 }}
-          >
-            {traceError && <Alert type="error" message={traceError} showIcon />}
-            {requestResult && (
-              <Descriptions
-                title={`SPB: ${requestResult.spb_number || requestResult.nomor}`}
-                column={1}
-                bordered
-                size="small"
-              >
-                <Descriptions.Item label="Status">
-                  <TagStatus status={requestResult.status} />
-                </Descriptions.Item>
-                <Descriptions.Item label="Pemohon">
-                  {requestResult.nama}
-                </Descriptions.Item>
-                <Descriptions.Item label="Tanggal">
-                  {formatDate(requestResult.tanggal_pengajuan)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Detail">
-                  {requestResult.items
-                    ?.map((i) => `${i.nama_barang} (${i.jumlah})`)
-                    .join(", ")}
-                </Descriptions.Item>
-              </Descriptions>
-            )}
-            {loanResult && (
-              <Descriptions
-                title={`SPA: ${loanResult.spa_number || loanResult.nomor}`}
-                column={1}
-                bordered
-                size="small"
-              >
-                <Descriptions.Item label="Status">
-                  <TagStatus status={loanResult.status} />
-                </Descriptions.Item>
-                <Descriptions.Item label="Peminjam">
-                  {loanResult.borrower_name}
-                </Descriptions.Item>
-                <Descriptions.Item label="Periode">
-                  {formatDate(loanResult.loan_date)} -{" "}
-                  {formatDate(loanResult.return_date)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Aset">
-                  {loanResult.asset_name}
-                </Descriptions.Item>
-              </Descriptions>
-            )}
-            {!requestResult && !loanResult && !traceError && (
-              <Empty
-                description="Hasil pencarian akan muncul di sini"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
-    </Space>
-  );
+            <Input
+              placeholder={traceType === "spb" ? "Contoh: SPB/2026/0001" : "Contoh: SPA/2026/0001"}
+              value={traceSearchVal}
+              onChange={(e) => setTraceSearchVal(e.target.value)}
+              onPressEnter={() => handleTrace(traceType, traceSearchVal)}
+            />
+            <Button
+              type="primary"
+              style={{ background: "#0F5B99" }}
+              onClick={() => handleTrace(traceType, traceSearchVal)}
+              loading={traceLoading}
+              icon={<SearchOutlined />}
+            >
+              Lacak
+            </Button>
+          </Space.Compact>
+        </div>
+
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={24}>
+            <div className="trace-result-card">
+              <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 20 }}>
+                <FileSearchOutlined style={{ marginRight: 8, color: "#0F5B99" }} />
+                Hasil Pelacakan
+              </Typography.Title>
+              
+              {traceError && (
+                <Alert
+                  type="error"
+                  message="Dokumen Tidak Ditemukan"
+                  description={traceError}
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
+              {requestResult && (
+                <Row gutter={[24, 24]}>
+                  <Col xs={24} md={12}>
+                    <Descriptions
+                      title={`Detail SPB: ${requestResult.spb_number || requestResult.nomor}`}
+                      column={1}
+                      bordered
+                      size="middle"
+                    >
+                      <Descriptions.Item label="Status Akhir">
+                        <TagStatus status={requestResult.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Nama Pemohon">
+                        {requestResult.nama || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Tanggal Pengajuan">
+                        {formatDate(requestResult.tanggal_pengajuan)}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Daftar Kebutuhan Barang">
+                        <ul style={{ paddingLeft: 16, margin: 0 }}>
+                          {(requestResult.items || []).map((item, idx) => (
+                            <li key={idx}>
+                              {item.nama_barang} <strong>({item.jumlah} pcs)</strong>
+                            </li>
+                          ))}
+                        </ul>
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Col>
+                  
+                  <Col xs={24} md={12} style={{ borderLeft: "1px solid #f1f5f9", paddingLeft: 24 }}>
+                    <Typography.Title level={5} style={{ fontSize: 14, color: "#64748b", marginBottom: 24 }}>
+                      Alur Proses Dokumen
+                    </Typography.Title>
+                    <Steps
+                      direction="vertical"
+                      size="small"
+                      current={spbSteps.current}
+                      status={spbSteps.status}
+                      items={[
+                        {
+                          title: "Laporan Diajukan",
+                          description: "Permintaan barang dikirim oleh staf pemohon.",
+                        },
+                        {
+                          title: spbSteps.status === "error" ? "Permintaan Ditolak" : "Disetujui / Diproses",
+                          description: spbSteps.status === "error" 
+                            ? "Pengajuan ditolak oleh pengelola BMN." 
+                            : "Pengajuan disetujui dan sedang disiapkan.",
+                        },
+                        {
+                          title: "Selesai",
+                          description: "Barang telah diserahterimakan.",
+                        },
+                      ]}
+                    />
+                  </Col>
+                </Row>
+              )}
+
+              {loanResult && (
+                <Row gutter={[24, 24]}>
+                  <Col xs={24} md={12}>
+                    <Descriptions
+                      title={`Detail SPA: ${loanResult.spa_number || loanResult.nomor}`}
+                      column={1}
+                      bordered
+                      size="middle"
+                    >
+                      <Descriptions.Item label="Status Akhir">
+                        <TagStatus status={loanResult.status} />
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Nama Peminjam">
+                        {loanResult.borrower_name || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Periode Pinjam">
+                        {formatDate(loanResult.loan_date)} s/d {formatDate(loanResult.return_date)}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Aset yang Dipinjam">
+                        <strong>{loanResult.asset_name || "-"}</strong>
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Col>
+                  
+                  <Col xs={24} md={12} style={{ borderLeft: "1px solid #f1f5f9", paddingLeft: 24 }}>
+                    <Typography.Title level={5} style={{ fontSize: 14, color: "#64748b", marginBottom: 24 }}>
+                      Alur Proses Dokumen
+                    </Typography.Title>
+                    <Steps
+                      direction="vertical"
+                      size="small"
+                      current={spaSteps.current}
+                      status={spaSteps.status}
+                      items={[
+                        {
+                          title: "Pengajuan Pinjaman",
+                          description: "Surat peminjaman diajukan oleh peminjam.",
+                        },
+                        {
+                          title: spaSteps.status === "error" ? "Peminjaman Ditolak" : "Disetujui & Aktif",
+                          description: spaSteps.status === "error" 
+                            ? "Peminjaman ditolak oleh pengelola BMN." 
+                            : "Aset diserahkan dan status peminjaman sedang aktif.",
+                        },
+                        {
+                          title: "Selesai Dikembalikan",
+                          description: "Aset telah dikembalikan dalam kondisi baik.",
+                        },
+                      ]}
+                    />
+                  </Col>
+                </Row>
+              )}
+
+              {!requestResult && !loanResult && !traceError && (
+                <Empty
+                  description="Silakan masukkan nomor dokumen untuk melihat hasil pelacakan alur"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              )}
+            </div>
+          </Col>
+        </Row>
+      </Space>
+    );
+  };
 
   return (
-    <div className="module-section">
-      <Space direction="vertical" style={{ width: "100%", marginBottom: 24 }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Laporan & Analitik
+    <div className="bmn-laporan-container">
+      <div className="report-header-section">
+        <Typography.Title level={3}>
+          Laporan & Analitik BMN
         </Typography.Title>
-        <Typography.Text type="secondary">
-          Pusat data pelaporan aset, peminjaman, dan penelusuran dokumen.
-        </Typography.Text>
-      </Space>
+        <p>
+          Pusat pemantauan data laporan aset, riwayat peminjaman harian, statistik pegawai, serta pelacakan dokumen SPB/SPA.
+        </p>
+      </div>
 
-      <Card
-        variant="borderless"
-        styles={{ body: { padding: "16px 24px" } }}
-        loading={loadingInitial}
-      >
+      <div className="tabs-card-wrapper">
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
-          type="card"
+          className="laporan-tabs"
           size="large"
           items={[
             {
@@ -886,7 +1015,7 @@ const BmnLaporan = () => {
             },
           ]}
         />
-      </Card>
+      </div>
     </div>
   );
 };

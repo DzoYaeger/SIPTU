@@ -35,6 +35,7 @@ import {
   SyncOutlined,
   MailOutlined,
   PhoneOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Modal, Steps, Tag, Spin, Button } from "antd";
 import dayjs from "dayjs";
@@ -210,6 +211,7 @@ const LayananMandiri = () => {
     { id: "it-helpdesk", title: "Laporan IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <ToolOutlined />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
     { id: "bmn-pemeliharaan-keluhan", title: "Pemeliharaan BMN", description: "Ajukan pemeliharaan aset atau sampaikan keluhan fasilitas.", icon: <ToolOutlined />, link: "/bmn-pemeliharaan-keluhan/new", accent: "#0d9488", emoji: "🛠️", category: "logistik" },
     { id: "surat-tugas", title: "Input Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/surat-tugas/new", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
+    { id: "zoom-generator", title: "Zoom Generator", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <VideoCameraOutlined />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
     { id: "sakip-2026", title: "DATA SAKIP 2026", description: "Sistem Akuntabilitas Kinerja Instansi Pemerintah Balai POM di Palopo.", icon: <GlobalOutlined />, link: "https://s.id/sakippalopo26", accent: "#10b981", emoji: "📊", category: "kepegawaian", isExternal: true },
   ];
 

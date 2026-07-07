@@ -8,14 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('surat_tugas', function (Blueprint $table) {
-            $table->timestamp('signed_kepala_at')->nullable()->after('signed_at');
-            $table->foreignId('signed_kepala_by')->nullable()->constrained('users')->nullOnDelete()->after('signed_by');
-        });
-
-        Schema::table('notification_settings', function (Blueprint $table) {
-            $table->json('kepala_balai_settings')->nullable()->after('slider_duration');
-        });
+        if (!Schema::hasColumn('surat_tugas', 'signed_kepala_at')) {
+            Schema::table('surat_tugas', function (Blueprint $table) {
+                $table->timestamp('signed_kepala_at')->nullable()->after('signed_at');
+                $table->foreignId('signed_kepala_by')->nullable()->constrained('users')->nullOnDelete()->after('signed_by');
+            });
+        }
     }
 
     public function down(): void
@@ -23,10 +21,6 @@ return new class extends Migration
         Schema::table('surat_tugas', function (Blueprint $table) {
             $table->dropForeign(['signed_kepala_by']);
             $table->dropColumn(['signed_kepala_at', 'signed_kepala_by']);
-        });
-
-        Schema::table('notification_settings', function (Blueprint $table) {
-            $table->dropColumn('kepala_balai_settings');
         });
     }
 };

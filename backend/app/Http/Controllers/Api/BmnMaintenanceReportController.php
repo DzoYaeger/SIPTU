@@ -10,6 +10,7 @@ use App\Models\NotificationSetting;
 use App\Services\FonnteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BmnMaintenanceReportController extends Controller
 {
@@ -44,6 +45,69 @@ class BmnMaintenanceReportController extends Controller
         }
 
         return response()->json($query->paginate(20));
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+        if (!$this->isAdminOrValidator($user)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $query = BmnMaintenanceReport::orderByDesc('created_at');
+
+        if ($request->filled('report_type')) {
+            $query->where('report_type', $request->string('report_type'));
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+        if ($request->filled('search')) {
+            $search = $request->string('search')->toString();
+            $query->where(function ($q) use ($search) {
+                $q->where('report_number', 'like', "%{$search}%")
+                    ->orWhere('reporter_name', 'like', "%{$search}%")
+                    ->orWhere('report_details', 'like', "%{$search}%")
+                    ->orWhere('asset_name', 'like', "%{$search}%");
+            });
+        }
+
+        $reports = $query->get();
+
+        $typeLabel = 'Semua Jenis';
+        if ($request->query('report_type') === 'pemeliharaan') {
+            $typeLabel = 'Pemeliharaan';
+        } elseif ($request->query('report_type') === 'keluhan') {
+            $typeLabel = 'Keluhan';
+        }
+
+        $statusLabel = 'Semua Status';
+        if ($request->query('status') === 'new') {
+            $statusLabel = 'Baru';
+        } elseif ($request->query('status') === 'in_progress') {
+            $statusLabel = 'Diproses';
+        } elseif ($request->query('status') === 'completed') {
+            $statusLabel = 'Selesai';
+        } elseif ($request->query('status') === 'rejected') {
+            $statusLabel = 'Ditolak';
+        }
+
+        $data = [
+            'reports'     => $reports,
+            'typeLabel'   => $typeLabel,
+            'statusLabel' => $statusLabel,
+            'date'        => now()->timezone('Asia/Makassar')->translatedFormat('d/m/Y H:i'),
+        ];
+
+        $pdf = Pdf::loadView('pdf.bmn_maintenance_report', $data)
+                  ->setPaper('a4', 'landscape');
+
+        $filename = 'Laporan_Pemeliharaan_BMN_' . now()->format('YmdHis') . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function store(Request $request, FonnteService $fonnteService)
