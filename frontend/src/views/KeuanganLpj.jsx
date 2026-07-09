@@ -191,7 +191,7 @@ export default function KeuanganLpj() {
 
     /* ── Parse saved LPJ item from DB into our state shape ── */
     const parseItemFromDb = (item, lokasi) => {
-        const autoRate = isLockedRegion(lokasi) ? LOCKED_DAILY_RATE : 0;
+        const autoRate = getLockedRate(lokasi);
         return {
             employee_id: item.employee_id,
             employee_name: item.employee_name,
@@ -224,8 +224,8 @@ export default function KeuanganLpj() {
             },
             uang_harian: {
                 checked: item.uang_harian != null,
-                per_hari: item.uang_harian_per_hari ?? (isLockedRegion(lokasi) ? getLockedRate(lokasi) : (item.uang_harian ?? 0)),
-                hari: item.uang_harian_hari ?? (item.uang_harian && isLockedRegion(lokasi) && getLockedRate(lokasi) ? Math.round(item.uang_harian / getLockedRate(lokasi)) : 0),
+                per_hari: item.uang_harian_per_hari ?? (autoRate > 0 ? autoRate : (item.uang_harian ?? 0)),
+                hari: item.uang_harian_hari ?? (item.uang_harian && autoRate > 0 ? Math.round(item.uang_harian / autoRate) : 0),
             },
             uang_penginapan: {
                 checked: item.uang_penginapan != null,
