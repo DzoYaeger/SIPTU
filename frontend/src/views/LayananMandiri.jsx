@@ -817,7 +817,7 @@ const LayananMandiri = () => {
         width={640}
         centered
         className="feed-detail-modal feed-modal--bmn"
-        styles={{ body: { padding: 0 } }}
+        styles={{ body: { padding: 0 }, mask: { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" } }}
       >
         {loadingBmn ? (
           <div className="feed-modal__loader"><Spin size="large" /><span>Memuat data peminjaman...</span></div>
@@ -918,7 +918,7 @@ const LayananMandiri = () => {
         width={640}
         centered
         className="feed-detail-modal feed-modal--it"
-        styles={{ body: { padding: 0 } }}
+        styles={{ body: { padding: 0 }, mask: { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" } }}
       >
         {loadingIt ? (
           <div className="feed-modal__loader"><Spin size="large" /><span>Memuat data laporan...</span></div>
@@ -1014,7 +1014,7 @@ const LayananMandiri = () => {
         width={640}
         centered
         className="feed-detail-modal feed-modal--exit"
-        styles={{ body: { padding: 0 } }}
+        styles={{ body: { padding: 0 }, mask: { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" } }}
       >
         {loadingExit ? (
           <div className="feed-modal__loader"><Spin size="large" /><span>Memuat data izin keluar...</span></div>
