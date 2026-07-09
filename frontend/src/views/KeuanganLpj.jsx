@@ -45,6 +45,8 @@ const COMPONENTS = [
     { key: "uang_transport_sewa_mobil",label: "Transport Sewa Mobil", color: "#06b6d4", type: "rate_days" },
     { key: "uang_harian",              label: "Uang Harian",          color: "#0d9488", type: "daily" },
     { key: "uang_penginapan",          label: "Penginapan",           color: "#8b5cf6", type: "rate_days" },
+    { key: "uang_fullboard",           label: "Paket Fullboard",      color: "#ec4899", type: "simple" },
+    { key: "uang_harian_fullboard",    label: "Uang Harian Fullboard", color: "#f59e0b", type: "daily" },
 ];
 
 const LPJ_STATUS = {
@@ -72,6 +74,8 @@ const getIconForComponent = (key) => {
         case "uang_transport_sewa_mobil": return <CarOutlined />;
         case "uang_harian":               return <DollarOutlined />;
         case "uang_penginapan":           return <HomeOutlined />;
+        case "uang_fullboard":            return <HomeOutlined />;
+        case "uang_harian_fullboard":     return <DollarOutlined />;
         default:                          return <DollarOutlined />;
     }
 };
@@ -85,6 +89,8 @@ const getDescForComponent = (key) => {
         case "uang_transport_sewa_mobil": return "Biaya rental/sewa mobil harian";
         case "uang_harian":               return "Uang saku harian perjalanan dinas";
         case "uang_penginapan":           return "Biaya hotel/penginapan per malam";
+        case "uang_fullboard":            return "Biaya paket meeting / penginapan Paket Fullboard";
+        case "uang_harian_fullboard":     return "Uang saku saku harian paket Fullboard per hari";
         default:                          return "Komponen biaya";
     }
 };
@@ -134,6 +140,21 @@ export default function KeuanganLpj() {
     const [keterangan, setKeterangan] = useState("");
     const [activeEmployeeKey, setActiveEmployeeKey] = useState(null);
     const [sidebarSearch, setSidebarSearch] = useState("");
+    const [employees, setEmployees] = useState([]);
+    const [bendaharaId, setBendaharaId] = useState(null);
+
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            try {
+                const res = await apiFetch("/employees?pageSize=1000");
+                const json = await res.json();
+                setEmployees(json.data ?? []);
+            } catch (err) {
+                console.error("Gagal memuat data pegawai:", err);
+            }
+        };
+        fetchEmployees();
+    }, [apiFetch]);
 
     useEffect(() => {
         const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 350);
@@ -166,6 +187,7 @@ export default function KeuanganLpj() {
             employee_name: item.employee_name,
             employee_nip: item.employee_nip,
             is_external: item.is_external,
+            nomor_spd: item.nomor_spd ?? "",
             uang_transport_bus: {
                 checked: item.uang_transport_bus != null,
                 berangkat: item.uang_transport_bus_berangkat ?? 0,
@@ -200,6 +222,15 @@ export default function KeuanganLpj() {
                 per_hari: item.uang_penginapan_harian ?? 0,
                 hari: item.uang_penginapan_hari ?? 0,
             },
+            uang_fullboard: {
+                checked: item.uang_fullboard != null,
+                value: item.uang_fullboard ?? 0,
+            },
+            uang_harian_fullboard: {
+                checked: item.uang_harian_fullboard != null,
+                per_hari: item.uang_harian_fullboard_per_hari ?? 0,
+                hari: item.uang_harian_fullboard_hari ?? 0,
+            },
         };
     };
 
@@ -211,12 +242,14 @@ export default function KeuanganLpj() {
         setLpjData(null);
         setLpjStatus("draft");
         setKeterangan("");
+        setBendaharaId(null);
         try {
             const res = await apiFetch(`/lpj/${st.id}`);
             const json = await res.json();
             setLpjData(json.lpj);
             setLpjStatus(json.lpj?.status ?? "draft");
             setKeterangan(json.lpj?.keterangan ?? "");
+            setBendaharaId(json.lpj?.bendahara_id ?? null);
             const lokasi = (json.surat_tugas ?? st)?.lokasi_tugas ?? "";
             if (json.lpj?.items?.length) {
                 const map = {};
@@ -241,16 +274,36 @@ export default function KeuanganLpj() {
         const lokasi = st?.lokasi_tugas ?? "";
         const autoRate = isLockedRegion(lokasi) ? LOCKED_DAILY_RATE : 0;
         const map = {};
+        let totalIndex = 0;
+        
         (st.employees ?? []).forEach((emp) => {
-            const entry = { employee_id: emp.id, employee_name: emp.name, employee_nip: emp.nip, is_external: false };
+            const letter = String.fromCharCode(65 + totalIndex);
+            const entry = { 
+                employee_id: emp.id, 
+                employee_name: emp.name, 
+                employee_nip: emp.nip, 
+                is_external: false, 
+                nomor_spd: st.nomor_st ? `${st.nomor_st}${letter}` : "" 
+            };
             COMPONENTS.forEach(c => { entry[c.key] = emptyComp(c.type, c.key === "uang_harian" ? autoRate : 0); });
             map[`emp_${emp.id}`] = entry;
+            totalIndex++;
         });
+
         (st.external_participants ?? []).forEach((ext, idx) => {
-            const entry = { employee_id: null, employee_name: ext.name, employee_nip: ext.nip ?? null, is_external: true };
+            const letter = String.fromCharCode(65 + totalIndex);
+            const entry = { 
+                employee_id: null, 
+                employee_name: ext.name, 
+                employee_nip: ext.nip ?? null, 
+                is_external: true, 
+                nomor_spd: st.nomor_st ? `${st.nomor_st}${letter}` : "" 
+            };
             COMPONENTS.forEach(c => { entry[c.key] = emptyComp(c.type, c.key === "uang_harian" ? autoRate : 0); });
             map[`ext_${ext.name}_${idx}`] = entry;
+            totalIndex++;
         });
+
         setItems(map);
         const firstKey = Object.keys(map)[0];
         setActiveEmployeeKey(firstKey || null);
@@ -285,14 +338,122 @@ export default function KeuanganLpj() {
         }));
     };
 
+    const updateItemProperty = (empKey, prop, value) => {
+        setItems((prev) => ({
+            ...prev,
+            [empKey]: {
+                ...prev[empKey],
+                [prop]: value
+            }
+        }));
+    };
+
+    const handlePrintSingle = async (employee) => {
+        if (!selectedSt || !lpjData) return;
+        try {
+            message.loading({ content: 'Menyiapkan dokumen...', key: 'lpj_print' });
+            
+            const params = new URLSearchParams();
+            if (employee.employee_id) {
+                params.set("employee_id", employee.employee_id);
+            } else {
+                params.set("employee_name", employee.employee_name);
+            }
+
+            const response = await apiFetch(
+                `/lpj/${selectedSt.id}/export-pdf?${params}`,
+                { method: "GET", headers: { Accept: "application/pdf" } }
+            );
+
+            if (!response.ok) throw new Error("Gagal mengunduh dokumen");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Rincian_Biaya_LPJ_${employee.employee_name.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            message.success({ content: 'Dokumen berhasil diunduh.', key: 'lpj_print' });
+        } catch (err) {
+            console.error(err);
+            message.error({ content: 'Gagal mencetak dokumen.', key: 'lpj_print' });
+        }
+    };
+
+    const handlePrintAll = async () => {
+        if (!selectedSt || !lpjData) return;
+        try {
+            message.loading({ content: 'Menyiapkan seluruh dokumen...', key: 'lpj_print_all' });
+            
+            const response = await apiFetch(
+                `/lpj/${selectedSt.id}/export-pdf`,
+                { method: "GET", headers: { Accept: "application/pdf" } }
+            );
+
+            if (!response.ok) throw new Error("Gagal mengunduh dokumen");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeNomorSt = selectedSt.nomor_st ? selectedSt.nomor_st.replace(/[\/\\]/g, '_') : selectedSt.id;
+            a.download = `Rincian_Biaya_LPJ_Semua_${safeNomorSt}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            message.success({ content: 'Seluruh dokumen berhasil diunduh.', key: 'lpj_print_all' });
+        } catch (err) {
+            console.error(err);
+            message.error({ content: 'Gagal mencetak dokumen.', key: 'lpj_print_all' });
+        }
+    };
+
+    const handlePrintRekap = async () => {
+        if (!selectedSt || !lpjData) return;
+        try {
+            message.loading({ content: 'Menyiapkan dokumen rekapitulasi...', key: 'lpj_print_rekap' });
+            
+            const response = await apiFetch(
+                `/lpj/${selectedSt.id}/export-rekap`,
+                { method: "GET", headers: { Accept: "application/pdf" } }
+            );
+
+            if (!response.ok) throw new Error("Gagal mengunduh dokumen");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeNomorSt = selectedSt.nomor_st ? selectedSt.nomor_st.replace(/[\/\\]/g, '_') : selectedSt.id;
+            a.download = `Rekapitulasi_LPJ_${safeNomorSt}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            message.success({ content: 'Dokumen rekapitulasi berhasil diunduh.', key: 'lpj_print_rekap' });
+        } catch (err) {
+            console.error(err);
+            message.error({ content: 'Gagal mencetak rekapitulasi.', key: 'lpj_print_rekap' });
+        }
+    };
+
     const handleSave = async () => {
         if (!selectedSt) return;
         const payload = {
             status: "final", keterangan: keterangan || null,
+            bendahara_id: bendaharaId || null,
             items: Object.values(items).map((item) => {
                 const row = {
                     employee_id: item.employee_id, employee_name: item.employee_name,
                     employee_nip: item.employee_nip, is_external: item.is_external,
+                    nomor_spd: item.nomor_spd || null,
                 };
                 COMPONENTS.forEach(c => {
                     const data = item[c.key];
@@ -315,6 +476,12 @@ export default function KeuanganLpj() {
                         } else if (c.key === "uang_penginapan") {
                             row["uang_penginapan_harian"] = data.per_hari || null;
                             row["uang_penginapan_hari"]   = data.hari || null;
+                        } else if (c.key === "uang_fullboard") {
+                            row["uang_fullboard_harian"] = data.per_hari || null;
+                            row["uang_fullboard_hari"]   = data.hari || null;
+                        } else if (c.key === "uang_harian_fullboard") {
+                            row["uang_harian_fullboard_per_hari"] = data.per_hari || null;
+                            row["uang_harian_fullboard_hari"]     = data.hari || null;
                         }
                         row[c.key] = (fmt(data.per_hari) * fmt(data.hari)) || null;
                     } else {
@@ -489,14 +656,15 @@ export default function KeuanganLpj() {
             );
         }
 
-        if (compDef.type === "daily" && compDef.key === "uang_harian") {
+        if (compDef.type === "daily" && (compDef.key === "uang_harian" || compDef.key === "uang_harian_fullboard")) {
             const total = fmt(compVal.per_hari) * fmt(compVal.hari);
+            const isUangHarian = compDef.key === "uang_harian";
             return (
                 <div className="klpj-sub-inputs">
                     <div className="klpj-sub-field">
                         <span className="klpj-sub-field-label">
                             Tarif / Hari
-                            {lockedRegion && <span className="klpj-auto-rate-badge">Auto</span>}
+                            {isUangHarian && lockedRegion && <span className="klpj-auto-rate-badge">Auto</span>}
                         </span>
                         <InputNumber
                             value={compVal.per_hari}
@@ -504,7 +672,7 @@ export default function KeuanganLpj() {
                             parser={v => Number(v.replace(/Rp\s?|[.]/g, ""))}
                             onChange={val => updateSubValue(empKey, compDef.key, "per_hari", val)}
                             min={0} placeholder="0"
-                            disabled={lockedRegion}
+                            disabled={isUangHarian && lockedRegion}
                         />
                     </div>
                     <span className="klpj-sub-multiply">×</span>
@@ -668,6 +836,25 @@ export default function KeuanganLpj() {
                                     </Tag>
                                 </div>
                             </div>
+                            <div className="klpj-info-item">
+                                <span className="klpj-info-label">Bendahara Pengeluaran</span>
+                                <div className="klpj-info-value" style={{ marginTop: 2 }}>
+                                    <Select
+                                        showSearch
+                                        style={{ width: '100%', minWidth: 200 }}
+                                        placeholder="Pilih Bendahara..."
+                                        optionFilterProp="label"
+                                        value={bendaharaId}
+                                        onChange={(val) => setBendaharaId(val)}
+                                        options={employees.map(emp => ({
+                                            value: emp.id,
+                                            label: `${emp.name} (NIP. ${emp.nip ?? '-'})`
+                                        }))}
+                                        allowClear
+                                        size="small"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Split Pane Layout */}
@@ -742,13 +929,35 @@ export default function KeuanganLpj() {
                                         const activeEmployee = items[activeEmployeeKey];
                                         return (
                                             <div className="klpj-detail-container">
-                                                <div className="klpj-detail-header">
-                                                    <Title level={4} className="klpj-detail-title">
-                                                        Rincian Biaya: {activeEmployee.employee_name}
-                                                    </Title>
-                                                    <span className="klpj-detail-subtitle">
-                                                        {activeEmployee.employee_nip || "NON-NIP"} {activeEmployee.is_external && <Tag color="gold" style={{ marginLeft: 6 }}>EKSTERNAL</Tag>}
-                                                    </span>
+                                                <div className="klpj-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div>
+                                                        <Title level={4} className="klpj-detail-title" style={{ margin: 0 }}>
+                                                            Rincian Biaya: {activeEmployee.employee_name}
+                                                        </Title>
+                                                        <span className="klpj-detail-subtitle">
+                                                            {activeEmployee.employee_nip || "NON-NIP"} {activeEmployee.is_external && <Tag color="gold" style={{ marginLeft: 6 }}>EKSTERNAL</Tag>}
+                                                        </span>
+                                                    </div>
+                                                    <Button 
+                                                        type="primary" 
+                                                        icon={<FileProtectOutlined />} 
+                                                        onClick={() => handlePrintSingle(activeEmployee)}
+                                                        disabled={!lpjData}
+                                                        title={!lpjData ? "Simpan data LPJ terlebih dahulu" : "Cetak rincian biaya pegawai ini"}
+                                                        size="middle"
+                                                    >
+                                                        Cetak Rincian
+                                                    </Button>
+                                                </div>
+
+                                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nomor SPD:</span>
+                                                    <Input 
+                                                        style={{ flex: 1 }}
+                                                        placeholder="Masukkan nomor lampiran SPD (contoh: PW.01.10.51B.06.26.238B)" 
+                                                        value={activeEmployee.nomor_spd || ""}
+                                                        onChange={e => updateItemProperty(activeEmployeeKey, "nomor_spd", e.target.value)}
+                                                    />
                                                 </div>
 
                                                 <div className="klpj-detail-items-list">
@@ -820,11 +1029,31 @@ export default function KeuanganLpj() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="klpj-modal-footer">
-                            <Button onClick={() => setModalVisible(false)}>Batal</Button>
-                            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-                                Simpan Laporan Biaya
-                            </Button>
+                        <div className="klpj-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                {lpjData && (
+                                    <Space size="middle">
+                                        <Button 
+                                            icon={<FileProtectOutlined />} 
+                                            onClick={handlePrintAll}
+                                        >
+                                            Cetak Semua Rincian (PDF)
+                                        </Button>
+                                        <Button 
+                                            icon={<FileProtectOutlined />} 
+                                            onClick={handlePrintRekap}
+                                        >
+                                            Cetak Rekapitulasi (PDF)
+                                        </Button>
+                                    </Space>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <Button onClick={() => setModalVisible(false)}>Batal</Button>
+                                <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                                    Simpan Laporan Biaya
+                                </Button>
+                            </div>
                         </div>
                     </Spin>
                 </div>

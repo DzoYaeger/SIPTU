@@ -13,7 +13,13 @@ class LpjHeader extends Model
         'status',
         'keterangan',
         'created_by',
+        'bendahara_id',
     ];
+
+    public function bendahara()
+    {
+        return $this->belongsTo(Employee::class, 'bendahara_id');
+    }
 
     public function suratTugas()
     {

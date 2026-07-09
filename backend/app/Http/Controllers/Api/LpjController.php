@@ -9,6 +9,7 @@ use App\Models\SuratTugas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LpjController extends Controller
 {
@@ -69,7 +70,7 @@ class LpjController extends Controller
             ->where('status', 'lengkap')
             ->findOrFail($suratTugasId);
 
-        $lpj = LpjHeader::with('items')
+        $lpj = LpjHeader::with(['items', 'bendahara'])
             ->where('surat_tugas_id', $st->id)
             ->first();
 
@@ -121,11 +122,13 @@ class LpjController extends Controller
         $validator = Validator::make($request->all(), [
             'status'                          => 'nullable|in:draft,final',
             'keterangan'                      => 'nullable|string|max:1000',
+            'bendahara_id'                    => 'nullable|integer|exists:employees,id',
             'items'                           => 'required|array',
             'items.*.employee_name'           => 'required|string|max:255',
             'items.*.employee_nip'            => 'nullable|string|max:50',
             'items.*.employee_id'             => 'nullable|integer|exists:employees,id',
             'items.*.is_external'             => 'nullable|boolean',
+            'items.*.nomor_spd'               => 'nullable|string|max:255',
             'items.*.uang_harian'             => 'nullable|numeric|min:0',
             'items.*.uang_harian_hari'        => 'nullable|integer|min:0',
             'items.*.uang_harian_per_hari'    => 'nullable|numeric|min:0',
@@ -158,6 +161,7 @@ class LpjController extends Controller
                 [
                     'status'     => $request->status ?? 'draft',
                     'keterangan' => $request->keterangan,
+                    'bendahara_id' => $request->bendahara_id,
                     'created_by' => $request->user()?->id,
                 ]
             );
@@ -166,6 +170,7 @@ class LpjController extends Controller
             $lpj->update([
                 'status'     => $request->status ?? $lpj->status,
                 'keterangan' => $request->keterangan ?? $lpj->keterangan,
+                'bendahara_id' => $request->has('bendahara_id') ? $request->bendahara_id : $lpj->bendahara_id,
             ]);
 
             // Hapus items lama dan insert ulang
@@ -184,6 +189,8 @@ class LpjController extends Controller
                 $sewaMobilTotal = $num('uang_transport_sewa_mobil_harian') * $int('uang_transport_sewa_mobil_hari');
                 $harianTotal = $num('uang_harian_per_hari') * $int('uang_harian_hari');
                 $penginapanTotal = $num('uang_penginapan_harian') * $int('uang_penginapan_hari');
+                $fullboardTotal = $num('uang_fullboard_harian') * $int('uang_fullboard_hari');
+                $harianFullboardTotal = $num('uang_harian_fullboard_per_hari') * $int('uang_harian_fullboard_hari');
 
                 return [
                     'lpj_header_id'       => $lpj->id,
@@ -191,6 +198,7 @@ class LpjController extends Controller
                     'employee_name'       => $item['employee_name'],
                     'employee_nip'        => $item['employee_nip'] ?? null,
                     'is_external'         => (bool) ($item['is_external'] ?? false),
+                    'nomor_spd'           => $val('nomor_spd'),
                     // Transport Bus
                     'uang_transport_bus'            => $busTotal ?: $val('uang_transport_bus'),
                     'uang_transport_bus_berangkat'  => $val('uang_transport_bus_berangkat'),
@@ -217,6 +225,14 @@ class LpjController extends Controller
                     'uang_penginapan'        => $penginapanTotal ?: $val('uang_penginapan'),
                     'uang_penginapan_harian' => $val('uang_penginapan_harian'),
                     'uang_penginapan_hari'   => $val('uang_penginapan_hari'),
+                    // Fullboard
+                    'uang_fullboard'        => $fullboardTotal ?: $val('uang_fullboard'),
+                    'uang_fullboard_harian' => $val('uang_fullboard_harian'),
+                    'uang_fullboard_hari'   => $val('uang_fullboard_hari'),
+                    // Uang Harian Fullboard
+                    'uang_harian_fullboard'          => $harianFullboardTotal ?: $val('uang_harian_fullboard'),
+                    'uang_harian_fullboard_per_hari' => $val('uang_harian_fullboard_per_hari'),
+                    'uang_harian_fullboard_hari'     => $val('uang_harian_fullboard_hari'),
                     'created_at'          => $now,
                     'updated_at'          => $now,
                 ];
@@ -229,7 +245,7 @@ class LpjController extends Controller
             $this->_lpj = $lpj;
         });
 
-        $lpjResult = LpjHeader::with('items')
+        $lpjResult = LpjHeader::with(['items', 'bendahara'])
             ->where('surat_tugas_id', $st->id)
             ->first();
 
@@ -296,6 +312,443 @@ class LpjController extends Controller
         $lpj->delete();
 
         return response()->json(['message' => 'LPJ berhasil dihapus.']);
+    }
+
+    /**
+     * Export LPJ details to PDF.
+     */
+    public function exportPdf(Request $request, $suratTugasId)
+    {
+        \Carbon\Carbon::setLocale('id');
+
+        $st = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim'])->findOrFail($suratTugasId);
+        $lpj = LpjHeader::with('bendahara')->where('surat_tugas_id', $st->id)->firstOrFail();
+
+        $pejabat = \App\Models\PejabatPerbendaharaan::with(['bendahara', 'ppk'])->first();
+        
+        $bendahara = null;
+        if ($pejabat && $pejabat->bendahara) {
+            $bendahara = $pejabat->bendahara;
+        } else {
+            $bendahara = $lpj->bendahara;
+        }
+
+        $bendaharaName = $bendahara ? $bendahara->name : '-';
+        $bendaharaNip = $bendahara ? $bendahara->nip : '-';
+
+        $ppkName = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->name : '-';
+        $ppkNip = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->nip : '-';
+
+        $itemsQuery = LpjItem::where('lpj_header_id', $lpj->id);
+
+        if ($request->filled('employee_id')) {
+            $itemsQuery->where('employee_id', $request->employee_id);
+        } elseif ($request->filled('employee_name')) {
+            $itemsQuery->where('employee_name', $request->employee_name);
+        }
+
+        $items = $itemsQuery->get();
+
+        if ($items->isEmpty()) {
+            abort(404, 'Data rincian biaya tidak ditemukan.');
+        }
+
+        $processedItems = [];
+        foreach ($items as $item) {
+            $rows = [];
+            $no = 1;
+            $totalAmount = 0;
+
+            // Transport Bus
+            if ($item->uang_transport_bus !== null && $item->uang_transport_bus > 0) {
+                $breakdown = [];
+                if ($item->uang_transport_bus_berangkat > 0) {
+                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_bus_berangkat, 'total' => $item->uang_transport_bus_berangkat];
+                }
+                if ($item->uang_transport_bus_pulang > 0) {
+                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_bus_pulang, 'total' => $item->uang_transport_bus_pulang];
+                }
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Bus)',
+                    'breakdown' => $breakdown,
+                    'total' => $item->uang_transport_bus,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_bus;
+            }
+
+            // Transport Taxi
+            if ($item->uang_transport_taxi !== null && $item->uang_transport_taxi > 0) {
+                $breakdown = [];
+                if ($item->uang_transport_taxi_berangkat > 0) {
+                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_taxi_berangkat, 'total' => $item->uang_transport_taxi_berangkat];
+                }
+                if ($item->uang_transport_taxi_pulang > 0) {
+                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_taxi_pulang, 'total' => $item->uang_transport_taxi_pulang];
+                }
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Taksi)',
+                    'breakdown' => $breakdown,
+                    'total' => $item->uang_transport_taxi,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_taxi;
+            }
+
+            // Transport Pesawat
+            if ($item->uang_transport_pesawat !== null && $item->uang_transport_pesawat > 0) {
+                $breakdown = [];
+                if ($item->uang_transport_pesawat_berangkat > 0) {
+                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_pesawat_berangkat, 'total' => $item->uang_transport_pesawat_berangkat];
+                }
+                if ($item->uang_transport_pesawat_pulang > 0) {
+                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_pesawat_pulang, 'total' => $item->uang_transport_pesawat_pulang];
+                }
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Pesawat)',
+                    'breakdown' => $breakdown,
+                    'total' => $item->uang_transport_pesawat,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_pesawat;
+            }
+
+            // Transport BBM
+            if ($item->uang_transport_bbm !== null && $item->uang_transport_bbm > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (BBM)',
+                    'breakdown' => [],
+                    'total' => $item->uang_transport_bbm,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_bbm;
+            }
+
+            // Transport Sewa Mobil
+            if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport Sewa Mobil',
+                    'breakdown' => [
+                        ['label' => '', 'qty' => $item->uang_transport_sewa_mobil_hari, 'rate' => $item->uang_transport_sewa_mobil_harian, 'total' => $item->uang_transport_sewa_mobil]
+                    ],
+                    'total' => $item->uang_transport_sewa_mobil,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_sewa_mobil;
+            }
+
+            // Uang Harian
+            if ($item->uang_harian !== null && $item->uang_harian > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Uang Harian',
+                    'breakdown' => [
+                        ['label' => '', 'qty' => $item->uang_harian_hari, 'rate' => $item->uang_harian_per_hari, 'total' => $item->uang_harian]
+                    ],
+                    'total' => $item->uang_harian,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_harian;
+            }
+
+            // Penginapan
+            if ($item->uang_penginapan !== null && $item->uang_penginapan > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Penginapan',
+                    'breakdown' => [
+                        ['label' => '', 'qty' => $item->uang_penginapan_hari, 'rate' => $item->uang_penginapan_harian, 'total' => $item->uang_penginapan]
+                    ],
+                    'total' => $item->uang_penginapan,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_penginapan;
+            }
+
+            // Fullboard
+            if ($item->uang_fullboard !== null && $item->uang_fullboard > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Paket Fullboard',
+                    'breakdown' => [],
+                    'total' => $item->uang_fullboard,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_fullboard;
+            }
+
+            // Uang Harian Fullboard
+            if ($item->uang_harian_fullboard !== null && $item->uang_harian_fullboard > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Uang Harian Fullboard',
+                    'breakdown' => [
+                        ['label' => '', 'qty' => $item->uang_harian_fullboard_hari, 'rate' => $item->uang_harian_fullboard_per_hari, 'total' => $item->uang_harian_fullboard]
+                    ],
+                    'total' => $item->uang_harian_fullboard,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_harian_fullboard;
+            }
+
+            $pangkat = '';
+            if (!$item->is_external && $item->employee_id) {
+                $emp = \App\Models\Employee::find($item->employee_id);
+                $pangkat = $emp ? $emp->pangkat : '';
+            }
+
+            $processedItems[] = [
+                'item' => $item,
+                'rows' => $rows,
+                'total' => $totalAmount,
+                'terbilang' => $totalAmount > 0 ? (preg_replace('/\s+/', ' ', trim($this->terbilang($totalAmount))) . ' Rupiah') : 'Nol Rupiah',
+                'pangkat' => $pangkat
+            ];
+        }
+
+        $grandTransport = 0;
+        $grandPenginapan = 0;
+        $grandUangHarian = 0;
+        $grandTotal = 0;
+
+        foreach ($processedItems as $itemData) {
+            $item = $itemData['item'];
+            $transport = ($item->uang_transport_bus ?? 0)
+                + ($item->uang_transport_taxi ?? 0)
+                + ($item->uang_transport_pesawat ?? 0)
+                + ($item->uang_transport_bbm ?? 0)
+                + ($item->uang_transport_sewa_mobil ?? 0);
+            $penginapan = $item->uang_penginapan ?? 0;
+            $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
+
+            $grandTransport += $transport;
+            $grandPenginapan += $penginapan;
+            $grandUangHarian += $uangHarian;
+            $grandTotal += $itemData['total'];
+        }
+
+        $grandTerbilang = $grandTotal > 0 ? (preg_replace('/\s+/', ' ', trim($this->terbilang($grandTotal))) . ' Rupiah') : 'Nol Rupiah';
+
+        $spdDate = null;
+        if ($st->tanggal_st) {
+            $spdDate = \Carbon\Carbon::parse($st->tanggal_st)->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        } elseif ($st->tanggal_mulai) {
+            $spdDate = \Carbon\Carbon::parse($st->tanggal_mulai)->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        } else {
+            $spdDate = \Carbon\Carbon::now()->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        }
+
+        $printDate = \Carbon\Carbon::now()->timezone('Asia/Makassar')->translatedFormat('j F Y');
+
+        $pdf = Pdf::loadView('pdf.lpj_report', [
+            'st' => $st,
+            'lpj' => $lpj,
+            'processedItems' => $processedItems,
+            'spdDate' => $spdDate,
+            'printDate' => $printDate,
+            'bendaharaName' => $bendaharaName,
+            'bendaharaNip' => $bendaharaNip,
+            'ppkName' => $ppkName,
+            'ppkNip' => $ppkNip,
+            'grandTransport' => $grandTransport,
+            'grandPenginapan' => $grandPenginapan,
+            'grandUangHarian' => $grandUangHarian,
+            'grandTotal' => $grandTotal,
+            'grandTerbilang' => $grandTerbilang,
+        ]);
+
+        $pdf->setPaper([0, 0, 612, 936]); // F4 Portrait
+
+        $safeNomorSt = str_replace(['/', '\\'], '_', $st->nomor_st);
+        return $pdf->download('Rincian_Biaya_LPJ_' . ($safeNomorSt ?: $st->id) . '.pdf');
+    }
+
+    public function exportRekap(Request $request, $suratTugasId)
+    {
+        \Carbon\Carbon::setLocale('id');
+
+        $st = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim'])->findOrFail($suratTugasId);
+        $lpj = LpjHeader::with('bendahara')->where('surat_tugas_id', $st->id)->firstOrFail();
+
+        $pejabat = \App\Models\PejabatPerbendaharaan::with(['bendahara', 'ppk'])->first();
+        
+        $bendahara = null;
+        if ($pejabat && $pejabat->bendahara) {
+            $bendahara = $pejabat->bendahara;
+        } else {
+            $bendahara = $lpj->bendahara;
+        }
+
+        $bendaharaName = $bendahara ? $bendahara->name : '-';
+        $bendaharaNip = $bendahara ? $bendahara->nip : '-';
+
+        $ppkName = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->name : '-';
+        $ppkNip = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->nip : '-';
+
+        $items = LpjItem::where('lpj_header_id', $lpj->id)->get();
+
+        if ($items->isEmpty()) {
+            abort(404, 'Data rincian biaya tidak ditemukan.');
+        }
+
+        $processedItems = [];
+        foreach ($items as $item) {
+            $totalAmount = 0;
+
+            // Transport Bus
+            if ($item->uang_transport_bus !== null && $item->uang_transport_bus > 0) {
+                $totalAmount += $item->uang_transport_bus;
+            }
+            // Transport Taxi
+            if ($item->uang_transport_taxi !== null && $item->uang_transport_taxi > 0) {
+                $totalAmount += $item->uang_transport_taxi;
+            }
+            // Transport Pesawat
+            if ($item->uang_transport_pesawat !== null && $item->uang_transport_pesawat > 0) {
+                $totalAmount += $item->uang_transport_pesawat;
+            }
+            // Transport BBM
+            if ($item->uang_transport_bbm !== null && $item->uang_transport_bbm > 0) {
+                $totalAmount += $item->uang_transport_bbm;
+            }
+            // Transport Sewa Mobil
+            if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
+                $totalAmount += $item->uang_transport_sewa_mobil;
+            }
+            // Uang Harian
+            if ($item->uang_harian !== null && $item->uang_harian > 0) {
+                $totalAmount += $item->uang_harian;
+            }
+            // Penginapan
+            if ($item->uang_penginapan !== null && $item->uang_penginapan > 0) {
+                $totalAmount += $item->uang_penginapan;
+            }
+            // Fullboard
+            if ($item->uang_fullboard !== null && $item->uang_fullboard > 0) {
+                $totalAmount += $item->uang_fullboard;
+            }
+            // Uang Harian Fullboard
+            if ($item->uang_harian_fullboard !== null && $item->uang_harian_fullboard > 0) {
+                $totalAmount += $item->uang_harian_fullboard;
+            }
+
+            // Skip if the total LPJ amount is 0 (tidak usah tampilkan jika nilainya 0)
+            if ($totalAmount <= 0) {
+                continue;
+            }
+
+            $pangkat = '';
+            if (!$item->is_external && $item->employee_id) {
+                $emp = \App\Models\Employee::find($item->employee_id);
+                $pangkat = $emp ? $emp->pangkat : '';
+            }
+
+            $processedItems[] = [
+                'item' => $item,
+                'total' => $totalAmount,
+                'pangkat' => $pangkat
+            ];
+        }
+
+        $grandTransport = 0;
+        $grandFullboard = 0;
+        $grandPenginapan = 0;
+        $grandUangHarian = 0;
+        $grandTotal = 0;
+
+        foreach ($processedItems as $itemData) {
+            $item = $itemData['item'];
+            $transport = ($item->uang_transport_bus ?? 0)
+                + ($item->uang_transport_taxi ?? 0)
+                + ($item->uang_transport_pesawat ?? 0)
+                + ($item->uang_transport_bbm ?? 0)
+                + ($item->uang_transport_sewa_mobil ?? 0);
+            $fullboard = $item->uang_fullboard ?? 0;
+            $penginapan = $item->uang_penginapan ?? 0;
+            $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
+
+            $grandTransport += $transport;
+            $grandFullboard += $fullboard;
+            $grandPenginapan += $penginapan;
+            $grandUangHarian += $uangHarian;
+            $grandTotal += $itemData['total'];
+        }
+
+        $grandTerbilang = $grandTotal > 0 ? (preg_replace('/\s+/', ' ', trim($this->terbilang($grandTotal))) . ' Rupiah') : 'Nol Rupiah';
+
+        $printDate = \Carbon\Carbon::now()->timezone('Asia/Makassar')->translatedFormat('j F Y');
+
+        $pdf = Pdf::loadView('pdf.lpj_rekap', [
+            'st' => $st,
+            'lpj' => $lpj,
+            'processedItems' => $processedItems,
+            'printDate' => $printDate,
+            'bendaharaName' => $bendaharaName,
+            'bendaharaNip' => $bendaharaNip,
+            'ppkName' => $ppkName,
+            'ppkNip' => $ppkNip,
+            'grandTransport' => $grandTransport,
+            'grandFullboard' => $grandFullboard,
+            'grandPenginapan' => $grandPenginapan,
+            'grandUangHarian' => $grandUangHarian,
+            'grandTotal' => $grandTotal,
+            'grandTerbilang' => $grandTerbilang,
+        ]);
+
+        $pdf->setPaper([0, 0, 936, 612]); // F4 Landscape
+
+        $safeNomorSt = str_replace(['/', '\\'], '_', $st->nomor_st);
+        return $pdf->download('Rekapitulasi_LPJ_' . ($safeNomorSt ?: $st->id) . '.pdf');
+    }
+
+    /**
+     * Spell out number in Indonesian words.
+     */
+    private function terbilang($angka)
+    {
+        $angka = (float)$angka;
+        $bilangan = array(
+            '',
+            'Satu',
+            'Dua',
+            'Tiga',
+            'Empat',
+            'Lima',
+            'Enam',
+            'Tujuh',
+            'Delapan',
+            'Sembilan',
+            'Sepuluh',
+            'Sebelas'
+        );
+
+        if ($angka < 12) {
+            return $bilangan[$angka];
+        } else if ($angka < 20) {
+            return $this->terbilang($angka - 10) . ' Belas';
+        } else if ($angka < 100) {
+            return $this->terbilang(floor($angka / 10)) . ' Puluh ' . $this->terbilang($angka % 10);
+        } else if ($angka < 200) {
+            return 'Seratus ' . $this->terbilang($angka - 100);
+        } else if ($angka < 1000) {
+            return $this->terbilang(floor($angka / 100)) . ' Ratus ' . $this->terbilang($angka % 100);
+        } else if ($angka < 2000) {
+            return 'Seribu ' . $this->terbilang($angka - 1000);
+        } else if ($angka < 1000000) {
+            return $this->terbilang(floor($angka / 1000)) . ' Ribu ' . $this->terbilang($angka % 1000);
+        } else if ($angka < 1000000000) {
+            return $this->terbilang(floor($angka / 1000000)) . ' Juta ' . $this->terbilang($angka % 1000000);
+        } else if ($angka < 1000000000000) {
+            return $this->terbilang(floor($angka / 1000000000)) . ' Miliar ' . $this->terbilang($angka % 1000000000);
+        } else if ($angka < 1000000000000000) {
+            return $this->terbilang(floor($angka / 1000000000000)) . ' Triliun ' . $this->terbilang($angka % 1000000000000);
+        }
+        return '';
     }
 }
 

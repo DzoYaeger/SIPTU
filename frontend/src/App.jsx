@@ -152,6 +152,7 @@ function App() {
       "/app/pengadaan-pdtt-rekapan": "SIPTU | Pengadaan - Rekapan Pengajuan",
       "/app/pengelola-pegawai-pdtt": "SIPTU | Pengadaan - Hak Akses Pegawai",
       "/app/keuangan-lpj": "SIPTU | Keuangan - Pembuatan LPJ",
+      "/app/keuangan-pejabat": "SIPTU | Keuangan - Pejabat Perbendaharaan",
       "/app/keuangan-revisi": "SIPTU | Keuangan - Revisi Anggaran",
       "/app/keuangan-anggaran": "SIPTU | Keuangan - Anggaran",
       "/app/keuangan-invoice": "SIPTU | Keuangan - Invoice Belanja",

@@ -14,6 +14,7 @@ class LpjItem extends Model
         'employee_name',
         'employee_nip',
         'is_external',
+        'nomor_spd',
         'uang_harian',
         'uang_harian_hari',
         'uang_harian_per_hari',
@@ -33,6 +34,12 @@ class LpjItem extends Model
         'uang_transport_pesawat',
         'uang_transport_pesawat_berangkat',
         'uang_transport_pesawat_pulang',
+        'uang_fullboard',
+        'uang_fullboard_hari',
+        'uang_fullboard_harian',
+        'uang_harian_fullboard',
+        'uang_harian_fullboard_hari',
+        'uang_harian_fullboard_per_hari',
     ];
 
     protected function casts(): array
@@ -58,6 +65,12 @@ class LpjItem extends Model
             'uang_transport_pesawat'          => 'float',
             'uang_transport_pesawat_berangkat' => 'float',
             'uang_transport_pesawat_pulang'   => 'float',
+            'uang_fullboard'                  => 'float',
+            'uang_fullboard_hari'             => 'integer',
+            'uang_fullboard_harian'           => 'float',
+            'uang_harian_fullboard'           => 'float',
+            'uang_harian_fullboard_hari'      => 'integer',
+            'uang_harian_fullboard_per_hari'  => 'float',
         ];
     }
 

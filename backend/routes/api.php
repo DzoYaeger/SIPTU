@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\EmployeeCalendarController;
 use App\Http\Controllers\Api\SuratTugasController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LpjController;
+use App\Http\Controllers\Api\PejabatPerbendaharaanController;
 use App\Http\Controllers\Api\ZoomController;
 use App\Http\Controllers\Api\QueueDisplayController;
 use App\Http\Controllers\Api\VisitorQueueController;
@@ -400,11 +401,17 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // ─── LPJ (Laporan Pertanggungjawaban) ─────────────
     Route::get('/lpj', [LpjController::class, 'index']);
     Route::get('/lpj/{suratTugasId}', [LpjController::class, 'show'])->whereNumber('suratTugasId');
+    Route::get('/lpj/{suratTugasId}/export-pdf', [LpjController::class, 'exportPdf'])->whereNumber('suratTugasId');
+    Route::get('/lpj/{suratTugasId}/export-rekap', [LpjController::class, 'exportRekap'])->whereNumber('suratTugasId');
     Route::post('/lpj/{suratTugasId}', [LpjController::class, 'store'])->whereNumber('suratTugasId');
     Route::put('/lpj/{suratTugasId}/items', [LpjController::class, 'updateItems'])->whereNumber('suratTugasId');
     Route::post('/lpj/{suratTugasId}/mark-manual', [LpjController::class, 'markManual'])->whereNumber('suratTugasId');
     Route::post('/lpj/{suratTugasId}/exclude', [LpjController::class, 'exclude'])->whereNumber('suratTugasId');
     Route::delete('/lpj/{suratTugasId}', [LpjController::class, 'destroy'])->whereNumber('suratTugasId');
+
+    // ─── Pejabat Perbendaharaan ─────────────
+    Route::get('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'show']);
+    Route::post('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'update']);
 
     // ─── Notifications & FCM ─────────────
     Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);

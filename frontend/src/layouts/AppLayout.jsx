@@ -54,6 +54,7 @@ import Kgb from "../views/Kgb.jsx";
 import KepegawaianKalender from "../views/KepegawaianKalender.jsx";
 import KepegawaianSuratTugas from "../views/KepegawaianSuratTugas.jsx";
 import KeuanganLpj from "../views/KeuanganLpj.jsx";
+import KeuanganPejabat from "../views/KeuanganPejabat.jsx";
 import Anggaran from "../views/Anggaran.jsx";
 import PermintaanRevisi from "../views/PermintaanRevisi.jsx";
 import InvoiceBelanja from "../views/InvoiceBelanja.jsx";
@@ -125,7 +126,7 @@ const CHILD_ORDER = {
     "pengadaan-pdtt-rekapan",
     "pengelola-pegawai-pdtt"
   ],
-  "keuangan": ["keuangan-lpj", "keuangan-revisi"],
+  "keuangan": ["keuangan-lpj", "keuangan-pejabat", "keuangan-revisi"],
   "it-helpdesk": ["it-helpdesk-pelaporan", "it-helpdesk-rekapan"],
 };
 
@@ -189,6 +190,7 @@ function mapSlugToPath(slug) {
     "pengadaan-pdtt-rekapan": "/app/pengadaan-pdtt-rekapan",
     "pengelola-pegawai-pdtt": "/app/pengelola-pegawai-pdtt",
     "keuangan-lpj": "/app/keuangan-lpj",
+    "keuangan-pejabat": "/app/keuangan-pejabat",
     "keuangan-revisi": "/app/keuangan-revisi",
     "keuangan-anggaran": "/app/keuangan-anggaran",
     "keuangan-invoice": "/app/keuangan-invoice",
@@ -369,6 +371,7 @@ function AppLayout() {
 
     const keuanganModule = createModule("keuangan", "Keuangan");
     addChild(keuanganModule, "keuangan-lpj", "Pembuatan LPJ");
+    addChild(keuanganModule, "keuangan-pejabat", "Pejabat Perbendaharaan");
     addChild(keuanganModule, "keuangan-revisi", "Revisi Anggaran");
 
     createModule("layanan-mandiri", "Layanan Mandiri");
@@ -413,6 +416,7 @@ function AppLayout() {
     "zoom-generator": <VideoCameraOutlined />,
     keuangan: <DollarOutlined />,
     "keuangan-lpj": <FileProtectOutlined />,
+    "keuangan-pejabat": <TeamOutlined />,
     "keuangan-revisi": <FormOutlined />,
     "antrian-ulpk": <DesktopOutlined />,
     "antrian-kontrol": <DesktopOutlined />,
@@ -665,6 +669,14 @@ function AppLayout() {
               element={
                 <ProtectedRoute moduleSlug="keuangan-lpj">
                   <KeuanganLpj />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="keuangan-pejabat"
+              element={
+                <ProtectedRoute moduleSlug="keuangan-pejabat">
+                  <KeuanganPejabat />
                 </ProtectedRoute>
               }
             />
