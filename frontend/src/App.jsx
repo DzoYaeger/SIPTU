@@ -129,6 +129,7 @@ function App() {
       "/app/operator-dashboard": "SIPTU | Dashboard Operator",
       "/app/layanan-mandiri": "SIPTU | Layanan Mandiri",
       "/app/riwayat-layanan": "SIPTU | Riwayat Layanan",
+      "/app/penyimpanan-cloud": "SIPTU | Penyimpanan Cloud",
       "/app/kepegawaian-data-pegawai": "SIPTU | Kepegawaian - Data Pegawai",
       "/app/kepegawaian-kgb": "SIPTU | Kepegawaian - Kenaikan Gaji Berkala",
       "/app/kepegawaian-kalender": "SIPTU | Kepegawaian - Kalender Kegiatan",

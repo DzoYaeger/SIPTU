@@ -158,6 +158,12 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::post('/user/profile/photo', [UserController::class, 'uploadPhoto']);
 
+    // Nextcloud Storage routes
+    Route::get('/nextcloud/files', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'index']);
+    Route::post('/nextcloud/upload', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'upload']);
+    Route::get('/nextcloud/download', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'download']);
+    Route::delete('/nextcloud/delete', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'destroy']);
+
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);
     Route::post('/push-unsubscribe', [PushNotificationController::class, 'unsubscribe']);

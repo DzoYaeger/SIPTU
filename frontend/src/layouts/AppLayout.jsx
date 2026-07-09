@@ -69,6 +69,7 @@ import ManajemenPeminjamanArsip from "../views/ManajemenPeminjamanArsip.jsx";
 import LaporanPeminjaman from "../views/LaporanPeminjaman.jsx";
 import ItHelpdeskDaftarLaporan from "../views/ItHelpdeskDaftarLaporan.jsx";
 import AccountSettings from "../views/AccountSettings.jsx";
+import PenyimpananCloud from "../views/PenyimpananCloud.jsx";
 import Rispeg from "../views/Rispeg.jsx";
 import RispegDashboard from "../views/RispegDashboard.jsx";
 import RispegMonitoringIzinKeluar from "../views/RispegMonitoringIzinKeluar.jsx";
@@ -204,6 +205,7 @@ function mapSlugToPath(slug) {
     "operator-dashboard": "/app/operator-dashboard",
     "pengaturan-slider": "/app/pengaturan-slider",
     "antrian-kontrol": "/app/antrian-kontrol",
+    "penyimpanan-cloud": "/app/penyimpanan-cloud",
   };
   return routes[slug] ?? null;
 }
@@ -376,7 +378,8 @@ function AppLayout() {
 
     createModule("layanan-mandiri", "Layanan Mandiri");
     createModule("riwayat-layanan", "Riwayat Layanan");
-
+    createModule("penyimpanan-cloud", "Penyimpanan Cloud");
+    
     createModule("antrian-kontrol", "Manajemen UPP");
 
     return normalizeModules(baseModules);
@@ -420,6 +423,7 @@ function AppLayout() {
     "keuangan-revisi": <FormOutlined />,
     "antrian-ulpk": <DesktopOutlined />,
     "antrian-kontrol": <DesktopOutlined />,
+    "penyimpanan-cloud": <FolderOpenOutlined />,
   };
 
   /* ── Role switching ── */
@@ -877,6 +881,7 @@ function AppLayout() {
             <Route path="layanan-mandiri" element={<LayananMandiri />} />
             <Route path="berita/:slug" element={<NewsDetail />} />
             <Route path="riwayat-layanan" element={<RiwayatLayanan />} />
+            <Route path="penyimpanan-cloud" element={<PenyimpananCloud />} />
             <Route
               path="it-helpdesk-pelaporan"
               element={
