@@ -96,7 +96,18 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
         }
 
-        $targetDir = "SIPTU Drive/{$targetNip}";
+        $baseDir = "SIPTU Drive/{$targetNip}";
+        
+        // Support subfolder navigation via 'path' parameter
+        $subPath = $request->query('path', '');
+        if ($subPath) {
+            // Security: prevent directory traversal
+            $subPath = str_replace('..', '', $subPath);
+            $subPath = ltrim($subPath, '/');
+            $targetDir = $baseDir . '/' . $subPath;
+        } else {
+            $targetDir = $baseDir;
+        }
 
         try {
             // Ensure the backup directory exists
@@ -211,7 +222,15 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
         }
 
-        $targetDir = "SIPTU Drive/{$targetNip}";
+        $baseDir = "SIPTU Drive/{$targetNip}";
+        $subPath = $request->input('path', '');
+        if ($subPath) {
+            $subPath = str_replace('..', '', $subPath);
+            $subPath = ltrim($subPath, '/');
+            $targetDir = $baseDir . '/' . $subPath;
+        } else {
+            $targetDir = $baseDir;
+        }
         $file = $request->file('file');
 
         try {
@@ -253,6 +272,55 @@ class NextcloudStorageController extends Controller
 
         } catch (\Exception $e) {
             Log::error("Nextcloud upload error: " . $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Create a new folder in the employee's storage.
+     */
+    public function createFolder(Request $request)
+    {
+        $request->validate([
+            'folder_name' => 'required|string|max:255',
+        ]);
+
+        $currentUser = $request->user();
+        $targetNip = $currentUser->nip;
+
+        if ($currentUser->base_role === 'admin' && $request->filled('nip')) {
+            $targetNip = $request->input('nip');
+        }
+
+        if (empty($targetNip)) {
+            return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
+        }
+
+        $baseDir = "SIPTU Drive/{$targetNip}";
+        $subPath = $request->input('path', '');
+        if ($subPath) {
+            $subPath = str_replace('..', '', $subPath);
+            $subPath = ltrim($subPath, '/');
+            $baseDir = $baseDir . '/' . $subPath;
+        }
+
+        $folderName = preg_replace('/[^a-zA-Z0-9_\-\. ]/', '_', $request->input('folder_name'));
+        $fullPath = $baseDir . '/' . $folderName;
+
+        try {
+            $this->ensureDirectoryExists($fullPath);
+
+            return response()->json([
+                'message' => 'Folder berhasil dibuat.',
+                'folder' => [
+                    'name' => $folderName,
+                    'path' => '/' . $fullPath,
+                    'is_dir' => true,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Nextcloud create folder error: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }

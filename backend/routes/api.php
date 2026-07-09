@@ -199,6 +199,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // Nextcloud Storage routes
     Route::get('/nextcloud/files', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'index']);
     Route::post('/nextcloud/upload', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'upload']);
+    Route::post('/nextcloud/folder', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'createFolder']);
     Route::get('/nextcloud/download', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'download']);
     Route::delete('/nextcloud/delete', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'destroy']);
 
