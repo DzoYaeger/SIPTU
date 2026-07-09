@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Select,
@@ -14,10 +15,8 @@ import {
   Tooltip,
   Empty,
   Breadcrumb,
-  Row,
-  Col,
-  Statistic,
   Progress,
+  Dropdown,
   message as andMessage,
 } from "antd";
 import {
@@ -44,7 +43,9 @@ import {
   FileFilled,
   FolderOpenOutlined,
   UploadOutlined,
-  ArrowUpOutlined,
+  ArrowLeftOutlined,
+  MenuOutlined,
+  EllipsisOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import dayjs from "dayjs";
@@ -110,6 +111,8 @@ const getFileIcon = (file) => {
 
 export default function PenyimpananCloud() {
   const { user, apiFetch } = useAuth();
+  const navigate = useNavigate();
+  
   const [employees, setEmployees] = useState([]);
   const [selectedNip, setSelectedNip] = useState("");
   const [files, setFiles] = useState([]);
@@ -118,13 +121,14 @@ export default function PenyimpananCloud() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
   const [currentPath, setCurrentPath] = useState(""); // relative to NIP root
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Modals state
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState({}); // { [uid]: { uid, name, size, progress, status, errorMessage } }
+  const [uploadingFiles, setUploadingFiles] = useState({});
 
   const hasActiveUploads = useMemo(() => {
     return Object.values(uploadingFiles).some((f) => f.status === "uploading");
@@ -421,12 +425,42 @@ export default function PenyimpananCloud() {
     return files.filter((f) => f.name.toLowerCase().includes(query));
   }, [files, searchQuery]);
 
+  // Separate Folders and Files
+  const folderItems = useMemo(() => filteredFiles.filter((f) => f.is_dir), [filteredFiles]);
+  const fileItems = useMemo(() => filteredFiles.filter((f) => !f.is_dir), [filteredFiles]);
+
   // Stats calculation
   const folderCount = useMemo(() => files.filter((f) => f.is_dir).length, [files]);
   const fileCount = useMemo(() => files.filter((f) => !f.is_dir).length, [files]);
   const totalSize = useMemo(() => {
     return files.reduce((acc, curr) => acc + (curr.size || 0), 0);
   }, [files]);
+
+  // Mocking 10 GB limit for custom Drive indicator
+  const quotaBytes = 10 * 1024 * 1024 * 1024;
+  const usedPercent = useMemo(() => {
+    return Math.min(Math.round((totalSize / quotaBytes) * 100), 100);
+  }, [totalSize, quotaBytes]);
+
+  // Action Menu items for "+ Baru" button
+  const newButtonItems = useMemo(() => {
+    return [
+      {
+        key: "new-folder",
+        label: "Folder Baru",
+        icon: <PlusOutlined />,
+        onClick: () => setIsFolderModalOpen(true),
+        disabled: isAdmin && !selectedNip,
+      },
+      {
+        key: "upload-file",
+        label: "Upload Berkas",
+        icon: <UploadOutlined />,
+        onClick: () => setIsUploadModalOpen(true),
+        disabled: isAdmin && !selectedNip,
+      },
+    ];
+  }, [isAdmin, selectedNip]);
 
   // List View columns
   const columns = [
@@ -503,25 +537,42 @@ export default function PenyimpananCloud() {
   ];
 
   return (
-    <div className="penyimpanan-cloud-page">
-      {/* Header section */}
-      <div className="cloud-header-section">
-        <div className="cloud-title-wrap">
-          <CloudServerOutlined className="cloud-main-icon" />
-          <div>
-            <Title level={2} style={{ margin: 0 }}>SIPTU Drive</Title>
-            <Text type="secondary">Unggah & backup berkas otomatis terintegrasi Nextcloud</Text>
-          </div>
+    <div className={`drive-standalone-layout ${isSidebarOpen ? "sidebar-open" : ""}`}>
+      {/* 1. Left Sidebar Section */}
+      <div className={`drive-sidebar ${isSidebarOpen ? "open" : ""}`}>
+        {/* Logo and Brand */}
+        <div className="drive-logo-section">
+          <CloudServerOutlined className="drive-logo-icon" />
+          <span className="drive-logo-title">SIPTU Drive</span>
         </div>
 
+        {/* Dynamic "+ Baru" Action Button */}
+        <div className="drive-new-action-wrap">
+          <Dropdown
+            menu={{ items: newButtonItems }}
+            trigger={["click"]}
+            disabled={isAdmin && !selectedNip}
+          >
+            <Button
+              type="primary"
+              size="large"
+              icon={<PlusOutlined />}
+              className="drive-new-btn"
+            >
+              Baru
+            </Button>
+          </Dropdown>
+        </div>
+
+        {/* Employee Switcher (Visible to Admin only) */}
         {isAdmin && (
-          <div className="cloud-employee-picker">
-            <Text strong className="picker-label">Kelola Folder Pegawai:</Text>
+          <div className="drive-admin-picker-wrap">
+            <span className="drive-sidebar-label">Kelola Folder Pegawai</span>
             <Select
               showSearch
               placeholder="Pilih pegawai..."
               optionFilterProp="children"
-              style={{ width: 280 }}
+              style={{ width: "100%" }}
               loading={loadingEmployees}
               value={selectedNip}
               onChange={setSelectedNip}
@@ -532,191 +583,265 @@ export default function PenyimpananCloud() {
                 value: emp.nip,
                 label: `${emp.name} (${emp.nip})`,
               }))}
+              className="drive-admin-select"
             />
+          </div>
+        )}
+
+        {/* Main Drive Sidebar Menu */}
+        <div className="drive-sidebar-menu">
+          <div className="drive-menu-item active">
+            <HomeOutlined />
+            <span>Drive Saya</span>
+          </div>
+          <div className="drive-menu-item return-btn" onClick={() => navigate("/app/dashboard")}>
+            <ArrowLeftOutlined />
+            <span>Kembali ke SIPTU</span>
+          </div>
+        </div>
+
+        {/* Dynamic storage indicator at the bottom */}
+        {(!isAdmin || selectedNip) && (
+          <div className="drive-storage-widget">
+            <div className="storage-widget-header">
+              <CloudServerOutlined />
+              <span>Penyimpanan</span>
+            </div>
+            <Progress
+              percent={usedPercent}
+              size="small"
+              strokeColor="var(--color-primary)"
+              showInfo={false}
+              className="storage-widget-progress"
+            />
+            <span className="storage-widget-info">
+              {formatBytes(totalSize)} dari 10 GB digunakan
+            </span>
           </div>
         )}
       </div>
 
-      {/* Stats Cards */}
-      {(!isAdmin || selectedNip) && files.length > 0 && (
-        <Row gap={16} className="drive-stats-row">
-          <Col xs={24} sm={8}>
-            <Card variant="borderless" className="stat-card">
-              <Statistic title="Jumlah Folder" value={folderCount} prefix={<FolderOpenOutlined className="stat-icon-yellow" />} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card variant="borderless" className="stat-card">
-              <Statistic title="Jumlah Berkas" value={fileCount} prefix={<FileFilled className="stat-icon-blue" />} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card variant="borderless" className="stat-card">
-              <Statistic title="Ukuran Penyimpanan" value={formatBytes(totalSize)} prefix={<ArrowUpOutlined className="stat-icon-green" />} />
-            </Card>
-          </Col>
-        </Row>
-      )}
+      {/* Sidebar Backdrop Overlay on Mobile */}
+      {isSidebarOpen && <div className="drive-sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
 
-      {/* Full-width Explorer Panel */}
-      <Card variant="borderless" className="explorer-card">
-        {/* Breadcrumbs & Actions Toolbar */}
-        <div className="drive-toolbar-wrap">
-          <div className="drive-navigation">
-            <Breadcrumb separator=">">
-              <Breadcrumb.Item onClick={() => navigateToSegment(-1)} className="breadcrumb-nav-link">
-                <HomeOutlined /> <span style={{ marginLeft: "4px" }}>SIPTU Drive</span>
-              </Breadcrumb.Item>
-              {pathSegments.map((segment, idx) => (
-                <Breadcrumb.Item
-                  key={idx}
-                  onClick={() => navigateToSegment(idx)}
-                  className="breadcrumb-nav-link"
-                >
-                  {segment}
-                </Breadcrumb.Item>
-              ))}
-            </Breadcrumb>
+      {/* 2. Main Workspace Panel */}
+      <div className="drive-workspace">
+        {/* Drive Header Bar */}
+        <div className="drive-main-header">
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setIsSidebarOpen(true)}
+            className="drive-menu-toggle-btn"
+          />
+          <div className="drive-search-container">
+            <Input
+              placeholder="Cari di SIPTU Drive..."
+              prefix={<SearchOutlined style={{ color: "#5f6368" }} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={loadingFiles || (isAdmin && !selectedNip)}
+              className="drive-search-input"
+            />
           </div>
-
-          <div className="drive-actions">
+          <div className="drive-header-right">
             <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              onClick={() => setIsUploadModalOpen(true)}
-              disabled={loadingFiles || (isAdmin && !selectedNip)}
-            >
-              Upload Berkas
-            </Button>
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => setIsFolderModalOpen(true)}
-              disabled={loadingFiles || (isAdmin && !selectedNip)}
-            >
-              Folder Baru
-            </Button>
-            <Button
+              type="text"
+              shape="circle"
               icon={<ReloadOutlined />}
               onClick={fetchFiles}
               disabled={loadingFiles || (isAdmin && !selectedNip)}
+              className="drive-header-icon-btn"
             />
-            <Radio.Group
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
-              className="view-toggle"
-            >
-              <Radio.Button value="grid"><AppstoreOutlined /></Radio.Button>
-              <Radio.Button value="list"><UnorderedListOutlined /></Radio.Button>
-            </Radio.Group>
+            <div className="drive-user-profile">
+              <div className="drive-avatar-circle">
+                {user?.name?.[0]?.toUpperCase() ?? user?.username?.[0]?.toUpperCase() ?? "U"}
+              </div>
+              <div className="drive-profile-info">
+                <span className="drive-profile-name">{user?.name ?? user?.username}</span>
+                <span className="drive-profile-role">{isAdmin ? "Admin" : "Pegawai"}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Search Toolbar */}
-        <div className="explorer-toolbar" style={{ borderBottom: "none", paddingBottom: 0 }}>
-          <Input
-            placeholder="Cari berkas atau folder..."
-            prefix={<SearchOutlined style={{ color: "var(--color-text-muted)" }} />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            disabled={loadingFiles || (isAdmin && !selectedNip)}
-            className="search-input"
-            style={{ width: "100%", maxWidth: "360px" }}
-          />
-          {(isAdmin && !selectedNip) ? (
-            <Tag color="warning" className="status-tag">Silakan pilih pegawai terlebih dahulu</Tag>
+        {/* Folder explorer workspace container */}
+        <div className="drive-content-area">
+          
+          {/* Breadcrumbs & Layout Switcher toolbar */}
+          <div className="drive-toolbar-wrap">
+            <div className="drive-navigation">
+              <Breadcrumb separator=">">
+                <Breadcrumb.Item onClick={() => navigateToSegment(-1)} className="breadcrumb-nav-link">
+                  <HomeOutlined /> <span style={{ marginLeft: "4px" }}>Drive Saya</span>
+                </Breadcrumb.Item>
+                {pathSegments.map((segment, idx) => (
+                  <Breadcrumb.Item
+                    key={idx}
+                    onClick={() => navigateToSegment(idx)}
+                    className="breadcrumb-nav-link"
+                  >
+                    {segment}
+                  </Breadcrumb.Item>
+                ))}
+              </Breadcrumb>
+            </div>
+
+            <div className="drive-actions">
+              <Radio.Group
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+                className="view-toggle"
+              >
+                <Radio.Button value="grid"><AppstoreOutlined /></Radio.Button>
+                <Radio.Button value="list"><UnorderedListOutlined /></Radio.Button>
+              </Radio.Group>
+            </div>
+          </div>
+
+          {/* Quick status display */}
+          <div className="drive-path-status-bar">
+            {(isAdmin && !selectedNip) ? (
+              <Tag color="warning" className="status-tag">Silakan pilih pegawai terlebih dahulu di sidebar</Tag>
+            ) : (
+              <Tag color="processing" className="status-tag">
+                Path: {isAdmin ? `SIPTU Drive/${selectedNip}${currentPath}` : `SIPTU Drive/${user?.nip}${currentPath}`}
+              </Tag>
+            )}
+          </div>
+
+          {/* Explorer Content */}
+          {loadingFiles ? (
+            <div className="explorer-loader-box">
+              <LoadingOutlined className="spinner-icon" />
+              <Text type="secondary">Membaca berkas dari Nextcloud...</Text>
+            </div>
+          ) : filteredFiles.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                isAdmin && !selectedNip
+                  ? "Pilih pegawai di dropdown sidebar kiri untuk melihat berkas."
+                  : "Folder ini masih kosong."
+              }
+              className="drive-empty-view"
+            />
+          ) : viewMode === "list" ? (
+            <div className="drive-table-container">
+              <Table
+                dataSource={filteredFiles.map((f, i) => ({ ...f, key: i }))}
+                columns={columns}
+                pagination={{ pageSize: 15, showSizeChanger: false }}
+                size="middle"
+                className="explorer-table"
+                onRow={(record) => ({
+                  onDoubleClick: () => {
+                    if (record.is_dir) {
+                      handleFolderOpen(record);
+                    }
+                  },
+                })}
+              />
+            </div>
           ) : (
-            <Tag color="processing" className="status-tag">
-              Path: {isAdmin ? `SIPTU Drive/${selectedNip}${currentPath}` : `SIPTU Drive/${user?.nip}${currentPath}`}
-            </Tag>
+            <div className="drive-grid-workspace">
+              {/* Render Folders Grid if folders exist */}
+              {folderItems.length > 0 && (
+                <div className="drive-folders-section">
+                  <div className="drive-section-title">Folder</div>
+                  <div className="drive-folders-grid">
+                    {folderItems.map((folder, idx) => (
+                      <div
+                        key={idx}
+                        className="drive-folder-chip"
+                        onDoubleClick={() => handleFolderOpen(folder)}
+                      >
+                        <FolderFilled className="drive-folder-chip-icon" />
+                        <span className="drive-folder-chip-name" title={folder.name}>
+                          {folder.name}
+                        </span>
+                        <div className="drive-folder-chip-actions" onDoubleClick={(e) => e.stopPropagation()}>
+                          <Dropdown
+                            menu={{
+                              items: [
+                                {
+                                  key: "delete",
+                                  label: "Hapus",
+                                  danger: true,
+                                  icon: <DeleteOutlined />,
+                                  onClick: () => handleDelete(folder),
+                                }
+                              ]
+                            }}
+                            trigger={["click"]}
+                            placement="bottomRight"
+                          >
+                            <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
+                          </Dropdown>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Render Files Grid if files exist */}
+              {fileItems.length > 0 && (
+                <div className="drive-files-section">
+                  <div className="drive-section-title">File</div>
+                  <div className="drive-files-grid">
+                    {fileItems.map((file, idx) => (
+                      <div key={idx} className="drive-file-card">
+                        <div className="drive-file-card-preview" onDoubleClick={() => handleDownload(file)}>
+                          <div className="preview-icon-wrapper">
+                            {getFileIcon(file)}
+                          </div>
+                          <div className="preview-extension-tag">
+                            {file.name.split(".").pop().toUpperCase()}
+                          </div>
+                        </div>
+                        <div className="drive-file-card-info">
+                          <div className="drive-file-card-meta">
+                            <span className="drive-file-title" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="drive-file-size">
+                              {formatBytes(file.size)}
+                            </span>
+                          </div>
+                          <div className="drive-file-card-actions">
+                            <Tooltip title="Unduh">
+                              <Button
+                                type="text"
+                                size="small"
+                                shape="circle"
+                                icon={<DownloadOutlined style={{ color: "var(--color-primary)" }} />}
+                                onClick={() => handleDownload(file)}
+                              />
+                            </Tooltip>
+                            <Tooltip title="Hapus">
+                              <Button
+                                type="text"
+                                size="small"
+                                shape="circle"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDelete(file)}
+                              />
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
+      </div>
 
-        {/* Content Panel */}
-        {loadingFiles ? (
-          <div className="explorer-loader-box">
-            <LoadingOutlined className="spinner-icon" />
-            <Text type="secondary">Membaca berkas dari Nextcloud...</Text>
-          </div>
-        ) : filteredFiles.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              isAdmin && !selectedNip
-                ? "Pilih pegawai di dropdown atas untuk melihat berkas."
-                : "Folder ini masih kosong."
-            }
-          />
-        ) : viewMode === "list" ? (
-          <Table
-            dataSource={filteredFiles.map((f, i) => ({ ...f, key: i }))}
-            columns={columns}
-            pagination={{ pageSize: 12, showSizeChanger: false }}
-            size="middle"
-            className="explorer-table"
-            onRow={(record) => ({
-              onDoubleClick: () => {
-                if (record.is_dir) {
-                  handleFolderOpen(record);
-                }
-              },
-            })}
-          />
-        ) : (
-          <div className="cloud-file-grid">
-            {filteredFiles.map((file, idx) => (
-              <Card
-                key={idx}
-                hoverable
-                className={`file-grid-card ${file.is_dir ? "folder-card" : "file-card"}`}
-                bodyStyle={{ padding: "16px" }}
-                onDoubleClick={() => {
-                  if (file.is_dir) handleFolderOpen(file);
-                }}
-              >
-                <div className="file-card-top">
-                  {getFileIcon(file)}
-                  <div className="file-card-actions">
-                    {!file.is_dir && (
-                      <Button
-                        type="text"
-                        size="small"
-                        shape="circle"
-                        icon={<DownloadOutlined style={{ color: "var(--color-primary)" }} />}
-                        onClick={() => handleDownload(file)}
-                      />
-                    )}
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      shape="circle"
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDelete(file)}
-                    />
-                  </div>
-                </div>
-                <div className="file-card-details">
-                  <Tooltip title={file.name}>
-                    <Text strong className="file-name-text" ellipsis>
-                      {file.name}
-                    </Text>
-                  </Tooltip>
-                  <div className="file-meta">
-                    <span className="file-size">
-                      {file.is_dir ? "Folder" : formatBytes(file.size)}
-                    </span>
-                    <span className="file-date">
-                      {file.last_modified ? dayjs(file.last_modified).format("DD MMM YYYY") : "-"}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Modal: New Folder */}
+      {/* Modal: Folder Baru */}
       <Modal
         title="Buat Folder Baru"
         open={isFolderModalOpen}
@@ -726,14 +851,14 @@ export default function PenyimpananCloud() {
           setNewFolderName("");
         }}
         confirmLoading={creatingFolder}
-        okText="Buat Folder"
+        okText="Buat"
         cancelText="Batal"
         centered
       >
         <div style={{ padding: "12px 0" }}>
           <Text type="secondary" style={{ display: "block", marginBottom: "8px" }}>Nama Folder:</Text>
           <Input
-            placeholder="Ketik nama folder baru..."
+            placeholder="Folder tanpa nama"
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             onPressEnter={handleCreateFolder}
@@ -742,7 +867,7 @@ export default function PenyimpananCloud() {
         </div>
       </Modal>
 
-      {/* Modal: Upload Zone */}
+      {/* Modal: Upload Zone (Queue) */}
       <Modal
         title="Upload Berkas ke Folder Ini"
         open={isUploadModalOpen}

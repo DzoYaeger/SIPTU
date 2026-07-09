@@ -881,7 +881,7 @@ function AppLayout() {
             <Route path="layanan-mandiri" element={<LayananMandiri />} />
             <Route path="berita/:slug" element={<NewsDetail />} />
             <Route path="riwayat-layanan" element={<RiwayatLayanan />} />
-            <Route path="penyimpanan-cloud" element={<PenyimpananCloud />} />
+            <Route path="penyimpanan-cloud" element={<Navigate to="/app/penyimpanan-cloud" replace />} />
             <Route
               path="it-helpdesk-pelaporan"
               element={
