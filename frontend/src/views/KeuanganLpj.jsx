@@ -273,8 +273,9 @@ export default function KeuanganLpj() {
             } else {
                 initItemsFromSt(json.surat_tugas ?? st);
             }
-        } catch {
-            message.error("Gagal memuat data LPJ.");
+        } catch (err) {
+            console.error("LPJ Fetch Error:", err);
+            message.error("Gagal memuat data LPJ: " + err.message);
         } finally {
             setLpjLoading(false);
         }
