@@ -41,4 +41,11 @@ return [
         'client_secret' => env('ZOOM_CLIENT_SECRET'),
     ],
 
+    'nextcloud' => [
+        'url' => env('NEXTCLOUD_URL', 'https://simpan.pom.go.id'),
+        'user' => env('NEXTCLOUD_USER', 'loka_palopo'),
+        'password' => env('NEXTCLOUD_PASSWORD', 'QA9Nq-iPerG-MpHYb-jzbCK-dH3Tf'),
+        'skip_ssl' => env('NEXTCLOUD_SKIP_SSL', true),
+    ],
+
 ];

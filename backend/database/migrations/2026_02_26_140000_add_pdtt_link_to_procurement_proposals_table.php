@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('procurement_proposals', function (Blueprint $table) {
-            $table->string('status')->default('pending')->after('volume');
+            $table->string('status')->default('pending')->after('satuan');
             $table->foreignId('converted_pdtt_item_id')
                 ->nullable()
                 ->after('status')

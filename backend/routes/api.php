@@ -54,6 +54,44 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user()->load('employee');
 });
 
+Route::get('/clear-cache-siptu', function() {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        
+        // Reset OPcache to flush cached PHP bytecode
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
+        }
+        // Also invalidate the specific controller file
+        $controllerPath = app_path('Http/Controllers/Api/NextcloudStorageController.php');
+        if (function_exists('opcache_invalidate') && file_exists($controllerPath)) {
+            opcache_invalidate($controllerPath, true);
+        }
+        
+        return "Cache cleared successfully! OPcache reset: " . (function_exists('opcache_reset') ? 'YES' : 'NO');
+    } catch (\Exception $e) {
+        return "Error clearing cache: " . $e->getMessage();
+    }
+});
+
+Route::get('/view-log-siptu', function() {
+    try {
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) {
+            return "Log file does not exist.";
+        }
+        $lines = file($logPath);
+        $lastLines = array_slice($lines, -100);
+        return response(implode("", $lastLines), 200, ['Content-Type' => 'text/plain']);
+    } catch (\Exception $e) {
+        return "Error reading log: " . $e->getMessage();
+    }
+});
+
+
 // ─── Authentication (rate-limited) ──────────────────────────────────
 Route::middleware('throttle:login')->group(function () {
     Route::post('/login', [UserController::class, 'login'])->name('login');

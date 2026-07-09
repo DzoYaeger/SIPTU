@@ -430,7 +430,7 @@ export default function PenyimpananCloud() {
                 <Tag color="warning" className="status-tag">Silakan pilih pegawai terlebih dahulu</Tag>
               ) : (
                 <Tag color="processing" icon={<FolderOpenOutlined />} className="status-tag">
-                  {isAdmin ? `Folder: SIPTU_Backup/${selectedNip}` : `Folder Pribadi: SIPTU_Backup/${user?.nip}`}
+                  {isAdmin ? `Folder: SIPTU Drive/${selectedNip}` : `Folder Pribadi: SIPTU Drive/${user?.nip}`}
                 </Tag>
               )}
             </div>

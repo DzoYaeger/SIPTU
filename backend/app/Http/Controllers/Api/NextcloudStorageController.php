@@ -16,9 +16,23 @@ class NextcloudStorageController extends Controller
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(env('NEXTCLOUD_URL', 'https://simpan.pom.go.id'), '/');
-        $this->username = env('NEXTCLOUD_USER', 'loka_palopo');
-        $this->password = env('NEXTCLOUD_PASSWORD', 'QA9Nq-iPerG-MpHYb-jzbCK-dH3Tf');
+        $this->baseUrl = rtrim(config('services.nextcloud.url', 'https://simpan.pom.go.id'), '/');
+        $this->username = config('services.nextcloud.user', 'loka_palopo');
+        $this->password = config('services.nextcloud.password', 'QA9Nq-iPerG-MpHYb-jzbCK-dH3Tf');
+    }
+
+    /**
+     * Get pre-configured HTTP client with optional SSL bypass.
+     */
+    private function httpClient()
+    {
+        $client = Http::withBasicAuth($this->username, $this->password);
+        
+        if (app()->environment('local') || config('services.nextcloud.skip_ssl', true)) {
+            $client->withoutVerifying();
+        }
+        
+        return $client;
     }
 
     /**
@@ -44,7 +58,7 @@ class NextcloudStorageController extends Controller
             $url = $this->getWebdavUrl($currentPath);
 
             // Send PROPFIND to check if folder exists
-            $response = Http::withBasicAuth($this->username, $this->password)
+            $response = $this->httpClient()
                 ->withHeaders([
                     'X-Requested-With' => 'XMLHttpRequest',
                     'Depth' => '0'
@@ -53,7 +67,7 @@ class NextcloudStorageController extends Controller
 
             if ($response->status() === 404) {
                 // Folder does not exist, create it
-                $mkcolResponse = Http::withBasicAuth($this->username, $this->password)
+                $mkcolResponse = $this->httpClient()
                     ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
                     ->send('MKCOL', $url);
 
@@ -82,7 +96,7 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
         }
 
-        $targetDir = "SIPTU_Backup/{$targetNip}";
+        $targetDir = "SIPTU Drive/{$targetNip}";
 
         try {
             // Ensure the backup directory exists
@@ -90,7 +104,7 @@ class NextcloudStorageController extends Controller
 
             // Get directory listing
             $url = $this->getWebdavUrl($targetDir);
-            $response = Http::withBasicAuth($this->username, $this->password)
+            $response = $this->httpClient()
                 ->withHeaders([
                     'X-Requested-With' => 'XMLHttpRequest',
                     'Depth' => '1' // Get immediate children
@@ -105,15 +119,17 @@ class NextcloudStorageController extends Controller
             }
 
             $xmlStr = $response->body();
-            $xml = simplexml_load_string($xmlStr);
             $files = [];
 
-            if ($xml) {
-                $xml->registerXPathNamespace('d', 'DAV:');
-                $responses = $xml->xpath('//d:response');
+            $dom = new \DOMDocument();
+            if (@$dom->loadXML($xmlStr)) {
+                $xpath = new \DOMXPath($dom);
+                $xpath->registerNamespace('d', 'DAV:');
+                $responseNodes = $xpath->query('//d:response');
 
-                foreach ($responses as $res) {
-                    $href = (string)($res->xpath('d:href')[0] ?? '');
+                foreach ($responseNodes as $node) {
+                    $hrefNodes = $xpath->query('d:href', $node);
+                    $href = $hrefNodes->length > 0 ? $hrefNodes->item(0)->textContent : '';
                     $decodedHref = urldecode($href);
                     
                     // Convert href to relative path
@@ -125,14 +141,21 @@ class NextcloudStorageController extends Controller
                         continue;
                     }
 
-                    $prop = $res->xpath('d:propstat/d:prop')[0] ?? null;
-                    if ($prop) {
-                        $lastModified = (string)($prop->xpath('d:getlastmodified')[0] ?? '');
-                        $size = (string)($prop->xpath('d:getcontentlength')[0] ?? '0');
-                        $contentType = (string)($prop->xpath('d:getcontenttype')[0] ?? '');
-
-                        $resourcetype = $prop->xpath('d:resourcetype')[0] ?? null;
-                        $isDir = ($resourcetype && $resourcetype->xpath('d:collection')) ? true : false;
+                    $propNodes = $xpath->query('d:propstat/d:prop', $node);
+                    if ($propNodes->length > 0) {
+                        $prop = $propNodes->item(0);
+                        
+                        $lastModifiedNodes = $xpath->query('d:getlastmodified', $prop);
+                        $lastModified = $lastModifiedNodes->length > 0 ? $lastModifiedNodes->item(0)->textContent : '';
+                        
+                        $sizeNodes = $xpath->query('d:getcontentlength', $prop);
+                        $size = $sizeNodes->length > 0 ? $sizeNodes->item(0)->textContent : '0';
+                        
+                        $contentTypeNodes = $xpath->query('d:getcontenttype', $prop);
+                        $contentType = $contentTypeNodes->length > 0 ? $contentTypeNodes->item(0)->textContent : '';
+                        
+                        $collectionNodes = $xpath->query('d:resourcetype/d:collection', $prop);
+                        $isDir = $collectionNodes->length > 0;
 
                         $name = basename(rtrim($relativePath, '/'));
 
@@ -188,7 +211,7 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
         }
 
-        $targetDir = "SIPTU_Backup/{$targetNip}";
+        $targetDir = "SIPTU Drive/{$targetNip}";
         $file = $request->file('file');
 
         try {
@@ -201,7 +224,7 @@ class NextcloudStorageController extends Controller
             $url = $this->getWebdavUrl($targetDir . '/' . $safeName);
             $fileContents = file_get_contents($file->getRealPath());
 
-            $uploadResponse = Http::withBasicAuth($this->username, $this->password)
+            $uploadResponse = $this->httpClient()
                 ->withHeaders([
                     'X-Requested-With' => 'XMLHttpRequest',
                     'Content-Type' => $file->getClientMimeType()
@@ -246,15 +269,15 @@ class NextcloudStorageController extends Controller
         $path = $request->query('path');
         $currentUser = $request->user();
 
-        // 🛡️ Security Check 1: Must be inside SIPTU_Backup
+        // 🛡️ Security Check 1: Must be inside SIPTU Drive
         $cleanPath = '/' . ltrim($path, '/');
-        if (!str_starts_with($cleanPath, '/SIPTU_Backup/')) {
+        if (!str_starts_with($cleanPath, '/SIPTU Drive/')) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         // 🛡️ Security Check 2: Non-admins can only download their own NIP folder files
         if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU_Backup/' . $currentUser->nip . '/';
+            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
             if (!str_starts_with($cleanPath, $expectedPrefix)) {
                 return response()->json(['message' => 'Anda tidak memiliki akses ke berkas ini.'], 403);
             }
@@ -262,7 +285,7 @@ class NextcloudStorageController extends Controller
 
         try {
             $url = $this->getWebdavUrl($cleanPath);
-            $response = Http::withBasicAuth($this->username, $this->password)
+            $response = $this->httpClient()
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
                 ->send('GET', $url);
 
@@ -298,15 +321,15 @@ class NextcloudStorageController extends Controller
         $path = $request->query('path');
         $currentUser = $request->user();
 
-        // 🛡️ Security Check 1: Must be inside SIPTU_Backup
+        // 🛡️ Security Check 1: Must be inside SIPTU Drive
         $cleanPath = '/' . ltrim($path, '/');
-        if (!str_starts_with($cleanPath, '/SIPTU_Backup/')) {
+        if (!str_starts_with($cleanPath, '/SIPTU Drive/')) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         // 🛡️ Security Check 2: Non-admins can only delete their own NIP folder files
         if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU_Backup/' . $currentUser->nip . '/';
+            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
             if (!str_starts_with($cleanPath, $expectedPrefix)) {
                 return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus berkas ini.'], 403);
             }
@@ -314,7 +337,7 @@ class NextcloudStorageController extends Controller
 
         try {
             $url = $this->getWebdavUrl($cleanPath);
-            $response = Http::withBasicAuth($this->username, $this->password)
+            $response = $this->httpClient()
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
                 ->delete($url);
 
