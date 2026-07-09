@@ -51,6 +51,19 @@ const Login = () => {
     return '/app';
   }, [location.search]);
 
+  const targetApp = useMemo(() => {
+    const redirect = new URLSearchParams(location.search).get('redirect');
+    if (!redirect) return null;
+    if (redirect.includes('/sso/selaras') || redirect.includes('selaras')) {
+      return {
+        name: 'SELARAS',
+        fullName: 'Sistem Layanan Mandiri (SELARAS)',
+        logo: '/logo/selaras.png',
+      };
+    }
+    return null;
+  }, [location.search]);
+
   useEffect(() => {
     if (remembered) {
       form.setFieldsValue({
@@ -141,9 +154,27 @@ const Login = () => {
       <div className="login-container">
         <div className="login-form-header">
           <img src="/logo/logo.png" alt="SIPTU Logo" className="login-logo" />
-          <h2>Login SIPTU</h2>
-          <p>Akses Sistem Layanan Mandiri</p>
+          <h2>SIPTU Single Sign-On</h2>
+          <p>Satu Kredensial untuk Semua Layanan Terintegrasi</p>
         </div>
+
+        {targetApp && (
+          <div className="sso-integration-card">
+            <div className="sso-integration-logos">
+              <img src="/logo/logo.png" alt="SIPTU" className="sso-mini-logo" />
+              <div className="sso-connector-dots">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+              <img src={targetApp.logo} alt={targetApp.name} className="sso-mini-logo target-app-logo" />
+            </div>
+            <div className="sso-integration-info">
+              <span className="sso-info-label">Menghubungkan Akun ke Portal</span>
+              <strong className="sso-info-app-name">{targetApp.fullName}</strong>
+            </div>
+          </div>
+        )}
 
         <Form layout="vertical" form={form} onFinish={handleSubmit} autoComplete="off">
           <Form.Item
