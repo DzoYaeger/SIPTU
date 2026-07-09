@@ -148,6 +148,9 @@ class LpjController extends Controller
             'items.*.uang_transport_pesawat'  => 'nullable|numeric|min:0',
             'items.*.uang_transport_pesawat_berangkat' => 'nullable|numeric|min:0',
             'items.*.uang_transport_pesawat_pulang'    => 'nullable|numeric|min:0',
+            'items.*.uang_transport_lokal'    => 'nullable|numeric|min:0',
+            'items.*.uang_transport_lokal_harian' => 'nullable|numeric|min:0',
+            'items.*.uang_transport_lokal_hari'   => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -191,6 +194,7 @@ class LpjController extends Controller
                 $penginapanTotal = $num('uang_penginapan_harian') * $int('uang_penginapan_hari');
                 $fullboardTotal = $num('uang_fullboard_harian') * $int('uang_fullboard_hari');
                 $harianFullboardTotal = $num('uang_harian_fullboard_per_hari') * $int('uang_harian_fullboard_hari');
+                $lokalTotal = $num('uang_transport_lokal_harian') * $int('uang_transport_lokal_hari');
 
                 return [
                     'lpj_header_id'       => $lpj->id,
@@ -233,6 +237,10 @@ class LpjController extends Controller
                     'uang_harian_fullboard'          => $harianFullboardTotal ?: $val('uang_harian_fullboard'),
                     'uang_harian_fullboard_per_hari' => $val('uang_harian_fullboard_per_hari'),
                     'uang_harian_fullboard_hari'     => $val('uang_harian_fullboard_hari'),
+                    // Transport Lokal
+                    'uang_transport_lokal'           => $lokalTotal ?: $val('uang_transport_lokal'),
+                    'uang_transport_lokal_harian'    => $val('uang_transport_lokal_harian'),
+                    'uang_transport_lokal_hari'      => $val('uang_transport_lokal_hari'),
                     'created_at'          => $now,
                     'updated_at'          => $now,
                 ];
@@ -442,6 +450,20 @@ class LpjController extends Controller
                 $totalAmount += $item->uang_transport_sewa_mobil;
             }
 
+            // Transport Lokal
+            if ($item->uang_transport_lokal !== null && $item->uang_transport_lokal > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport Lokal',
+                    'breakdown' => [
+                        ['label' => '', 'qty' => $item->uang_transport_lokal_hari, 'rate' => $item->uang_transport_lokal_harian, 'total' => $item->uang_transport_lokal]
+                    ],
+                    'total' => $item->uang_transport_lokal,
+                    'keterangan' => ''
+                ];
+                $totalAmount += $item->uang_transport_lokal;
+            }
+
             // Uang Harian
             if ($item->uang_harian !== null && $item->uang_harian > 0) {
                 $rows[] = [
@@ -620,6 +642,10 @@ class LpjController extends Controller
             if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
                 $totalAmount += $item->uang_transport_sewa_mobil;
             }
+            // Transport Lokal
+            if ($item->uang_transport_lokal !== null && $item->uang_transport_lokal > 0) {
+                $totalAmount += $item->uang_transport_lokal;
+            }
             // Uang Harian
             if ($item->uang_harian !== null && $item->uang_harian > 0) {
                 $totalAmount += $item->uang_harian;
@@ -667,7 +693,8 @@ class LpjController extends Controller
                 + ($item->uang_transport_taxi ?? 0)
                 + ($item->uang_transport_pesawat ?? 0)
                 + ($item->uang_transport_bbm ?? 0)
-                + ($item->uang_transport_sewa_mobil ?? 0);
+                + ($item->uang_transport_sewa_mobil ?? 0)
+                + ($item->uang_transport_lokal ?? 0);
             $fullboard = $item->uang_fullboard ?? 0;
             $penginapan = $item->uang_penginapan ?? 0;
             $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
@@ -738,7 +765,7 @@ class LpjController extends Controller
 
             // 1. BBM
             $bbmVal = $item->uang_transport_bbm ?? 0;
-            if ($bbmVal > 0 || (empty($item->uang_transport_taxi) && empty($item->uang_transport_bus) && empty($item->uang_transport_pesawat) && empty($item->uang_transport_sewa_mobil))) {
+            if ($bbmVal > 0 || (empty($item->uang_transport_taxi) && empty($item->uang_transport_bus) && empty($item->uang_transport_pesawat) && empty($item->uang_transport_sewa_mobil) && empty($item->uang_transport_lokal))) {
                 $rows[] = [
                     'no' => $no++,
                     'title' => 'Transport (BBM)',
@@ -784,6 +811,16 @@ class LpjController extends Controller
                     'title' => 'Transport Sewa Mobil',
                     'desc' => 'Klaim Rental / Sewa Mobil',
                     'value' => $item->uang_transport_sewa_mobil
+                ];
+            }
+
+            // 6. Transport Lokal
+            if ($item->uang_transport_lokal !== null && $item->uang_transport_lokal > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport Lokal',
+                    'desc' => 'Klaim Transport Lokal',
+                    'value' => $item->uang_transport_lokal
                 ];
             }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-    Table, Card, Button, Tag, Space, Input, Modal,
+    Table, Card, Button, Tag, Space, Input, Modal, Radio,
     message, Typography, Row, Col, Checkbox, InputNumber,
     Spin, Dropdown, Select, Switch,
 } from "antd";
@@ -53,6 +53,7 @@ const COMPONENTS = [
     { key: "uang_transport_pesawat",   label: "Transport Pesawat",    color: "#3b82f6", type: "departure_return" },
     { key: "uang_transport_bbm",       label: "Transport BBM",        color: "#0ea5e9", type: "simple" },
     { key: "uang_transport_sewa_mobil",label: "Transport Sewa Mobil", color: "#06b6d4", type: "rate_days" },
+    { key: "uang_transport_lokal",     label: "Transport Lokal",      color: "#1e1b4b", type: "rate_days" },
     { key: "uang_harian",              label: "Uang Harian",          color: "#0d9488", type: "daily" },
     { key: "uang_penginapan",          label: "Penginapan",           color: "#8b5cf6", type: "rate_days" },
     { key: "uang_fullboard",           label: "Paket Fullboard",      color: "#ec4899", type: "simple" },
@@ -152,6 +153,7 @@ export default function KeuanganLpj() {
     const [sidebarSearch, setSidebarSearch] = useState("");
     const [employees, setEmployees] = useState([]);
     const [bendaharaId, setBendaharaId] = useState(null);
+    const [filterKey, setFilterKey] = useState("all");
 
     useEffect(() => {
         const fetchEmployees = async () => {
@@ -222,6 +224,11 @@ export default function KeuanganLpj() {
                 per_hari: item.uang_transport_sewa_mobil_harian ?? 0,
                 hari: item.uang_transport_sewa_mobil_hari ?? 0,
             },
+            uang_transport_lokal: {
+                checked: item.uang_transport_lokal != null,
+                per_hari: item.uang_transport_lokal_harian ?? 0,
+                hari: item.uang_transport_lokal_hari ?? 0,
+            },
             uang_harian: {
                 checked: item.uang_harian != null,
                 per_hari: item.uang_harian_per_hari ?? (autoRate > 0 ? autoRate : (item.uang_harian ?? 0)),
@@ -253,6 +260,7 @@ export default function KeuanganLpj() {
         setLpjStatus("draft");
         setKeterangan("");
         setBendaharaId(null);
+        setFilterKey("all");
         try {
             const res = await apiFetch(`/lpj/${st.id}`);
             const json = await res.json();
@@ -546,6 +554,9 @@ export default function KeuanganLpj() {
                     } else if (c.type === "rate_days" || c.type === "daily") {
                         const suffix = c.key === "uang_harian" ? "" : (c.key === "uang_penginapan" ? "" : "");
                         if (c.key === "uang_transport_sewa_mobil") {
+                            row[c.key + "_harian"] = data.per_hari || null;
+                            row[c.key + "_hari"]   = data.hari || null;
+                        } else if (c.key === "uang_transport_lokal") {
                             row[c.key + "_harian"] = data.per_hari || null;
                             row[c.key + "_hari"]   = data.hari || null;
                         } else if (c.key === "uang_harian") {
@@ -1053,11 +1064,34 @@ export default function KeuanganLpj() {
                                                     />
                                                 </div>
 
+                                                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center', background: '#f8fafc', padding: '6px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                    <Radio.Group 
+                                                        value={filterKey} 
+                                                        onChange={e => setFilterKey(e.target.value)} 
+                                                        buttonStyle="solid" 
+                                                        size="middle"
+                                                        style={{ width: '100%', display: 'flex' }}
+                                                    >
+                                                        <Radio.Button value="all" style={{ flex: 1, textAlign: 'center', borderRadius: '6px 0 0 6px' }}>Semua</Radio.Button>
+                                                        <Radio.Button value="transport" style={{ flex: 1, textAlign: 'center' }}>Transport</Radio.Button>
+                                                        <Radio.Button value="harian" style={{ flex: 1, textAlign: 'center' }}>Uang Harian</Radio.Button>
+                                                        <Radio.Button value="penginapan" style={{ flex: 1, textAlign: 'center', borderRadius: '0 6px 6px 0' }}>Penginapan</Radio.Button>
+                                                    </Radio.Group>
+                                                </div>
+
                                                 <div className="klpj-detail-items-list">
-                                                    {COMPONENTS.map(c => {
-                                                        const compVal = activeEmployee[c.key] || emptyComp(c.type, 0);
-                                                        const compTotal = getComponentTotal(activeEmployee, c.key);
-                                                        return (
+                                                    {COMPONENTS
+                                                        .filter(c => {
+                                                            if (filterKey === "all") return true;
+                                                            if (filterKey === "transport") return c.key.startsWith("uang_transport");
+                                                            if (filterKey === "harian") return c.key === "uang_harian" || c.key === "uang_harian_fullboard";
+                                                            if (filterKey === "penginapan") return c.key === "uang_penginapan" || c.key === "uang_fullboard";
+                                                            return true;
+                                                        })
+                                                        .map(c => {
+                                                            const compVal = activeEmployee[c.key] || emptyComp(c.type, 0);
+                                                            const compTotal = getComponentTotal(activeEmployee, c.key);
+                                                            return (
                                                             <div className={`klpj-detail-item-card${compVal.checked ? ' active' : ''}`} key={c.key}>
                                                                 {/* Top row: icon + label + toggle */}
                                                                 <div className="klpj-detail-item-top">

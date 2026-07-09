@@ -40,6 +40,9 @@ class LpjItem extends Model
         'uang_harian_fullboard',
         'uang_harian_fullboard_hari',
         'uang_harian_fullboard_per_hari',
+        'uang_transport_lokal',
+        'uang_transport_lokal_harian',
+        'uang_transport_lokal_hari',
     ];
 
     protected function casts(): array
@@ -71,6 +74,9 @@ class LpjItem extends Model
             'uang_harian_fullboard'           => 'float',
             'uang_harian_fullboard_hari'      => 'integer',
             'uang_harian_fullboard_per_hari'  => 'float',
+            'uang_transport_lokal'            => 'float',
+            'uang_transport_lokal_harian'     => 'float',
+            'uang_transport_lokal_hari'       => 'integer',
         ];
     }
 
