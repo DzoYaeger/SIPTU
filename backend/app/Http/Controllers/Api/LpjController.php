@@ -706,6 +706,133 @@ class LpjController extends Controller
         return $pdf->download('Rekapitulasi_LPJ_' . ($safeNomorSt ?: $st->id) . '.pdf');
     }
 
+    public function exportRill(Request $request, $suratTugasId)
+    {
+        \Carbon\Carbon::setLocale('id');
+
+        $st = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim'])->findOrFail($suratTugasId);
+        $lpj = LpjHeader::with('bendahara')->where('surat_tugas_id', $st->id)->firstOrFail();
+
+        $pejabat = \App\Models\PejabatPerbendaharaan::with(['bendahara', 'ppk'])->first();
+        $ppkName = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->name : '-';
+        $ppkNip = ($pejabat && $pejabat->ppk) ? $pejabat->ppk->nip : '-';
+
+        $itemsQuery = LpjItem::where('lpj_header_id', $lpj->id);
+
+        if ($request->has('employee_id')) {
+            $itemsQuery->where('employee_id', $request->employee_id);
+        } elseif ($request->has('employee_name')) {
+            $itemsQuery->where('employee_name', $request->employee_name);
+        }
+
+        $items = $itemsQuery->get();
+
+        if ($items->isEmpty()) {
+            abort(404, 'Data rincian biaya tidak ditemukan.');
+        }
+
+        $processedItems = [];
+        foreach ($items as $item) {
+            $rows = [];
+            $no = 1;
+
+            // 1. BBM
+            $bbmVal = $item->uang_transport_bbm ?? 0;
+            if ($bbmVal > 0 || (empty($item->uang_transport_taxi) && empty($item->uang_transport_bus) && empty($item->uang_transport_pesawat) && empty($item->uang_transport_sewa_mobil))) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (BBM)',
+                    'desc' => 'Klaim BBM Kendaraan Dinas',
+                    'value' => $bbmVal
+                ];
+            }
+
+            // 2. Taksi
+            if ($item->uang_transport_taxi !== null && $item->uang_transport_taxi > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Taksi)',
+                    'desc' => 'Klaim Taksi Kendaraan Dinas / Umum',
+                    'value' => $item->uang_transport_taxi
+                ];
+            }
+
+            // 3. Bus
+            if ($item->uang_transport_bus !== null && $item->uang_transport_bus > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Bus)',
+                    'desc' => 'Klaim Bus Kendaraan Dinas / Umum',
+                    'value' => $item->uang_transport_bus
+                ];
+            }
+
+            // 4. Pesawat
+            if ($item->uang_transport_pesawat !== null && $item->uang_transport_pesawat > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Pesawat)',
+                    'desc' => 'Klaim Tiket Pesawat',
+                    'value' => $item->uang_transport_pesawat
+                ];
+            }
+
+            // 5. Sewa Mobil
+            if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport Sewa Mobil',
+                    'desc' => 'Klaim Rental / Sewa Mobil',
+                    'value' => $item->uang_transport_sewa_mobil
+                ];
+            }
+
+            $position = '-';
+            if (!$item->is_external && $item->employee_id) {
+                $emp = \App\Models\Employee::find($item->employee_id);
+                $position = $emp ? ($emp->position ?: '-') : '-';
+            }
+
+            $totalAmount = array_sum(collect($rows)->pluck('value')->toArray());
+
+            $processedItems[] = [
+                'item' => $item,
+                'rows' => $rows,
+                'total' => $totalAmount,
+                'position' => $position
+            ];
+        }
+
+        $sppdDate = null;
+        if ($st->tanggal_st) {
+            $sppdDate = \Carbon\Carbon::parse($st->tanggal_st)->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        } elseif ($st->tanggal_mulai) {
+            $sppdDate = \Carbon\Carbon::parse($st->tanggal_mulai)->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        } else {
+            $sppdDate = \Carbon\Carbon::now()->timezone('Asia/Makassar')->translatedFormat('j F Y');
+        }
+
+        $printDate = \Carbon\Carbon::now()->timezone('Asia/Makassar')->translatedFormat('j F Y');
+
+        $pdf = Pdf::loadView('pdf.lpj_rill', [
+            'st' => $st,
+            'lpj' => $lpj,
+            'processedItems' => $processedItems,
+            'sppdDate' => $sppdDate,
+            'printDate' => $printDate,
+            'ppkName' => $ppkName,
+            'ppkNip' => $ppkNip,
+        ]);
+
+        $pdf->setPaper([0, 0, 612, 936]); // F4 Portrait
+
+        $safeNomorSt = str_replace(['/', '\\'], '_', $st->nomor_st);
+        if ($request->has('employee_id') || $request->has('employee_name')) {
+            return $pdf->download('Daftar_Pengeluaran_Riil_' . str_replace(' ', '_', $items[0]->employee_name) . '.pdf');
+        }
+        return $pdf->download('Daftar_Pengeluaran_Riil_Semua_' . ($safeNomorSt ?: $st->id) . '.pdf');
+    }
+
     /**
      * Spell out number in Indonesian words.
      */

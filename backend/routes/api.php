@@ -403,6 +403,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::get('/lpj/{suratTugasId}', [LpjController::class, 'show'])->whereNumber('suratTugasId');
     Route::get('/lpj/{suratTugasId}/export-pdf', [LpjController::class, 'exportPdf'])->whereNumber('suratTugasId');
     Route::get('/lpj/{suratTugasId}/export-rekap', [LpjController::class, 'exportRekap'])->whereNumber('suratTugasId');
+    Route::get('/lpj/{suratTugasId}/export-rill', [LpjController::class, 'exportRill'])->whereNumber('suratTugasId');
     Route::post('/lpj/{suratTugasId}', [LpjController::class, 'store'])->whereNumber('suratTugasId');
     Route::put('/lpj/{suratTugasId}/items', [LpjController::class, 'updateItems'])->whereNumber('suratTugasId');
     Route::post('/lpj/{suratTugasId}/mark-manual', [LpjController::class, 'markManual'])->whereNumber('suratTugasId');

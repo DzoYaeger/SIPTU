@@ -19,21 +19,31 @@ import "./KeuanganLpj.css";
 
 const { Title, Text } = Typography;
 
-/* ── Region-based auto-rate for Uang Harian ── */
 const LOCKED_RATE_REGIONS = [
-    "palopo", "kota palopo",
     "luwu",
     "luwu utara",
     "toraja utara",
     "tanah toraja",
     "enrekang",
 ];
-const LOCKED_DAILY_RATE = 430000;
 
-const isLockedRegion = (lokasi) => {
-    if (!lokasi) return false;
+const getLockedRate = (lokasi) => {
+    if (!lokasi) return 0;
     const lower = lokasi.toLowerCase();
-    return LOCKED_RATE_REGIONS.some(r => lower.includes(r));
+    if (lower.includes("palopo")) {
+        return 150000;
+    }
+    if (LOCKED_RATE_REGIONS.some(r => lower.includes(r))) {
+        return 430000;
+    }
+    return 0;
+};
+
+const isLockedRegion = (lokasi) => getLockedRate(lokasi) > 0;
+
+const isPalopo = (lokasi) => {
+    if (!lokasi) return false;
+    return lokasi.toLowerCase().includes("palopo");
 };
 
 /* ── Components definition ── */
@@ -214,8 +224,8 @@ export default function KeuanganLpj() {
             },
             uang_harian: {
                 checked: item.uang_harian != null,
-                per_hari: item.uang_harian_per_hari ?? (isLockedRegion(lokasi) ? LOCKED_DAILY_RATE : (item.uang_harian ?? 0)),
-                hari: item.uang_harian_hari ?? (item.uang_harian && isLockedRegion(lokasi) && LOCKED_DAILY_RATE ? Math.round(item.uang_harian / LOCKED_DAILY_RATE) : 0),
+                per_hari: item.uang_harian_per_hari ?? (isLockedRegion(lokasi) ? getLockedRate(lokasi) : (item.uang_harian ?? 0)),
+                hari: item.uang_harian_hari ?? (item.uang_harian && isLockedRegion(lokasi) && getLockedRate(lokasi) ? Math.round(item.uang_harian / getLockedRate(lokasi)) : 0),
             },
             uang_penginapan: {
                 checked: item.uang_penginapan != null,
@@ -272,7 +282,7 @@ export default function KeuanganLpj() {
 
     const initItemsFromSt = (st) => {
         const lokasi = st?.lokasi_tugas ?? "";
-        const autoRate = isLockedRegion(lokasi) ? LOCKED_DAILY_RATE : 0;
+        const autoRate = getLockedRate(lokasi);
         const map = {};
         let totalIndex = 0;
         
@@ -316,8 +326,9 @@ export default function KeuanganLpj() {
             let updated;
             if (checked) {
                 // When turning on, keep existing values or set defaults
-                if (compKey === "uang_harian" && isLockedRegion(selectedSt?.lokasi_tugas)) {
-                    updated = { ...existing, checked: true, per_hari: LOCKED_DAILY_RATE };
+                const rate = getLockedRate(selectedSt?.lokasi_tugas);
+                if (compKey === "uang_harian" && rate > 0) {
+                    updated = { ...existing, checked: true, per_hari: rate };
                 } else {
                     updated = { ...existing, checked: true };
                 }
@@ -411,6 +422,72 @@ export default function KeuanganLpj() {
         } catch (err) {
             console.error(err);
             message.error({ content: 'Gagal mencetak dokumen.', key: 'lpj_print_all' });
+        }
+    };
+
+    const handlePrintRill = async (employee) => {
+        if (!selectedSt || !lpjData) return;
+        try {
+            message.loading({ content: 'Menyiapkan dokumen...', key: 'lpj_print_rill' });
+            
+            const params = new URLSearchParams();
+            if (employee.employee_id) {
+                params.set("employee_id", employee.employee_id);
+            } else {
+                params.set("employee_name", employee.employee_name);
+            }
+
+            const response = await apiFetch(
+                `/lpj/${selectedSt.id}/export-rill?${params}`,
+                { method: "GET", headers: { Accept: "application/pdf" } }
+            );
+
+            if (!response.ok) throw new Error("Gagal mengunduh dokumen");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Daftar_Pengeluaran_Riil_${employee.employee_name.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            message.success({ content: 'Dokumen Pengeluaran Riil berhasil diunduh.', key: 'lpj_print_rill' });
+        } catch (err) {
+            console.error(err);
+            message.error({ content: 'Gagal mencetak dokumen.', key: 'lpj_print_rill' });
+        }
+    };
+
+    const handlePrintAllRill = async () => {
+        if (!selectedSt || !lpjData) return;
+        try {
+            message.loading({ content: 'Menyiapkan seluruh dokumen...', key: 'lpj_print_all_rill' });
+            
+            const response = await apiFetch(
+                `/lpj/${selectedSt.id}/export-rill`,
+                { method: "GET", headers: { Accept: "application/pdf" } }
+            );
+
+            if (!response.ok) throw new Error("Gagal mengunduh dokumen");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeNomorSt = selectedSt.nomor_st ? selectedSt.nomor_st.replace(/[\/\\]/g, '_') : selectedSt.id;
+            a.download = `Daftar_Pengeluaran_Riil_Semua_${safeNomorSt}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            message.success({ content: 'Seluruh dokumen Pengeluaran Riil berhasil diunduh.', key: 'lpj_print_all_rill' });
+        } catch (err) {
+            console.error(err);
+            message.error({ content: 'Gagal mencetak dokumen.', key: 'lpj_print_all_rill' });
         }
     };
 
@@ -938,16 +1015,31 @@ export default function KeuanganLpj() {
                                                             {activeEmployee.employee_nip || "NON-NIP"} {activeEmployee.is_external && <Tag color="gold" style={{ marginLeft: 6 }}>EKSTERNAL</Tag>}
                                                         </span>
                                                     </div>
-                                                    <Button 
-                                                        type="primary" 
-                                                        icon={<FileProtectOutlined />} 
-                                                        onClick={() => handlePrintSingle(activeEmployee)}
-                                                        disabled={!lpjData}
-                                                        title={!lpjData ? "Simpan data LPJ terlebih dahulu" : "Cetak rincian biaya pegawai ini"}
-                                                        size="middle"
-                                                    >
-                                                        Cetak Rincian
-                                                    </Button>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <Button 
+                                                            type="primary" 
+                                                            icon={<FileProtectOutlined />} 
+                                                            onClick={() => handlePrintSingle(activeEmployee)}
+                                                            disabled={!lpjData}
+                                                            title={!lpjData ? "Simpan data LPJ terlebih dahulu" : "Cetak rincian biaya pegawai ini"}
+                                                            size="middle"
+                                                        >
+                                                            Cetak Rincian
+                                                        </Button>
+                                                        {isPalopo(selectedSt?.lokasi_tugas) && (
+                                                            <Button 
+                                                                type="primary" 
+                                                                style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                                                                icon={<FileProtectOutlined />} 
+                                                                onClick={() => handlePrintRill(activeEmployee)}
+                                                                disabled={!lpjData}
+                                                                title={!lpjData ? "Simpan data LPJ terlebih dahulu" : "Cetak pengeluaran riil pegawai ini"}
+                                                                size="middle"
+                                                            >
+                                                                Cetak Pengeluaran Riil
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1039,6 +1131,15 @@ export default function KeuanganLpj() {
                                         >
                                             Cetak Semua Rincian (PDF)
                                         </Button>
+                                        {isPalopo(selectedSt?.lokasi_tugas) && (
+                                            <Button 
+                                                icon={<FileProtectOutlined />} 
+                                                style={{ color: '#10b981', borderColor: '#10b981' }}
+                                                onClick={handlePrintAllRill}
+                                            >
+                                                Cetak Semua Pengeluaran Riil (PDF)
+                                            </Button>
+                                        )}
                                         <Button 
                                             icon={<FileProtectOutlined />} 
                                             onClick={handlePrintRekap}
