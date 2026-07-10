@@ -207,6 +207,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::get('/nextcloud/download', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'download']);
     Route::delete('/nextcloud/delete', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'destroy']);
     Route::get('/nextcloud/share-token', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'getShareToken']);
+    Route::post('/nextcloud/save', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'saveFile']);
 
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);

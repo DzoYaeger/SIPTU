@@ -549,4 +549,59 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Tautan tidak valid atau telah kedaluwarsa.'], 400);
         }
     }
+
+    /**
+     * Menyimpan/menimpa perubahan berkas di Nextcloud.
+     */
+    public function saveFile(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file',
+            'path' => 'required|string',
+        ]);
+
+        $path = $request->input('path');
+        $currentUser = $request->user();
+        $cleanPath = '/' . ltrim($path, '/');
+
+        // 🛡️ Security Check: Must be inside SIPTU Drive
+        if (!str_starts_with($cleanPath, '/SIPTU Drive/')) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        // 🛡️ Security Check: Non-admins can only save files in their own NIP folder
+        if ($currentUser->base_role !== 'admin') {
+            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
+            if (!str_starts_with($cleanPath, $expectedPrefix)) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk menyimpan berkas ini.'], 403);
+            }
+        }
+
+        $file = $request->file('file');
+
+        try {
+            $url = $this->getWebdavUrl($cleanPath);
+            $fileContents = file_get_contents($file->getRealPath());
+
+            $response = $this->httpClient()
+                ->withHeaders([
+                    'X-Requested-With' => 'XMLHttpRequest',
+                    'Content-Type' => $file->getClientMimeType()
+                ])
+                ->withBody($fileContents, $file->getClientMimeType())
+                ->send('PUT', $url);
+
+            if (!$response->successful() && $response->status() !== 201 && $response->status() !== 204) {
+                return response()->json([
+                    'message' => 'Gagal menyimpan berkas ke Nextcloud.',
+                    'status' => $response->status()
+                ], 500);
+            }
+
+            return response()->json(['message' => 'Berkas berhasil disimpan.']);
+        } catch (\Exception $e) {
+            Log::error("Nextcloud save error: " . $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
 }

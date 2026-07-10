@@ -47,6 +47,7 @@ import {
   MenuOutlined,
   EllipsisOutlined,
   LinkOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import dayjs from "dayjs";
@@ -54,6 +55,14 @@ import "./PenyimpananCloud.css";
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
+
+const getEditableType = (fileName) => {
+  if (!fileName) return null;
+  const ext = fileName.split(".").pop().toLowerCase();
+  if (["xlsx", "xls"].includes(ext)) return "xlsx";
+  if (["docx", "doc"].includes(ext)) return "docx";
+  return null;
+};
 
 const formatBytes = (bytes, decimals = 2) => {
   if (bytes === null || bytes === undefined) return "-";
@@ -540,6 +549,16 @@ export default function PenyimpananCloud() {
               />
             </Tooltip>
           )}
+          {getEditableType(file.name) && (
+            <Tooltip title="Edit Berkas">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<EditOutlined style={{ color: "#fa8c16" }} />}
+                onClick={() => navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${getEditableType(file.name)}`)}
+              />
+            </Tooltip>
+          )}
           {!file.is_dir && (
             <Tooltip title="Unduh">
               <Button
@@ -854,6 +873,17 @@ export default function PenyimpananCloud() {
                                 onClick={() => handleShareLink(file)}
                               />
                             </Tooltip>
+                            {getEditableType(file.name) && (
+                              <Tooltip title="Edit Berkas">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  shape="circle"
+                                  icon={<EditOutlined style={{ color: "#fa8c16" }} />}
+                                  onClick={() => navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${getEditableType(file.name)}`)}
+                                />
+                              </Tooltip>
+                            )}
                             <Tooltip title="Unduh">
                               <Button
                                 type="text"

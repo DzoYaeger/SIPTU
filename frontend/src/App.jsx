@@ -27,6 +27,7 @@ import PublicQueueRegistration from "./pages/PublicQueueRegistration.jsx";
 import AdminQueueStandalone from "./views/AdminQueueStandalone.jsx";
 import PenyimpananCloud from "./views/PenyimpananCloud.jsx";
 import PublicSharePage from "./views/PublicSharePage.jsx";
+import DriveEditor from "./views/DriveEditor.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import KearsipanPencatatanSurat from "./views/KearsipanPencatatanSurat.jsx";
 import KearsipanArsipVital from "./views/KearsipanArsipVital.jsx";
@@ -337,6 +338,10 @@ function App() {
       <Route
         path="/app/penyimpanan-cloud"
         element={token ? <PenyimpananCloud /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/app/drive/editor"
+        element={token ? <DriveEditor /> : <Navigate to="/login" replace />}
       />
       <Route path="/it-helpdesk/new" element={<ItHelpdeskForm />} />
       <Route
