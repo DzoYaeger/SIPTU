@@ -118,9 +118,9 @@ export default function DriveEditor() {
         header: [],
         main: [],
         footer: []
-      });
+      }, {});
 
-      editor.command.executeHtml({
+      editor.command.executeSetHTML({
         header: "",
         main: html,
         footer: ""
@@ -181,7 +181,7 @@ export default function DriveEditor() {
           throw new Error("Canvas-Editor belum terinisialisasi.");
         }
         
-        const htmlContent = editorRef.current.command.getHtml();
+        const htmlContent = editorRef.current.command.getHTML();
         
         // Construct basic Word-compatible XML document envelope
         const docxContent = `
