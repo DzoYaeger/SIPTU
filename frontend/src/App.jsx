@@ -26,6 +26,7 @@ import QueueTvDisplay from "./pages/QueueTvDisplay.jsx";
 import PublicQueueRegistration from "./pages/PublicQueueRegistration.jsx";
 import AdminQueueStandalone from "./views/AdminQueueStandalone.jsx";
 import PenyimpananCloud from "./views/PenyimpananCloud.jsx";
+import PublicSharePage from "./views/PublicSharePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import KearsipanPencatatanSurat from "./views/KearsipanPencatatanSurat.jsx";
 import KearsipanArsipVital from "./views/KearsipanArsipVital.jsx";
@@ -324,6 +325,7 @@ function App() {
       <Route path="/sign-protokol/:id/:token" element={<SignProtokolPage type="ketua" />} />
       <Route path="/sign-protokol-kepala/:id/:token" element={<SignProtokolPage type="kepala" />} />
       <Route path="/verifikasi/:token" element={<VerifyDocumentPage />} />
+      <Route path="/share/:token" element={<PublicSharePage />} />
       <Route path="/peminjaman-ruangan" element={<PublicRoomSchedulePage />} />
       <Route path="/surat-tugas/new" element={<SuratTugasForm />} />
       <Route path="/antrian-display" element={<QueueTvDisplay />} />

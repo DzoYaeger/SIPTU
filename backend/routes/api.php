@@ -175,6 +175,10 @@ Route::middleware('throttle:public-api')->group(function () {
     // BMN asset template download (public, no auth needed)
     Route::get('/bmn/assets/template', [AssetController::class, 'template']);
 
+    // Public Share Links (Nextcloud)
+    Route::get('/share/info/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareInfo']);
+    Route::get('/share/download/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDownload']);
+
 });
 
 // ─── Queue Display polling (generous rate limit for TV) ─────────────
@@ -202,6 +206,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::post('/nextcloud/folder', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'createFolder']);
     Route::get('/nextcloud/download', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'download']);
     Route::delete('/nextcloud/delete', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'destroy']);
+    Route::get('/nextcloud/share-token', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'getShareToken']);
 
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);

@@ -423,4 +423,130 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Membuat token enkripsi untuk sharing berkas.
+     */
+    public function getShareToken(Request $request)
+    {
+        $request->validate([
+            'path' => 'required|string',
+        ]);
+        
+        $path = $request->query('path');
+        $currentUser = $request->user();
+        $cleanPath = '/' . ltrim($path, '/');
+
+        // Security Check: Non-admins can only share their own NIP folder files
+        if ($currentUser->base_role !== 'admin') {
+            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
+            if (!str_starts_with($cleanPath, $expectedPrefix)) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk membagikan berkas ini.'], 403);
+            }
+        }
+
+        try {
+            $token = base64_encode(\Illuminate\Support\Facades\Crypt::encryptString($cleanPath));
+            return response()->json([
+                'token' => $token
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Gagal membuat tautan berbagi.'], 500);
+        }
+    }
+
+    /**
+     * Mengambil metadata berkas secara publik berdasarkan share token.
+     */
+    public function shareInfo($token)
+    {
+        try {
+            $path = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+            
+            // Security Check: Must start with SIPTU Drive
+            $cleanPath = '/' . ltrim($path, '/');
+            if (!str_starts_with($cleanPath, '/SIPTU Drive/')) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            $url = $this->getWebdavUrl($cleanPath);
+            $response = $this->httpClient()
+                ->withHeaders([
+                    'X-Requested-With' => 'XMLHttpRequest',
+                    'Depth' => '0'
+                ])
+                ->send('PROPFIND', $url);
+
+            if (!$response->successful()) {
+                return response()->json(['message' => 'Berkas tidak ditemukan atau telah dihapus.'], 404);
+            }
+
+            $xmlStr = $response->body();
+            $dom = new \DOMDocument();
+            if (@$dom->loadXML($xmlStr)) {
+                $xpath = new \DOMXPath($dom);
+                $xpath->registerNamespace('d', 'DAV:');
+                $responseNodes = $xpath->query('//d:response');
+                
+                if ($responseNodes->length > 0) {
+                    $node = $responseNodes->item(0);
+                    $propstatNodes = $xpath->query('d:propstat/d:prop', $node);
+                    if ($propstatNodes->length > 0) {
+                        $propNode = $propstatNodes->item(0);
+                        $displayNameNodes = $xpath->query('d:displayname', $propNode);
+                        $getcontentlengthNodes = $xpath->query('d:getcontentlength', $propNode);
+                        
+                        $name = $displayNameNodes->length > 0 ? $displayNameNodes->item(0)->textContent : basename($cleanPath);
+                        $size = $getcontentlengthNodes->length > 0 ? (int)$getcontentlengthNodes->item(0)->textContent : 0;
+
+                        return response()->json([
+                            'name' => $name,
+                            'size' => $size,
+                            'path' => $cleanPath
+                        ]);
+                    }
+                }
+            }
+            
+            return response()->json(['message' => 'Gagal membaca data berkas.'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Tautan berbagi tidak valid atau telah kedaluwarsa.'], 400);
+        }
+    }
+
+    /**
+     * Mengunduh berkas secara publik berdasarkan share token.
+     */
+    public function shareDownload($token)
+    {
+        try {
+            $path = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+            
+            // Security Check: Must start with SIPTU Drive
+            $cleanPath = '/' . ltrim($path, '/');
+            if (!str_starts_with($cleanPath, '/SIPTU Drive/')) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            $url = $this->getWebdavUrl($cleanPath);
+            
+            $response = $this->httpClient()
+                ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->send('GET', $url);
+
+            if (!$response->successful()) {
+                return response()->json(['message' => 'Gagal mengunduh berkas.'], 404);
+            }
+
+            $contentType = $response->header('Content-Type') ?: 'application/octet-stream';
+            $fileName = basename($cleanPath);
+
+            return response($response->body(), 200, [
+                'Content-Type' => $contentType,
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Tautan tidak valid atau telah kedaluwarsa.'], 400);
+        }
+    }
 }

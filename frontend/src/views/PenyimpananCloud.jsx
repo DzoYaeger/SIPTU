@@ -46,6 +46,7 @@ import {
   ArrowLeftOutlined,
   MenuOutlined,
   EllipsisOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import dayjs from "dayjs";
@@ -275,6 +276,23 @@ export default function PenyimpananCloud() {
         }
       },
     });
+  };
+
+  // Share link handler
+  const handleShareLink = async (file) => {
+    try {
+      andMessage.loading({ content: "Membuat tautan berbagi...", key: "share-link" });
+      const response = await apiFetch(`/nextcloud/share-token?path=${encodeURIComponent(file.path)}`);
+      if (!response.ok) throw new Error("Gagal membuat tautan berbagi.");
+
+      const data = await response.json();
+      const shareUrl = `${window.location.origin}/share/${encodeURIComponent(data.token)}`;
+
+      await navigator.clipboard.writeText(shareUrl);
+      andMessage.success({ content: "Link berbagi berhasil disalin ke clipboard!", key: "share-link" });
+    } catch (err) {
+      andMessage.error({ content: err.message, key: "share-link" });
+    }
   };
 
   // Create Folder handler
@@ -508,10 +526,20 @@ export default function PenyimpananCloud() {
     {
       title: "Aksi",
       key: "actions",
-      width: 120,
+      width: 160,
       align: "center",
       render: (_, file) => (
         <Space>
+          {!file.is_dir && (
+            <Tooltip title="Salin Link">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<LinkOutlined style={{ color: "#5f6368" }} />}
+                onClick={() => handleShareLink(file)}
+              />
+            </Tooltip>
+          )}
           {!file.is_dir && (
             <Tooltip title="Unduh">
               <Button
@@ -765,6 +793,13 @@ export default function PenyimpananCloud() {
                             menu={{
                               items: [
                                 {
+                                  key: "share",
+                                  label: "Salin Link",
+                                  icon: <LinkOutlined />,
+                                  onClick: () => handleShareLink(folder),
+                                },
+                                { type: "divider" },
+                                {
                                   key: "delete",
                                   label: "Hapus",
                                   danger: true,
@@ -810,6 +845,15 @@ export default function PenyimpananCloud() {
                             </span>
                           </div>
                           <div className="drive-file-card-actions">
+                            <Tooltip title="Salin Link">
+                              <Button
+                                type="text"
+                                size="small"
+                                shape="circle"
+                                icon={<LinkOutlined style={{ color: "#5f6368" }} />}
+                                onClick={() => handleShareLink(file)}
+                              />
+                            </Tooltip>
                             <Tooltip title="Unduh">
                               <Button
                                 type="text"
