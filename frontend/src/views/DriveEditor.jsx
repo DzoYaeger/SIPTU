@@ -1,30 +1,35 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button, Space, Spin, Typography, message } from "antd";
 import { SaveOutlined, ArrowLeftOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import ExcelJS from "exceljs";
 import mammoth from "mammoth";
-import Editor from "@hufe921/canvas-editor";
 import "./DriveEditor.css";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 export default function DriveEditor() {
   const { apiFetch } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const filePath = searchParams.get("path");
   const fileType = searchParams.get("type"); // xlsx or docx
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fileName, setFileName] = useState("");
-  
-  const editorRef = useRef(null); // Reference to Canvas-Editor instance
-  const containerRef = useRef(null); // Reference to Canvas-Editor container div
+  const [editorReady, setEditorReady] = useState(false);
 
+  const editorRef = useRef(null);       // Canvas-Editor instance
+  const containerRef = useRef(null);    // Canvas-Editor DOM container
+  const blobRef = useRef(null);         // Stores fetched blob for deferred init
+  const initCalledRef = useRef(false);  // Prevent double init
+
+  // ──────────────────────────────────────
+  // 1. Fetch the file blob from Nextcloud
+  // ──────────────────────────────────────
   useEffect(() => {
     if (!filePath || !fileType) {
       message.error("Parameter berkas tidak valid.");
@@ -33,24 +38,15 @@ export default function DriveEditor() {
     }
 
     setFileName(filePath.split("/").pop());
-    
-    // Fetch file from Nextcloud
+
     const fetchFile = async () => {
       try {
         setLoading(true);
         const response = await apiFetch(`/nextcloud/download?path=${encodeURIComponent(filePath)}`);
         if (!response.ok) throw new Error("Gagal mengunduh berkas dari Nextcloud.");
-        
+
         const blob = await response.blob();
-        
-        if (fileType === "xlsx") {
-          // Allow small delay for luckysheet script to mount
-          setTimeout(() => {
-            initLuckysheet(blob);
-          }, 100);
-        } else if (fileType === "docx") {
-          await initCanvasEditor(blob);
-        }
+        blobRef.current = blob;
       } catch (err) {
         message.error(err.message);
         navigate("/app/penyimpanan-cloud");
@@ -60,66 +56,120 @@ export default function DriveEditor() {
     };
 
     fetchFile();
-    
-    // Cleanup Luckysheet on unmount
+
     return () => {
+      // Cleanup Luckysheet on unmount
       if (window.luckysheet) {
-        try {
-          window.luckysheet.destroy();
-        } catch (_) {}
+        try { window.luckysheet.destroy(); } catch (_) {}
       }
     };
   }, [filePath, fileType]);
 
-  // Initialize Luckysheet
+  // ──────────────────────────────────────
+  // 2. Init editor AFTER loading=false && DOM exists && blob ready
+  // ──────────────────────────────────────
+  useEffect(() => {
+    if (loading || !blobRef.current || initCalledRef.current) return;
+
+    // Use requestAnimationFrame to guarantee the DOM container is painted
+    const raf = requestAnimationFrame(() => {
+      initCalledRef.current = true;
+
+      if (fileType === "xlsx") {
+        initLuckysheet(blobRef.current);
+      } else if (fileType === "docx") {
+        initCanvasEditor(blobRef.current);
+      }
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [loading, fileType]);
+
+
+  // ──────────────────────────────────────
+  // 3A. Initialize Luckysheet (Excel)
+  // ──────────────────────────────────────
   const initLuckysheet = (blob) => {
     if (!window.LuckyExcel) {
-      message.error("Library LuckyExcel tidak terload. Periksa koneksi internet.");
+      console.error("[DriveEditor] window.LuckyExcel is undefined. CDN may have failed to load.");
+      message.error("Library LuckyExcel tidak terload. Periksa koneksi internet lalu muat ulang halaman.");
+      return;
+    }
+    if (!window.luckysheet) {
+      console.error("[DriveEditor] window.luckysheet is undefined. CDN may have failed to load.");
+      message.error("Library Luckysheet tidak terload. Periksa koneksi internet lalu muat ulang halaman.");
       return;
     }
 
-    window.LuckyExcel.transformExcelToLucky(blob, (exportJson) => {
-      if (exportJson.sheets === null || exportJson.sheets.length === 0) {
-        message.error("Gagal mengonversi berkas Excel.");
-        return;
-      }
-      
-      // Destroy existing if any
-      if (window.luckysheet) {
-        try {
-          window.luckysheet.destroy();
-        } catch (_) {}
-      }
-
-      window.luckysheet.create({
-        container: "luckysheet-editor-container",
-        data: exportJson.sheets,
-        title: exportJson.info.name || fileName,
-        lang: "zh",
-        showinfobar: false,
-        allowUpdate: false,
-      });
+    // LuckyExcel needs a File object, not raw Blob
+    const file = new File([blob], fileName, {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
+
+    try {
+      window.LuckyExcel.transformExcelToLucky(file, (exportJson) => {
+        if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
+          console.error("[DriveEditor] LuckyExcel export result is empty:", exportJson);
+          message.error("Gagal mengonversi berkas Excel. Berkas mungkin rusak atau kosong.");
+          return;
+        }
+
+        const container = document.getElementById("luckysheet-editor-container");
+        if (!container) {
+          console.error("[DriveEditor] DOM container #luckysheet-editor-container not found.");
+          message.error("Kontainer editor tidak ditemukan.");
+          return;
+        }
+
+        // Destroy existing instance if any
+        try { window.luckysheet.destroy(); } catch (_) {}
+
+        window.luckysheet.create({
+          container: "luckysheet-editor-container",
+          data: exportJson.sheets,
+          title: exportJson.info?.name || fileName,
+          lang: "zh",
+          showinfobar: false,
+          allowUpdate: false,
+        });
+
+        console.log("[DriveEditor] Luckysheet created successfully with", exportJson.sheets.length, "sheet(s).");
+        setEditorReady(true);
+      });
+    } catch (err) {
+      console.error("[DriveEditor] Luckysheet init error:", err);
+      message.error("Terjadi kesalahan saat memuat spreadsheet: " + err.message);
+    }
   };
 
-  // Initialize Canvas-Editor (Word)
+
+  // ──────────────────────────────────────
+  // 3B. Initialize Canvas-Editor (Word)
+  // ──────────────────────────────────────
   const initCanvasEditor = async (blob) => {
     try {
       const arrayBuffer = await blob.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
       const html = result.value || "<p></p>";
 
-      // Clean container first
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
+      if (!containerRef.current) {
+        console.error("[DriveEditor] Canvas-Editor container ref is null.");
+        message.error("Kontainer editor tidak ditemukan.");
+        return;
       }
 
-      const editor = new Editor(containerRef.current, {
+      // Dynamically import Canvas-Editor so it doesn't block initial bundle
+      const { default: CanvasEditor } = await import("@hufe921/canvas-editor");
+
+      containerRef.current.innerHTML = "";
+
+      const editor = new CanvasEditor(containerRef.current, {
         header: [],
-        main: [],
+        main: [{ value: "" }],
         footer: []
       }, {});
 
+      // Load the converted HTML
       editor.command.executeSetHTML({
         header: "",
         main: html,
@@ -127,38 +177,41 @@ export default function DriveEditor() {
       });
 
       editorRef.current = editor;
+      setEditorReady(true);
+      console.log("[DriveEditor] Canvas-Editor initialized successfully.");
     } catch (err) {
-      console.error(err);
-      message.error("Gagal membaca dokumen Word.");
+      console.error("[DriveEditor] Canvas-Editor init error:", err);
+      message.error("Gagal membaca dokumen Word: " + err.message);
     }
   };
 
-  // Save changes handler
+
+  // ──────────────────────────────────────
+  // 4. Save changes handler
+  // ──────────────────────────────────────
   const handleSave = async () => {
     try {
       setSaving(true);
       let outputBlob = null;
-      let mimeType = "";
 
       if (fileType === "xlsx") {
         if (!window.luckysheet) {
           throw new Error("Luckysheet belum terinisialisasi.");
         }
         const data = window.luckysheet.getluckysheetfile();
-        
-        // Export Luckysheet data to Xlsx Blob using exceljs
+
         const workbook = new ExcelJS.Workbook();
         data.forEach((sheet) => {
           const worksheet = workbook.addWorksheet(sheet.name);
           const celldata = sheet.celldata || [];
-          
+
           celldata.forEach((cell) => {
             const r = cell.r + 1;
             const c = cell.c + 1;
             const val = cell.v;
-            
+
             const targetCell = worksheet.getCell(r, c);
-            if (val && typeof val === 'object') {
+            if (val && typeof val === "object") {
               if (val.f) {
                 targetCell.value = { formula: val.f, result: val.v };
               } else {
@@ -172,18 +225,16 @@ export default function DriveEditor() {
 
         const buffer = await workbook.xlsx.writeBuffer();
         outputBlob = new Blob([buffer], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
-        mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
       } else if (fileType === "docx") {
         if (!editorRef.current) {
           throw new Error("Canvas-Editor belum terinisialisasi.");
         }
-        
+
         const htmlContent = editorRef.current.command.getHTML();
-        
-        // Construct basic Word-compatible XML document envelope
+
         const docxContent = `
           <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
           <head>
@@ -203,21 +254,19 @@ export default function DriveEditor() {
           </body>
           </html>
         `;
-        
+
         outputBlob = new Blob([docxContent], { type: "application/msword" });
-        mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
       }
 
       if (!outputBlob) throw new Error("Gagal memproses ekspor file.");
 
-      // Upload/Save back to Nextcloud
       const formData = new FormData();
       formData.append("file", outputBlob, fileName);
       formData.append("path", filePath);
 
       const response = await apiFetch("/nextcloud/save", {
         method: "POST",
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
@@ -249,13 +298,13 @@ export default function DriveEditor() {
           </Title>
           {loading && <Spin indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />} />}
         </Space>
-        
+
         <Space>
           <Button
             type="primary"
             icon={<SaveOutlined />}
             loading={saving}
-            disabled={loading}
+            disabled={loading || !editorReady}
             onClick={handleSave}
             className="drive-editor-save-btn"
           >
@@ -264,38 +313,42 @@ export default function DriveEditor() {
         </Space>
       </div>
 
-      {/* Editor Canvas Area */}
+      {/* Editor Canvas Area — containers ALWAYS rendered so DOM is ready */}
       <div className="drive-editor-body">
-        {loading ? (
+        {/* Loading overlay */}
+        {loading && (
           <div className="drive-editor-loading-screen">
-            <Spin size="large" tip="Mengunduh berkas dari Nextcloud..." />
+            <Spin size="large" />
+            <p style={{ marginTop: 16, color: "#5f6368" }}>Mengunduh berkas dari Nextcloud...</p>
           </div>
-        ) : (
-          <>
-            {fileType === "xlsx" && (
-              <div
-                id="luckysheet-editor-container"
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  position: "absolute",
-                  width: "100%",
-                  height: "calc(100vh - 64px)",
-                  left: 0,
-                  top: "64px"
-                }}
-              />
-            )}
-            {fileType === "docx" && (
-              <div className="drive-word-workspace">
-                <div 
-                  ref={containerRef} 
-                  id="word-editor-container"
-                  className="drive-word-canvas-wrapper"
-                />
-              </div>
-            )}
-          </>
+        )}
+
+        {/* Luckysheet container — always in DOM, shown when type is xlsx */}
+        {fileType === "xlsx" && (
+          <div
+            id="luckysheet-editor-container"
+            style={{
+              margin: 0,
+              padding: 0,
+              position: "absolute",
+              width: "100%",
+              height: "calc(100vh - 64px)",
+              left: 0,
+              top: 0,
+              visibility: loading ? "hidden" : "visible",
+            }}
+          />
+        )}
+
+        {/* Canvas-Editor container — always in DOM, shown when type is docx */}
+        {fileType === "docx" && (
+          <div className="drive-word-workspace" style={{ visibility: loading ? "hidden" : "visible" }}>
+            <div
+              ref={containerRef}
+              id="word-editor-container"
+              className="drive-word-canvas-wrapper"
+            />
+          </div>
         )}
       </div>
     </div>
