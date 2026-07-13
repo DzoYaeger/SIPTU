@@ -23,6 +23,7 @@ import {
   MenuOutlined,
   AppstoreOutlined,
   CloudUploadOutlined,
+  CloudServerOutlined,
   NotificationOutlined,
   BarcodeOutlined,
   InfoCircleOutlined,
@@ -202,6 +203,7 @@ const LayananMandiri = () => {
   // Categories filter removed
 
   const rawServices = [
+    { id: "siptu-drive", title: "SIPTU Drive", description: "Penyimpanan cloud terintegrasi untuk berkas kerja dan kolaborasi dokumen Anda.", icon: <CloudServerOutlined />, link: "/app/penyimpanan-cloud", accent: "#1a73e8", emoji: "☁️", category: "kepegawaian" },
     { id: "kearsipan", title: "Peminjaman Arsip", description: "Ajukan peminjaman arsip fisik atau digital dengan validasi TTE.", icon: <FileProtectOutlined />, link: "/kearsipan-peminjaman/new", accent: "#3b82f6", emoji: "📁", category: "kepegawaian" },
     { id: "bmn", title: "Peminjaman BMN", description: "Pinjam Barang Milik Negara untuk keperluan dinas operasional.", icon: <FundOutlined />, link: "/peminjaman-aset/new", accent: "#0ea5e9", emoji: "🏗️", category: "logistik" },
     { id: "ruangan", title: "Peminjaman Ruangan", description: "Lihat jadwal dan ajukan peminjaman ruangan rapat atau aula.", icon: <FundOutlined />, link: "/peminjaman-ruangan", accent: "#6366f1", emoji: "🏢", category: "logistik" },

@@ -178,6 +178,11 @@ Route::middleware('throttle:public-api')->group(function () {
     // Public Share Links (Nextcloud)
     Route::get('/share/info/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareInfo']);
     Route::get('/share/download/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDownload']);
+    Route::post('/share/folder/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareCreateFolder']);
+    Route::post('/share/upload/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareUpload']);
+    Route::delete('/share/delete/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDelete']);
+    Route::post('/share/move/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareMove']);
+    Route::post('/share/copy/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareCopy']);
 
 });
 
@@ -208,6 +213,11 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::delete('/nextcloud/delete', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'destroy']);
     Route::get('/nextcloud/share-token', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'getShareToken']);
     Route::post('/nextcloud/save', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'saveFile']);
+    Route::get('/nextcloud/share-settings', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'getShareSettings']);
+    Route::post('/nextcloud/share-settings', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'updateShareSettings']);
+    Route::delete('/nextcloud/share-settings', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'deleteShareSettings']);
+    Route::post('/nextcloud/move', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'move']);
+    Route::post('/nextcloud/copy', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'copy']);
 
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);

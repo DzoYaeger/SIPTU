@@ -128,10 +128,16 @@ export default function DriveEditor() {
           container: "luckysheet-editor-container",
           data: exportJson.sheets,
           title: exportJson.info?.name || fileName,
-          lang: "zh",
+          lang: "en",
           showinfobar: false,
           allowUpdate: false,
         });
+
+        setTimeout(() => {
+          if (window.luckysheet) {
+            window.luckysheet.resize();
+          }
+        }, 150);
 
         console.log("[DriveEditor] Luckysheet created successfully with", exportJson.sheets.length, "sheet(s).");
         setEditorReady(true);
@@ -203,24 +209,38 @@ export default function DriveEditor() {
         const workbook = new ExcelJS.Workbook();
         data.forEach((sheet) => {
           const worksheet = workbook.addWorksheet(sheet.name);
-          const celldata = sheet.celldata || [];
-
-          celldata.forEach((cell) => {
-            const r = cell.r + 1;
-            const c = cell.c + 1;
-            const val = cell.v;
-
-            const targetCell = worksheet.getCell(r, c);
-            if (val && typeof val === "object") {
-              if (val.f) {
-                targetCell.value = { formula: val.f, result: val.v };
-              } else {
-                targetCell.value = val.v;
+          
+          // Use sheet.data (contains current edits) or fallback to sheet.celldata
+          if (sheet.data && sheet.data.length > 0) {
+            sheet.data.forEach((row, r) => {
+              row.forEach((cell, c) => {
+                if (cell && (cell.v !== undefined || cell.f !== undefined)) {
+                  const targetCell = worksheet.getCell(r + 1, c + 1);
+                  if (cell.f) {
+                    const formulaStr = cell.f.startsWith("=") ? cell.f.substring(1) : cell.f;
+                    targetCell.value = { formula: formulaStr, result: cell.v };
+                  } else {
+                    targetCell.value = cell.v;
+                  }
+                }
+              });
+            });
+          } else if (sheet.celldata && sheet.celldata.length > 0) {
+            sheet.celldata.forEach((cellItem) => {
+              const r = cellItem.r + 1;
+              const c = cellItem.c + 1;
+              const cell = cellItem.v;
+              if (cell) {
+                const targetCell = worksheet.getCell(r, c);
+                if (cell.f) {
+                  const formulaStr = cell.f.startsWith("=") ? cell.f.substring(1) : cell.f;
+                  targetCell.value = { formula: formulaStr, result: cell.v };
+                } else {
+                  targetCell.value = cell.v;
+                }
               }
-            } else {
-              targetCell.value = val;
-            }
-          });
+            });
+          }
         });
 
         const buffer = await workbook.xlsx.writeBuffer();

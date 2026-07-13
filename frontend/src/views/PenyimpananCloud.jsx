@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
+  Checkbox,
   Select,
   Button,
   Table,
@@ -17,10 +18,12 @@ import {
   Breadcrumb,
   Progress,
   Dropdown,
+  Spin,
   message as andMessage,
 } from "antd";
 import {
   CloudServerOutlined,
+  CloudUploadOutlined,
   InboxOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -48,6 +51,10 @@ import {
   EllipsisOutlined,
   LinkOutlined,
   EditOutlined,
+  CheckCircleFilled,
+  CloseCircleFilled,
+  MinusOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import dayjs from "dayjs";
@@ -129,7 +136,7 @@ export default function PenyimpananCloud() {
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("list"); // grid or list
   const [currentPath, setCurrentPath] = useState(""); // relative to NIP root
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -139,6 +146,29 @@ export default function PenyimpananCloud() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState({});
+  const [downloads, setDownloads] = useState({});
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [isDownloadWidgetVisible, setIsDownloadWidgetVisible] = useState(false);
+  const [isDownloadWidgetMinimized, setIsDownloadWidgetMinimized] = useState(false);
+  const [isUploadWidgetVisible, setIsUploadWidgetVisible] = useState(false);
+  const [isUploadWidgetMinimized, setIsUploadWidgetMinimized] = useState(false);
+  const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
+  const dragCounter = useRef(0);
+
+  // Sharing settings states
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareFile, setShareFile] = useState(null);
+  const [shareSettings, setShareSettings] = useState({ is_shared: false, token: "", can_edit: false });
+  const [loadingShareSettings, setLoadingShareSettings] = useState(false);
+
+  // Selector modal states (Move/Copy)
+  const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
+  const [selectorAction, setSelectorAction] = useState("move"); // "move" or "copy"
+  const [selectorSourceFile, setSelectorSourceFile] = useState(null);
+  const [selectorPath, setSelectorPath] = useState("");
+  const [selectorFolders, setSelectorFolders] = useState([]);
+  const [loadingSelectorFolders, setLoadingSelectorFolders] = useState(false);
+  const [executingSelector, setExecutingSelector] = useState(false);
 
   const hasActiveUploads = useMemo(() => {
     return Object.values(uploadingFiles).some((f) => f.status === "uploading");
@@ -210,6 +240,10 @@ export default function PenyimpananCloud() {
     }
   }, [isAdmin, user, selectedNip, fetchFiles]);
 
+  useEffect(() => {
+    setSelectedRowKeys([]);
+  }, [currentPath, selectedNip]);
+
   // Folder Navigation Helper
   const handleFolderOpen = (folder) => {
     const nip = isAdmin ? selectedNip : user?.nip;
@@ -236,26 +270,153 @@ export default function PenyimpananCloud() {
   };
 
   // Secure download
-  const handleDownload = async (file) => {
-    const key = `download-${file.name}`;
+  const handleDownload = (file) => {
+    const fileId = `download-${Date.now()}-${file.name}`;
+    
+    setDownloads((prev) => ({
+      ...prev,
+      [fileId]: {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        progress: 0,
+        status: "downloading",
+      },
+    }));
+    setIsDownloadWidgetVisible(true);
+    setIsDownloadWidgetMinimized(false);
+
+    const xhr = new XMLHttpRequest();
+    const token = localStorage.getItem("sipaus_token");
+    const baseUrlRaw = import.meta.env.VITE_API_URL || "https://siptu.bpompalopo.com/core_api/api";
+    const baseUrl = baseUrlRaw.replace(/\/+$/, "");
+    const url = `${baseUrl}/nextcloud/download?path=${encodeURIComponent(file.path)}`;
+
+    xhr.open("GET", url, true);
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+    xhr.responseType = "blob";
+
+    xhr.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        setDownloads((prev) => {
+          if (!prev[fileId] || prev[fileId].progress === percent) return prev;
+          return {
+            ...prev,
+            [fileId]: {
+              ...prev[fileId],
+              progress: percent,
+            },
+          };
+        });
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const blob = xhr.response;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        setDownloads((prev) => ({
+          ...prev,
+          [fileId]: {
+            ...prev[fileId],
+            progress: 100,
+            status: "success",
+          },
+        }));
+      } else {
+        setDownloads((prev) => ({
+          ...prev,
+          [fileId]: {
+            ...prev[fileId],
+            status: "error",
+            errorMessage: "Gagal mengunduh berkas.",
+          },
+        }));
+      }
+    });
+
+    xhr.addEventListener("error", () => {
+      setDownloads((prev) => ({
+        ...prev,
+        [fileId]: {
+          ...prev[fileId],
+          status: "error",
+          errorMessage: "Koneksi terputus.",
+        },
+      }));
+    });
+
+    xhr.send();
+  };
+
+  const handlePreviewPdf = async (file) => {
+    const key = `preview-${file.name}`;
     try {
-      andMessage.loading({ content: `Mengunduh ${file.name}...`, key });
+      andMessage.loading({ content: `Menyiapkan pratinjau ${file.name}...`, key });
       const response = await apiFetch(`/nextcloud/download?path=${encodeURIComponent(file.path)}`);
       if (!response.ok) throw new Error("Gagal mengunduh berkas dari Nextcloud.");
       
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
+      const pdfBlob = new Blob([blob], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(pdfBlob);
+      window.open(url, "_blank");
       
-      andMessage.success({ content: "Berkas berhasil diunduh.", key });
+      andMessage.success({ content: "Pratinjau siap.", key });
     } catch (err) {
       andMessage.error({ content: err.message, key });
+    }
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDraggingOverPage(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingOverPage(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverPage(false);
+
+    const nip = isAdmin ? selectedNip : user?.nip;
+    if (!nip) {
+      andMessage.warning("Pilih pegawai terlebih dahulu.");
+      return;
+    }
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const filesList = Array.from(e.dataTransfer.files);
+      filesList.forEach((rawFile) => {
+        handleCustomUpload({ file: rawFile });
+      });
     }
   };
 
@@ -287,20 +448,241 @@ export default function PenyimpananCloud() {
     });
   };
 
-  // Share link handler
-  const handleShareLink = async (file) => {
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) return;
+    
+    Modal.confirm({
+      title: "Hapus Beberapa Item",
+      content: `Apakah Anda yakin ingin menghapus ${selectedRowKeys.length} item terpilih dari Nextcloud? Semua subfolder dan berkas di dalamnya juga akan terhapus. Tindakan ini tidak dapat dibatalkan.`,
+      okText: "Hapus",
+      okType: "danger",
+      cancelText: "Batal",
+      centered: true,
+      onOk: async () => {
+        const key = "batch-delete";
+        andMessage.loading({ content: `Menghapus 0/${selectedRowKeys.length} item...`, key });
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < selectedRowKeys.length; i++) {
+          const path = selectedRowKeys[i];
+          try {
+            const response = await apiFetch(`/nextcloud/delete?path=${encodeURIComponent(path)}`, {
+              method: "DELETE",
+            });
+            if (response.ok) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (err) {
+            failCount++;
+          }
+          andMessage.loading({ 
+            content: `Menghapus ${successCount + failCount}/${selectedRowKeys.length} item...`, 
+            key 
+          });
+        }
+
+        if (failCount > 0) {
+          andMessage.warning({ 
+            content: `Berhasil menghapus ${successCount} item. ${failCount} item gagal dihapus.`, 
+            key, 
+            duration: 3 
+          });
+        } else {
+          andMessage.success({ content: `Berhasil menghapus ${successCount} item.`, key, duration: 3 });
+        }
+        
+        setSelectedRowKeys([]);
+        fetchFiles();
+      }
+    });
+  };
+
+  const handleBatchDownload = () => {
+    const filesToDownload = filteredFiles.filter(
+      (f) => selectedRowKeys.includes(f.path) && !f.is_dir
+    );
+
+    if (filesToDownload.length === 0) {
+      andMessage.warning("Tidak ada berkas yang dapat diunduh (folder tidak didukung untuk unduhan massal langsung).");
+      return;
+    }
+
+    andMessage.success(`Memulai unduhan untuk ${filesToDownload.length} berkas.`);
+    
+    filesToDownload.forEach((file, index) => {
+      setTimeout(() => {
+        handleDownload(file);
+      }, index * 150);
+    });
+
+    setSelectedRowKeys([]);
+  };
+
+  // Share link settings modal triggers
+  const openShareModal = async (file) => {
+    setShareFile(file);
+    setIsShareModalOpen(true);
+    setLoadingShareSettings(true);
     try {
-      andMessage.loading({ content: "Membuat tautan berbagi...", key: "share-link" });
-      const response = await apiFetch(`/nextcloud/share-token?path=${encodeURIComponent(file.path)}`);
-      if (!response.ok) throw new Error("Gagal membuat tautan berbagi.");
-
-      const data = await response.json();
-      const shareUrl = `${window.location.origin}/share/${encodeURIComponent(data.token)}`;
-
-      await navigator.clipboard.writeText(shareUrl);
-      andMessage.success({ content: "Link berbagi berhasil disalin ke clipboard!", key: "share-link" });
+      const response = await apiFetch(`/nextcloud/share-settings?path=${encodeURIComponent(file.path)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setShareSettings(data);
+      }
     } catch (err) {
-      andMessage.error({ content: err.message, key: "share-link" });
+      andMessage.error("Gagal memuat pengaturan berbagi.");
+    } finally {
+      setLoadingShareSettings(false);
+    }
+  };
+
+  const handleCreateOrUpdateShare = async (canEdit) => {
+    if (!shareFile) return;
+    try {
+      setLoadingShareSettings(true);
+      const response = await apiFetch("/nextcloud/share-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: shareFile.path,
+          can_edit: canEdit,
+        }),
+      });
+      if (!response.ok) throw new Error("Gagal menyimpan pengaturan berbagi.");
+      const data = await response.json();
+      setShareSettings(data);
+      andMessage.success("Pengaturan berbagi berhasil diperbarui.");
+      fetchFiles();
+    } catch (err) {
+      andMessage.error(err.message);
+    } finally {
+      setLoadingShareSettings(false);
+    }
+  };
+
+  const handleStopSharing = async () => {
+    if (!shareFile) return;
+    try {
+      setLoadingShareSettings(true);
+      const response = await apiFetch(`/nextcloud/share-settings?path=${encodeURIComponent(shareFile.path)}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Gagal menghentikan berbagi.");
+      setShareSettings({ is_shared: false, token: "", can_edit: false });
+      andMessage.success("Berbagi berkas telah dihentikan.");
+      fetchFiles();
+    } catch (err) {
+      andMessage.error(err.message);
+    } finally {
+      setLoadingShareSettings(false);
+    }
+  };
+
+  // Selector modal triggers (Move/Copy)
+  const openSelectorModal = (file, action) => {
+    setSelectorSourceFile(file);
+    setSelectorAction(action);
+    setSelectorPath("");
+    setIsSelectorModalOpen(true);
+  };
+
+  const fetchSelectorFolders = useCallback(async () => {
+    const nip = isAdmin ? selectedNip : user?.nip;
+    if (!nip) return;
+    try {
+      setLoadingSelectorFolders(true);
+      const url = `/nextcloud/files?nip=${nip}&path=${encodeURIComponent(selectorPath)}`;
+      const response = await apiFetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        // Skip source folder itself if we are moving it
+        const filtered = (data.files || []).filter(
+          (f) => f.is_dir && f.path !== selectorSourceFile?.path
+        );
+        setSelectorFolders(filtered);
+      }
+    } catch (err) {
+      andMessage.error("Gagal memuat daftar folder.");
+    } finally {
+      setLoadingSelectorFolders(false);
+    }
+  }, [isAdmin, selectedNip, user, apiFetch, selectorPath, selectorSourceFile]);
+
+  useEffect(() => {
+    if (isSelectorModalOpen) {
+      fetchSelectorFolders();
+    }
+  }, [isSelectorModalOpen, fetchSelectorFolders]);
+
+  useEffect(() => {
+    const preventDefault = (e) => {
+      e.preventDefault();
+    };
+    
+    const handleWindowDragEnter = (e) => {
+      if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+        setIsDraggingOverPage(true);
+      }
+    };
+
+    window.addEventListener("dragenter", handleWindowDragEnter, false);
+    window.addEventListener("dragover", preventDefault, false);
+    window.addEventListener("drop", preventDefault, false);
+
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter, false);
+      window.removeEventListener("dragover", preventDefault, false);
+      window.removeEventListener("drop", preventDefault, false);
+    };
+  }, []);
+
+  const handleExecuteSelectorAction = async () => {
+    if (!selectorSourceFile) return;
+    const nip = isAdmin ? selectedNip : user?.nip;
+    const basePrefix = `/SIPTU Drive/${nip}`;
+    const destFolder = selectorPath ? `${basePrefix}/${selectorPath.replace(/^\/+/, "")}` : basePrefix;
+    const destPath = `${destFolder}/${selectorSourceFile.name}`;
+
+    try {
+      setExecutingSelector(true);
+      const url = selectorAction === "move" ? "/nextcloud/move" : "/nextcloud/copy";
+      const response = await apiFetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_path: selectorSourceFile.path,
+          dest_path: destPath,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal melakukan aksi.");
+      }
+
+      andMessage.success(`Berhasil ${selectorAction === "move" ? "memindahkan" : "menyalin"} item.`);
+      setIsSelectorModalOpen(false);
+      fetchFiles();
+    } catch (err) {
+      andMessage.error(err.message);
+    } finally {
+      setExecutingSelector(false);
+    }
+  };
+
+  const selectorPathSegments = useMemo(() => {
+    return selectorPath.split("/").filter(Boolean);
+  }, [selectorPath]);
+
+  const navigateSelectorToSegment = (idx) => {
+    if (idx === -1) {
+      setSelectorPath("");
+    } else {
+      const targetSegments = selectorPathSegments.slice(0, idx + 1);
+      setSelectorPath("/" + targetSegments.join("/"));
     }
   };
 
@@ -351,7 +733,10 @@ export default function PenyimpananCloud() {
       return;
     }
 
-    const fileUid = file.uid;
+    const fileUid = file.uid || `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    setIsUploadWidgetVisible(true);
+    setIsUploadWidgetMinimized(false);
 
     // Add file to uploading list
     setUploadingFiles((prev) => ({
@@ -497,7 +882,14 @@ export default function PenyimpananCloud() {
       key: "name",
       render: (text, record) => (
         <Space size="middle">
-          {getFileIcon(record)}
+          <div style={{ position: "relative", display: "inline-block", height: "24px" }}>
+            {getFileIcon(record)}
+            {record.is_shared && (
+              <div className="shared-badge-list">
+                <LinkOutlined style={{ fontSize: "8px", color: "#1a73e8" }} />
+              </div>
+            )}
+          </div>
           {record.is_dir ? (
             <Button
               type="link"
@@ -507,7 +899,12 @@ export default function PenyimpananCloud() {
               {text}
             </Button>
           ) : (
-            <Text strong className="list-file-text">
+            <Text 
+              strong 
+              className="list-file-text"
+              style={{ cursor: record.name.toLowerCase().endsWith(".pdf") ? "pointer" : "default" }}
+              onClick={() => record.name.toLowerCase().endsWith(".pdf") && handlePreviewPdf(record)}
+            >
               {text}
             </Text>
           )}
@@ -539,16 +936,14 @@ export default function PenyimpananCloud() {
       align: "center",
       render: (_, file) => (
         <Space>
-          {!file.is_dir && (
-            <Tooltip title="Salin Link">
-              <Button
-                type="text"
-                shape="circle"
-                icon={<LinkOutlined style={{ color: "#5f6368" }} />}
-                onClick={() => handleShareLink(file)}
-              />
-            </Tooltip>
-          )}
+          <Tooltip title="Pengaturan Bagikan">
+            <Button
+              type="text"
+              shape="circle"
+              icon={<LinkOutlined style={{ color: file.is_shared ? "#1a73e8" : "#5f6368" }} />}
+              onClick={() => openShareModal(file)}
+            />
+          </Tooltip>
           {getEditableType(file.name) && (
             <Tooltip title="Edit Berkas">
               <Button
@@ -556,6 +951,16 @@ export default function PenyimpananCloud() {
                 shape="circle"
                 icon={<EditOutlined style={{ color: "#fa8c16" }} />}
                 onClick={() => navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${getEditableType(file.name)}`)}
+              />
+            </Tooltip>
+          )}
+          {file.name.toLowerCase().endsWith(".pdf") && (
+            <Tooltip title="Pratinjau PDF">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<SearchOutlined style={{ color: "#fa8c16" }} />}
+                onClick={() => handlePreviewPdf(file)}
               />
             </Tooltip>
           )}
@@ -569,22 +974,49 @@ export default function PenyimpananCloud() {
               />
             </Tooltip>
           )}
-          <Tooltip title="Hapus">
-            <Button
-              type="text"
-              shape="circle"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(file)}
-            />
-          </Tooltip>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "move",
+                  label: "Pindahkan",
+                  icon: <FolderOpenOutlined />,
+                  onClick: () => openSelectorModal(file, "move"),
+                },
+                {
+                  key: "copy",
+                  label: "Salin",
+                  icon: <PlusOutlined />,
+                  onClick: () => openSelectorModal(file, "copy"),
+                },
+                { type: "divider" },
+                {
+                  key: "delete",
+                  label: "Hapus",
+                  danger: true,
+                  icon: <DeleteOutlined />,
+                  onClick: () => handleDelete(file),
+                }
+              ]
+            }}
+            trigger={["click"]}
+            placement="bottomRight"
+          >
+            <Button type="text" shape="circle" icon={<EllipsisOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className={`drive-standalone-layout ${isSidebarOpen ? "sidebar-open" : ""}`}>
+    <div
+      className={`drive-standalone-layout ${isSidebarOpen ? "sidebar-open" : ""}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* 1. Left Sidebar Section */}
       <div className={`drive-sidebar ${isSidebarOpen ? "open" : ""}`}>
         {/* Logo and Brand */}
@@ -641,7 +1073,7 @@ export default function PenyimpananCloud() {
             <HomeOutlined />
             <span>Drive Saya</span>
           </div>
-          <div className="drive-menu-item return-btn" onClick={() => navigate("/app/dashboard")}>
+          <div className="drive-menu-item return-btn" onClick={() => navigate("/app/layanan-mandiri")}>
             <ArrowLeftOutlined />
             <span>Kembali ke SIPTU</span>
           </div>
@@ -715,6 +1147,50 @@ export default function PenyimpananCloud() {
         {/* Folder explorer workspace container */}
         <div className="drive-content-area">
           
+          {/* Floating Bulk Action Bar */}
+          {selectedRowKeys.length > 0 && (
+            <div className="drive-batch-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", background: "#e8f0fe", border: "1px solid #1a73e8", borderRadius: "8px", marginBottom: "16px", animation: "slideDown 0.2s ease-out" }}>
+              <Space>
+                <Checkbox 
+                  checked={selectedRowKeys.length === filteredFiles.length}
+                  indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < filteredFiles.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedRowKeys(filteredFiles.map(f => f.path));
+                    } else {
+                      setSelectedRowKeys([]);
+                    }
+                  }}
+                />
+                <Text strong style={{ color: "#1a73e8" }}>{selectedRowKeys.length} terpilih</Text>
+              </Space>
+              <Space>
+                <Button 
+                  type="primary" 
+                  icon={<DownloadOutlined />} 
+                  onClick={handleBatchDownload}
+                  disabled={!filteredFiles.some(f => selectedRowKeys.includes(f.path) && !f.is_dir)}
+                >
+                  Unduh Terpilih
+                </Button>
+                <Button 
+                  type="primary" 
+                  danger 
+                  icon={<DeleteOutlined />} 
+                  onClick={handleBatchDelete}
+                >
+                  Hapus Terpilih
+                </Button>
+                <Button 
+                  type="text" 
+                  onClick={() => setSelectedRowKeys([])}
+                >
+                  Batal
+                </Button>
+              </Space>
+            </div>
+          )}
+          
           {/* Breadcrumbs & Layout Switcher toolbar */}
           <div className="drive-toolbar-wrap">
             <div className="drive-navigation">
@@ -776,7 +1252,11 @@ export default function PenyimpananCloud() {
           ) : viewMode === "list" ? (
             <div className="drive-table-container">
               <Table
-                dataSource={filteredFiles.map((f, i) => ({ ...f, key: i }))}
+                dataSource={filteredFiles.map((f) => ({ ...f, key: f.path }))}
+                rowSelection={{
+                  selectedRowKeys,
+                  onChange: setSelectedRowKeys,
+                }}
                 columns={columns}
                 pagination={{ pageSize: 15, showSizeChanger: false }}
                 size="middle"
@@ -785,6 +1265,15 @@ export default function PenyimpananCloud() {
                   onDoubleClick: () => {
                     if (record.is_dir) {
                       handleFolderOpen(record);
+                    } else {
+                      const editableType = getEditableType(record.name);
+                      if (editableType) {
+                        navigate(`/app/drive/editor?path=${encodeURIComponent(record.path)}&type=${editableType}`);
+                      } else if (record.name.toLowerCase().endsWith(".pdf")) {
+                        handlePreviewPdf(record);
+                      } else {
+                        handleDownload(record);
+                      }
                     }
                   },
                 })}
@@ -796,14 +1285,39 @@ export default function PenyimpananCloud() {
               {folderItems.length > 0 && (
                 <div className="drive-folders-section">
                   <div className="drive-section-title">Folder</div>
-                  <div className="drive-folders-grid">
-                    {folderItems.map((folder, idx) => (
-                      <div
-                        key={idx}
-                        className="drive-folder-chip"
-                        onDoubleClick={() => handleFolderOpen(folder)}
-                      >
-                        <FolderFilled className="drive-folder-chip-icon" />
+                  <div className={`drive-folders-grid ${selectedRowKeys.length > 0 ? "has-selection" : ""}`}>
+                    {folderItems.map((folder, idx) => {
+                      const isFolderSelected = selectedRowKeys.includes(folder.path);
+                      const handleToggleSelect = (e) => {
+                        e.stopPropagation();
+                        if (isFolderSelected) {
+                          setSelectedRowKeys(prev => prev.filter(k => k !== folder.path));
+                        } else {
+                          setSelectedRowKeys(prev => [...prev, folder.path]);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`drive-folder-chip ${isFolderSelected ? "selected" : ""}`}
+                          onDoubleClick={() => handleFolderOpen(folder)}
+                          onClick={handleToggleSelect}
+                        >
+                          <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                              checked={isFolderSelected} 
+                              onChange={handleToggleSelect}
+                            />
+                          </div>
+                          <div style={{ position: "relative", display: "inline-block", height: "24px" }}>
+                          <FolderFilled className="drive-folder-chip-icon" />
+                          {folder.is_shared && (
+                            <div className="shared-badge-grid-folder">
+                              <LinkOutlined style={{ fontSize: "8px", color: "#ffffff" }} />
+                            </div>
+                          )}
+                        </div>
                         <span className="drive-folder-chip-name" title={folder.name}>
                           {folder.name}
                         </span>
@@ -813,9 +1327,21 @@ export default function PenyimpananCloud() {
                               items: [
                                 {
                                   key: "share",
-                                  label: "Salin Link",
+                                  label: "Pengaturan Bagikan",
                                   icon: <LinkOutlined />,
-                                  onClick: () => handleShareLink(folder),
+                                  onClick: () => openShareModal(folder),
+                                },
+                                {
+                                  key: "move",
+                                  label: "Pindahkan",
+                                  icon: <FolderOpenOutlined />,
+                                  onClick: () => openSelectorModal(folder, "move"),
+                                },
+                                {
+                                  key: "copy",
+                                  label: "Salin Folder",
+                                  icon: <PlusOutlined />,
+                                  onClick: () => openSelectorModal(folder, "copy"),
                                 },
                                 { type: "divider" },
                                 {
@@ -834,7 +1360,8 @@ export default function PenyimpananCloud() {
                           </Dropdown>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               )}
@@ -843,12 +1370,50 @@ export default function PenyimpananCloud() {
               {fileItems.length > 0 && (
                 <div className="drive-files-section">
                   <div className="drive-section-title">File</div>
-                  <div className="drive-files-grid">
-                    {fileItems.map((file, idx) => (
-                      <div key={idx} className="drive-file-card">
-                        <div className="drive-file-card-preview" onDoubleClick={() => handleDownload(file)}>
-                          <div className="preview-icon-wrapper">
+                  <div className={`drive-files-grid ${selectedRowKeys.length > 0 ? "has-selection" : ""}`}>
+                    {fileItems.map((file, idx) => {
+                      const isFileSelected = selectedRowKeys.includes(file.path);
+                      const handleToggleSelect = (e) => {
+                        e.stopPropagation();
+                        if (isFileSelected) {
+                          setSelectedRowKeys(prev => prev.filter(k => k !== file.path));
+                        } else {
+                          setSelectedRowKeys(prev => [...prev, file.path]);
+                        }
+                      };
+
+                      return (
+                        <div 
+                          key={idx} 
+                          className={`drive-file-card ${isFileSelected ? "selected" : ""}`}
+                          onClick={handleToggleSelect}
+                        >
+                          <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                              checked={isFileSelected} 
+                              onChange={handleToggleSelect}
+                            />
+                          </div>
+                          <div
+                            className="drive-file-card-preview"
+                            onDoubleClick={() => {
+                              const editableType = getEditableType(file.name);
+                              if (editableType) {
+                              navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${editableType}`);
+                            } else if (file.name.toLowerCase().endsWith(".pdf")) {
+                              handlePreviewPdf(file);
+                            } else {
+                              handleDownload(file);
+                            }
+                          }}
+                        >
+                          <div className="preview-icon-wrapper" style={{ position: "relative" }}>
                             {getFileIcon(file)}
+                            {file.is_shared && (
+                              <div className="shared-badge-grid-file">
+                                <LinkOutlined style={{ fontSize: "12px", color: "#1a73e8" }} />
+                              </div>
+                            )}
                           </div>
                           <div className="preview-extension-tag">
                             {file.name.split(".").pop().toUpperCase()}
@@ -856,57 +1421,82 @@ export default function PenyimpananCloud() {
                         </div>
                         <div className="drive-file-card-info">
                           <div className="drive-file-card-meta">
-                            <span className="drive-file-title" title={file.name}>
+                            <span 
+                              className="drive-file-title" 
+                              title={file.name}
+                              onClick={() => file.name.toLowerCase().endsWith(".pdf") && handlePreviewPdf(file)}
+                              style={{ cursor: file.name.toLowerCase().endsWith(".pdf") ? "pointer" : "default" }}
+                            >
                               {file.name}
                             </span>
                             <span className="drive-file-size">
                               {formatBytes(file.size)}
                             </span>
                           </div>
-                          <div className="drive-file-card-actions">
-                            <Tooltip title="Salin Link">
-                              <Button
-                                type="text"
-                                size="small"
-                                shape="circle"
-                                icon={<LinkOutlined style={{ color: "#5f6368" }} />}
-                                onClick={() => handleShareLink(file)}
-                              />
-                            </Tooltip>
-                            {getEditableType(file.name) && (
-                              <Tooltip title="Edit Berkas">
+                          <div className="drive-file-card-actions" onClick={(e) => e.stopPropagation()}>
+                            {file.name.toLowerCase().endsWith(".pdf") && (
+                              <Tooltip title="Pratinjau PDF">
                                 <Button
                                   type="text"
                                   size="small"
                                   shape="circle"
-                                  icon={<EditOutlined style={{ color: "#fa8c16" }} />}
-                                  onClick={() => navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${getEditableType(file.name)}`)}
+                                  icon={<SearchOutlined style={{ color: "#fa8c16" }} />}
+                                  onClick={() => handlePreviewPdf(file)}
                                 />
                               </Tooltip>
                             )}
-                            <Tooltip title="Unduh">
-                              <Button
-                                type="text"
-                                size="small"
-                                shape="circle"
-                                icon={<DownloadOutlined style={{ color: "var(--color-primary)" }} />}
-                                onClick={() => handleDownload(file)}
-                              />
-                            </Tooltip>
-                            <Tooltip title="Hapus">
-                              <Button
-                                type="text"
-                                size="small"
-                                shape="circle"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDelete(file)}
-                              />
-                            </Tooltip>
+                            {!file.is_dir && (
+                              <Tooltip title="Unduh">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  shape="circle"
+                                  icon={<DownloadOutlined style={{ color: "var(--color-primary)" }} />}
+                                  onClick={() => handleDownload(file)}
+                                />
+                              </Tooltip>
+                            )}
+                            <Dropdown
+                              menu={{
+                                items: [
+                                  {
+                                    key: "share",
+                                    label: "Pengaturan Bagikan",
+                                    icon: <LinkOutlined />,
+                                    onClick: () => openShareModal(file),
+                                  },
+                                  {
+                                    key: "move",
+                                    label: "Pindahkan",
+                                    icon: <FolderOpenOutlined />,
+                                    onClick: () => openSelectorModal(file, "move"),
+                                  },
+                                  {
+                                    key: "copy",
+                                    label: "Salin Berkas",
+                                    icon: <PlusOutlined />,
+                                    onClick: () => openSelectorModal(file, "copy"),
+                                  },
+                                  { type: "divider" },
+                                  {
+                                    key: "delete",
+                                    label: "Hapus",
+                                    danger: true,
+                                    icon: <DeleteOutlined />,
+                                    onClick: () => handleDelete(file),
+                                  }
+                                ]
+                              }}
+                              trigger={["click"]}
+                              placement="bottomRight"
+                            >
+                              <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
+                            </Dropdown>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               )}
@@ -914,6 +1504,153 @@ export default function PenyimpananCloud() {
           )}
         </div>
       </div>
+
+      {/* Modal: Pengaturan Berbagi */}
+      <Modal
+        title="Pengaturan Berbagi Link"
+        open={isShareModalOpen}
+        footer={null}
+        onCancel={() => {
+          setIsShareModalOpen(false);
+          setShareFile(null);
+          setShareSettings({ is_shared: false, token: "", can_edit: false });
+        }}
+        centered
+      >
+        <Spin spinning={loadingShareSettings}>
+          <div style={{ padding: "12px 0" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong style={{ display: "block", marginBottom: "4px" }}>Item:</Text>
+              <Text type="secondary">{shareFile?.name}</Text>
+            </div>
+
+            {shareSettings.is_shared ? (
+              <>
+                <div style={{ marginBottom: "16px" }}>
+                  <Text strong style={{ display: "block", marginBottom: "6px" }}>Link Berbagi:</Text>
+                  <Space.Compact style={{ width: "100%" }}>
+                    <Input 
+                      value={`${window.location.origin}/share/${encodeURIComponent(shareSettings.token)}`} 
+                      readOnly 
+                    />
+                    <Button 
+                      type="primary" 
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(
+                          `${window.location.origin}/share/${encodeURIComponent(shareSettings.token)}`
+                        );
+                        andMessage.success("Link berhasil disalin!");
+                      }}
+                    >
+                      Salin
+                    </Button>
+                  </Space.Compact>
+                </div>
+
+                <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <Text strong style={{ display: "block" }}>Izinkan Pengeditan:</Text>
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
+                      Tamu publik dapat menambah, menghapus, memindahkan, atau menyalin berkas.
+                    </Text>
+                  </div>
+                  <Radio.Group
+                    options={[
+                      { label: "Bisa Edit", value: true },
+                      { label: "Lihat Saja", value: false }
+                    ]}
+                    onChange={(e) => handleCreateOrUpdateShare(e.target.value)}
+                    value={shareSettings.can_edit}
+                    optionType="button"
+                    buttonStyle="solid"
+                  />
+                </div>
+
+                <Button 
+                  danger 
+                  type="primary" 
+                  onClick={handleStopSharing}
+                  block
+                  icon={<DeleteOutlined />}
+                >
+                  Hentikan Berbagi Link
+                </Button>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <Empty description="Link berbagi belum aktif untuk berkas ini." style={{ marginBottom: "16px" }} />
+                <Button 
+                  type="primary" 
+                  onClick={() => handleCreateOrUpdateShare(false)}
+                >
+                  Aktifkan Link Berbagi
+                </Button>
+              </div>
+            )}
+          </div>
+        </Spin>
+      </Modal>
+
+      {/* Modal: Folder Selector (Move/Copy) */}
+      <Modal
+        title={`${selectorAction === "move" ? "Pindahkan" : "Salin"} "${selectorSourceFile?.name}"`}
+        open={isSelectorModalOpen}
+        onOk={handleExecuteSelectorAction}
+        onCancel={() => setIsSelectorModalOpen(false)}
+        confirmLoading={executingSelector}
+        okText={selectorAction === "move" ? "Pindahkan ke Sini" : "Salin ke Sini"}
+        cancelText="Batal"
+        centered
+        width={500}
+      >
+        <div style={{ padding: "8px 0" }}>
+          {/* Breadcrumbs for Selector */}
+          <div style={{ marginBottom: "12px", padding: "8px", backgroundColor: "#f8f9fa", borderRadius: "6px" }}>
+            <Breadcrumb separator=">">
+              <Breadcrumb.Item onClick={() => navigateSelectorToSegment(-1)} style={{ cursor: "pointer" }}>
+                <HomeOutlined /> <span>Drive Saya</span>
+              </Breadcrumb.Item>
+              {selectorPathSegments.map((segment, idx) => (
+                <Breadcrumb.Item
+                  key={idx}
+                  onClick={() => navigateSelectorToSegment(idx)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {segment}
+                </Breadcrumb.Item>
+              ))}
+            </Breadcrumb>
+          </div>
+
+          <Text strong>Pilih Folder Tujuan:</Text>
+          <div className="selector-folder-list">
+            <Spin spinning={loadingSelectorFolders}>
+              {selectorFolders.length === 0 ? (
+                <div style={{ padding: "30px", textAlign: "center" }}>
+                  <Text type="secondary">Tidak ada subfolder di folder ini.</Text>
+                </div>
+              ) : (
+                selectorFolders.map((folder, idx) => (
+                  <div
+                    key={idx}
+                    className="selector-folder-item"
+                    onDoubleClick={() => {
+                      const basePath = selectorPath ? `${selectorPath}/${folder.name}` : folder.name;
+                      setSelectorPath(basePath);
+                    }}
+                  >
+                    <FolderFilled className="selector-folder-icon" />
+                    <span className="selector-folder-name">{folder.name}</span>
+                  </div>
+                ))
+              )}
+            </Spin>
+          </div>
+          <Text type="secondary" style={{ fontSize: "12px", display: "block", marginTop: "8px" }}>
+            *Double-click folder untuk masuk. Lokasi saat ini: <Text code>{selectorPath ? `/${selectorPath}` : "/"}</Text>
+          </Text>
+        </div>
+      </Modal>
 
       {/* Modal: Folder Baru */}
       <Modal
@@ -1028,6 +1765,179 @@ export default function PenyimpananCloud() {
           )}
         </div>
       </Modal>
+
+      {/* Google Drive-like Download Status Widget */}
+      {isDownloadWidgetVisible && (
+        <div 
+          className={`drive-download-widget ${isDownloadWidgetMinimized ? "minimized" : ""}`}
+          style={{ right: isUploadWidgetVisible ? "400px" : "24px" }}
+        >
+          <div className="download-widget-header">
+            <span className="download-widget-title">
+              {Object.values(downloads).some((d) => d.status === "downloading")
+                ? `Mengunduh ${Object.values(downloads).filter((d) => d.status === "downloading").length} item`
+                : `${Object.values(downloads).filter((d) => d.status === "success").length} download selesai`}
+            </span>
+            <div className="download-widget-controls">
+              <Button
+                type="text"
+                size="small"
+                icon={isDownloadWidgetMinimized ? <PlusOutlined /> : <MinusOutlined />}
+                onClick={() => setIsDownloadWidgetMinimized(!isDownloadWidgetMinimized)}
+                style={{ color: "#ffffff" }}
+              />
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => {
+                  setIsDownloadWidgetVisible(false);
+                  setDownloads({});
+                }}
+                style={{ color: "#ffffff", marginLeft: "4px" }}
+              />
+            </div>
+          </div>
+          
+          {!isDownloadWidgetMinimized && (
+            <div className="download-widget-body">
+              {Object.values(downloads).map((item) => {
+                const isDownloading = item.status === "downloading";
+                const isSuccess = item.status === "success";
+                const isError = item.status === "error";
+                
+                return (
+                  <div key={item.id} className="download-item-row">
+                    <div className="download-item-icon">
+                      {getFileIcon({ name: item.name, is_dir: false })}
+                    </div>
+                    <div className="download-item-details">
+                      <span className="download-item-name" title={item.name}>
+                        {item.name}
+                      </span>
+                      <span className="download-item-meta">
+                        {isDownloading && `${item.progress}% dari ${formatBytes(item.size)}`}
+                        {isSuccess && `Selesai • ${formatBytes(item.size)}`}
+                        {isError && `Gagal • ${item.errorMessage}`}
+                      </span>
+                    </div>
+                    <div className="download-item-status">
+                      {isDownloading && (
+                        <Progress
+                          type="circle"
+                          percent={item.progress}
+                          width={22}
+                          strokeWidth={12}
+                          showInfo={false}
+                          strokeColor="#1a73e8"
+                        />
+                      )}
+                      {isSuccess && <CheckCircleFilled style={{ color: "#52c41a", fontSize: "18px" }} />}
+                      {isError && (
+                        <Tooltip title={item.errorMessage}>
+                          <CloseCircleFilled style={{ color: "#ff4d4f", fontSize: "18px" }} />
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Google Drive-like Upload Status Widget */}
+      {isUploadWidgetVisible && (
+        <div className={`drive-upload-widget ${isUploadWidgetMinimized ? "minimized" : ""}`}>
+          <div className="upload-widget-header">
+            <span className="upload-widget-title">
+              {Object.values(uploadingFiles).some((f) => f.status === "uploading")
+                ? `Mengunggah ${Object.values(uploadingFiles).filter((f) => f.status === "uploading").length} item`
+                : `${Object.values(uploadingFiles).filter((f) => f.status === "success").length} upload selesai`}
+            </span>
+            <div className="upload-widget-controls">
+              <Button
+                type="text"
+                size="small"
+                icon={isUploadWidgetMinimized ? <PlusOutlined /> : <MinusOutlined />}
+                onClick={() => setIsUploadWidgetMinimized(!isUploadWidgetMinimized)}
+                style={{ color: "#ffffff" }}
+              />
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => {
+                  setIsUploadWidgetVisible(false);
+                  setUploadingFiles({});
+                }}
+                style={{ color: "#ffffff", marginLeft: "4px" }}
+              />
+            </div>
+          </div>
+          
+          {!isUploadWidgetMinimized && (
+            <div className="upload-widget-body">
+              {Object.values(uploadingFiles).map((item) => {
+                const isUploading = item.status === "uploading";
+                const isSuccess = item.status === "success";
+                const isError = item.status === "error";
+                
+                return (
+                  <div key={item.uid} className="upload-item-row">
+                    <div className="upload-item-icon">
+                      {getFileIcon({ name: item.name, is_dir: false })}
+                    </div>
+                    <div className="upload-item-details">
+                      <span className="upload-item-name" title={item.name}>
+                        {item.name}
+                      </span>
+                      <span className="upload-item-meta">
+                        {isUploading && `${item.progress}% dari ${formatBytes(item.size)}`}
+                        {isSuccess && `Selesai • ${formatBytes(item.size)}`}
+                        {isError && `Gagal • ${item.errorMessage}`}
+                      </span>
+                    </div>
+                    <div className="upload-item-status">
+                      {isUploading && (
+                        <Progress
+                          type="circle"
+                          percent={item.progress}
+                          width={22}
+                          strokeWidth={12}
+                          showInfo={false}
+                          strokeColor="#1a73e8"
+                        />
+                      )}
+                      {isSuccess && <CheckCircleFilled style={{ color: "#52c41a", fontSize: "18px" }} />}
+                      {isError && (
+                        <Tooltip title={item.errorMessage}>
+                          <CloseCircleFilled style={{ color: "#ff4d4f", fontSize: "18px" }} />
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Full screen Drag & Drop Overlay */}
+      <div 
+        className={`drive-drag-overlay ${isDraggingOverPage && (!isAdmin || selectedNip) ? "active" : ""}`}
+        onDragLeave={() => setIsDraggingOverPage(false)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+      >
+        <div className="drive-drag-overlay-content" style={{ pointerEvents: "none" }}>
+          <CloudUploadOutlined className="drive-drag-overlay-icon" style={{ pointerEvents: "none" }} />
+          <h3 style={{ pointerEvents: "none" }}>Lepaskan berkas untuk mengunggah ke folder ini</h3>
+          <p style={{ pointerEvents: "none" }}>SIPTU Drive terintegrasi Nextcloud</p>
+        </div>
+      </div>
     </div>
   );
 }
