@@ -371,9 +371,9 @@ const PengumumanRispeg = () => {
             <h2 style={{ color: "#0f172a", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", margin: 0 }}>
               Papan Pelanggaran Disiplin
             </h2>
-            <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 2 }}>
+            <span style={{ color: "#64748b", fontSize: 12, display: "block", marginTop: 2 }}>
               Monitoring RISPEG – Sistem Rekapitulasi Pembinaan Disiplin Pegawai
-            </Text>
+            </span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

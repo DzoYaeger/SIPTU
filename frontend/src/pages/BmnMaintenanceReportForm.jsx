@@ -24,6 +24,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
+import "./PublicInventoryRequestPageModern.css";
 import "./BmnMaintenanceReportForm.css";
 
 const { Text } = Typography;
@@ -307,8 +308,8 @@ export default function BmnMaintenanceReportForm() {
         </div>
 
         {/* Right Panel: Form Content */}
-        <div className="fluid-ws__panel-right" style={{ flex: 1, background: "#f8fafc", overflowY: "auto", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
-          <div style={{ maxWidth: 640, width: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="fluid-ws__panel-right" style={{ flex: 1, background: "#f8fafc", overflowY: "auto", padding: "40px 24px" }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
             <Card 
               style={{
                 borderRadius: 20,
