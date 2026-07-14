@@ -1,95 +1,47 @@
-.bmn-report-wrapper {
-  min-height: 100vh;
-  background: #ffffff;
-  padding: 20px;
-}
-
-.bmn-report-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
-  border-radius: 20px;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.bmn-report-left {
-  padding: 28px;
-  background: linear-gradient(180deg, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.02) 100%);
-  border-bottom: 1px solid #eef2f7;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.bmn-report-right {
-  padding: 28px;
-}
-
-.bmn-passport-card {
-  border-radius: 16px;
-}
-
-.bmn-passport-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.bmn-avatar {
-  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
-}
-
-.bmn-info-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px dashed #f1f5f9;
-  color: #475569;
-  font-size: 13px;
-}
-
-.bmn-info-row:last-child {
-  border-bottom: none;
-}
-
-.bmn-guide-card {
-  border-radius: 16px;
-  background: #ffffff;
-}
+/* ==========================================================================
+   SIPTU BMN Maintenance & Complaint Form Styles
+   Clean Teal Corporate Design System
+   ========================================================================== */
 
 .bmn-type-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
 }
 
 .bmn-type-group .ant-radio-button-wrapper {
-  border-radius: 10px !important;
-  border: 1px solid #d9e2ec !important;
-  height: 42px;
-  line-height: 40px;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  height: 50px;
+  line-height: 48px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
+  color: #475569;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.bmn-type-group .ant-radio-button-wrapper:hover {
+  border-color: #0d9488 !important;
+  color: #0d9488;
 }
 
 .bmn-type-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
   color: #0f766e;
-  border-color: #14b8a6 !important;
+  border-color: #0d9488 !important;
   background: #f0fdfa;
-  box-shadow: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
-.bmn-submit-btn {
-  height: 44px;
-  border-radius: 10px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
-  border: none;
+/* Radio button icons spacing */
+.bmn-type-group .ant-radio-button-wrapper span.anticon {
+  font-size: 16px;
 }
 
 .bmn-asset-option {
@@ -98,96 +50,21 @@
   gap: 2px;
 }
 
-.bmn-asset-option-title {
-  font-weight: 600;
-  color: #0f172a;
-  font-size: 13px;
-}
-
-.bmn-asset-option-meta {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.bmn-selected-asset-card {
-  margin-bottom: 16px;
-  border-radius: 10px;
-  border: 1px solid #d9f3ee;
-  background: #f8fffd;
-}
-
-.bmn-selected-asset-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.bmn-selected-asset-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.bmn-selected-asset-grid > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.bmn-selected-asset-grid span {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.bmn-selected-asset-grid strong {
-  font-size: 13px;
-  color: #0f172a;
-}
-
-.bmn-note-line {
-  margin-top: 12px;
-  color: #64748b;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.bmn-report-result {
-  min-height: 480px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@media (min-width: 992px) {
-  .bmn-report-container {
-    flex-direction: row;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fluid-ws__layout {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow-y: auto !important;
   }
-
-  .bmn-report-left {
-    flex: 0 0 34%;
-    border-right: 1px solid #eef2f7;
-    border-bottom: none;
+  .fluid-ws__panel-left {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+    height: auto !important;
   }
-
-  .bmn-report-right {
-    flex: 1;
-  }
-}
-
-@media (max-width: 576px) {
-  .bmn-report-wrapper {
-    padding: 12px;
-  }
-
-  .bmn-report-left,
-  .bmn-report-right {
-    padding: 18px;
-  }
-
-  .bmn-selected-asset-grid {
-    grid-template-columns: 1fr;
+  .fluid-ws__panel-right {
+    height: auto !important;
+    padding: 24px 16px !important;
   }
 }

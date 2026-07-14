@@ -19,90 +19,25 @@ dayjs.locale("id");
 
 /* ── Violation tag colours ───────────────────────────────── */
 const VIOLATION_COLORS = {
-  "Terlambat Masuk":  { color: "#ff6b35", bg: "#fff4e6" },
-  "Pulang Cepat":     { color: "#20c997", bg: "#e6fcf5" },
-  "Tidak Berseragam": { color: "#4dabf7", bg: "#e7f5ff" },
-  "terlambat Absen Apel pagi":       { color: "#cc5de8", bg: "#f3f0ff" },
-  "Lupa Absen Masuk": { color: "#22b8cf", bg: "#e3fafc" },
-  "Lupa Absen Pulang":{ color: "#f06595", bg: "#fff0f6" },
+  "Terlambat Masuk":  { color: "#ea580c", bg: "#fff7ed" },
+  "Pulang Cepat":     { color: "#0d9488", bg: "#f0fdfa" },
+  "Tidak Berseragam": { color: "#2563eb", bg: "#eff6ff" },
+  "terlambat Absen Apel pagi":       { color: "#7c3aed", bg: "#f5f3ff" },
+  "Lupa Absen Masuk": { color: "#0891b2", bg: "#ecfeff" },
+  "Lupa Absen Pulang":{ color: "#db2777", bg: "#fdf2f8" },
 };
 
 const getViolationTag = (text) => {
   for (const [key, style] of Object.entries(VIOLATION_COLORS)) {
     if (text.startsWith(key)) {
       return (
-        <Tag style={{ color: style.color, background: style.bg, border: `1px solid ${style.color}50`, borderRadius: 8, padding: "3px 10px", fontSize: 12 }}>
+        <Tag style={{ color: style.color, background: style.bg, border: `1px solid ${style.color}30`, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
           {text}
         </Tag>
       );
     }
   }
-  return <Tag color="error">{text}</Tag>;
-};
-
-/* ── Rain drop animation component ─────────────────────── */
-const RainEffect = () => {
-  const drops = Array.from({ length: 60 });
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-      {drops.map((_, i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            top: "-20px",
-            left: `${(i * 1.7) % 100}%`,
-            width: "1.5px",
-            height: `${(i % 3) * 15 + 20}px`,
-            background: `linear-gradient(to bottom, transparent, rgba(99,150,220,${0.1 + (i % 4) * 0.06}))`,
-            borderRadius: "2px",
-            animation: `rain ${1.5 + (i % 5) * 0.4}s linear infinite`,
-            animationDelay: `${(i % 7) * 0.4}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-/* ── Sad Emoji Float component ─────────────────────────── */
-const SadEmojis = ({ show }) => {
-  const emojis = ["😢", "😭", "😔", "💧", "😿", "🥺", "😞", "😓"];
-  const [items, setItems] = useState([]);
-
-  useEffect(() => {
-    if (!show) return;
-    const newItems = Array.from({ length: 12 }, (_, i) => ({
-      id: i,
-      emoji: emojis[i % emojis.length],
-      x: (i * 8.5) % 92 + 2,
-      delay: i * 0.25,
-      duration: 4 + (i % 4),
-      size: 20 + (i % 3) * 10,
-    }));
-    setItems(newItems);
-  }, [show]);
-
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "hidden" }}>
-      {items.map((item) => (
-        <div
-          key={item.id}
-          style={{
-            position: "absolute",
-            bottom: "-60px",
-            left: `${item.x}%`,
-            fontSize: `${item.size}px`,
-            animation: `floatUp ${item.duration}s ease-in forwards`,
-            animationDelay: `${item.delay}s`,
-            opacity: 0,
-          }}
-        >
-          {item.emoji}
-        </div>
-      ))}
-    </div>
-  );
+  return <Tag color="error" style={{ borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>{text}</Tag>;
 };
 
 /* ── Avatar — perfectly centered initials ────────────────── */
@@ -116,7 +51,7 @@ const UserAvatar = ({ name, size = 56, fontSize = 20 }) => {
       width: size,
       height: size,
       borderRadius: "50%",
-      background: `hsl(${hue}, 60%, 52%)`,
+      background: `hsl(${hue}, 60%, 48%)`,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -126,7 +61,7 @@ const UserAvatar = ({ name, size = 56, fontSize = 20 }) => {
       lineHeight: 1,
       flexShrink: 0,
       textAlign: "center",
-      boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
       userSelect: "none",
     }}>
       <span style={{ display: "block", lineHeight: 1 }}>{initials}</span>
@@ -136,7 +71,7 @@ const UserAvatar = ({ name, size = 56, fontSize = 20 }) => {
 
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
-════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════ */
 const PengumumanRispeg = () => {
   const { apiFetch, user, currentRole } = useAuth();
   const navigate = useNavigate();
@@ -226,56 +161,93 @@ const PengumumanRispeg = () => {
   /* ── Podium Card ─────────────────────────────────────── */
   const PodiumCard = ({ emp, rank }) => {
     const cfg = {
-      1: { glow: "#f59e0b55", bg: "#fffbeb", border: "#f59e0b", crown: "🚨", avatarSize: 80, avatarFont: 28, zIdx: 10, scale: 1.06, pts: { bg: "#ef4444", color: "#fff", shadow: "#ef444440" } },
-      2: { glow: "#94a3b820", bg: "#f8fafc",  border: "#cbd5e1", crown: "⚠️", avatarSize: 64, avatarFont: 22, zIdx: 5,  scale: 1.0,  pts: { bg: "#64748b", color: "#fff", shadow: "none" } },
-      3: { glow: "#d9770620", bg: "#fff7ed",  border: "#d97706", crown: "😤", avatarSize: 64, avatarFont: 22, zIdx: 5,  scale: 1.0,  pts: { bg: "#d97706", color: "#fff", shadow: "none" } },
+      1: { 
+        glow: "rgba(239, 68, 68, 0.12)", 
+        bg: "#ffffff", 
+        border: "#fecaca", 
+        crown: "👑 Peringkat 1", 
+        headerColor: "#ef4444",
+        avatarSize: 80, 
+        avatarFont: 26, 
+        zIdx: 10, 
+        scale: 1.05, 
+        pts: { bg: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", color: "#fff", shadow: "0 4px 12px rgba(239, 68, 68, 0.3)" } 
+      },
+      2: { 
+        glow: "rgba(100, 116, 139, 0.06)", 
+        bg: "#ffffff",  
+        border: "#e2e8f0", 
+        crown: "🥈 Peringkat 2", 
+        headerColor: "#64748b",
+        avatarSize: 68, 
+        avatarFont: 22, 
+        zIdx: 5,  
+        scale: 1.0,  
+        pts: { bg: "linear-gradient(135deg, #64748b 0%, #475569 100%)", color: "#fff", shadow: "none" } 
+      },
+      3: { 
+        glow: "rgba(245, 158, 11, 0.06)", 
+        bg: "#ffffff",  
+        border: "#fef3c7", 
+        crown: "🥉 Peringkat 3", 
+        headerColor: "#d97706",
+        avatarSize: 68, 
+        avatarFont: 22, 
+        zIdx: 5,  
+        scale: 1.0,  
+        pts: { bg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff", shadow: "none" } 
+      },
     }[rank];
 
-    if (!emp) return <div style={{ flex: 1 }} />;
+    if (!emp) return <div style={{ flex: 1, minWidth: 200 }} />;
 
     return (
       <div
         onClick={() => showDetail(emp)}
         style={{
           flex: 1,
-          maxWidth: rank === 1 ? 300 : 240,
+          minWidth: rank === 1 ? 260 : 220,
+          maxWidth: rank === 1 ? 320 : 260,
           background: cfg.bg,
-          border: `2px solid ${cfg.border}`,
-          borderRadius: 28,
-          padding: "28px 20px 24px",
+          border: `1px solid ${cfg.border}`,
+          borderRadius: 24,
+          padding: "24px 20px 20px",
           textAlign: "center",
           cursor: "pointer",
-          transform: entered ? `scale(${cfg.scale})` : "scale(0.75) translateY(50px)",
+          transform: entered ? `scale(${cfg.scale})` : "scale(0.9) translateY(30px)",
           opacity: entered ? 1 : 0,
-          transition: `all 0.8s cubic-bezier(0.34,1.56,0.64,1) ${rank * 0.18}s`,
-          boxShadow: `0 16px 48px ${cfg.glow}`,
+          transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${rank * 0.1}s`,
+          boxShadow: `0 20px 40px -15px ${cfg.glow}, 0 1px 3px rgba(0,0,0,0.02)`,
           zIndex: cfg.zIdx,
           position: "relative",
           alignSelf: "flex-end",
         }}
       >
-        <div style={{ fontSize: 28, marginBottom: 10, lineHeight: 1 }}>{cfg.crown}</div>
-        {/* Avatar centered */}
+        <div style={{ fontSize: 13, fontWeight: 800, color: cfg.headerColor, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 12 }}>
+          {cfg.crown}
+        </div>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
           <UserAvatar name={emp.name} size={cfg.avatarSize} fontSize={cfg.avatarFont} />
         </div>
-        <div style={{ fontWeight: 800, fontSize: rank === 1 ? 16 : 14, color: "#1e293b", lineHeight: 1.4 }}>
+        <div style={{ fontWeight: 800, fontSize: rank === 1 ? 16 : 14, color: "#0f172a", lineHeight: 1.3 }}>
           {emp.name}
         </div>
-        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>NIP. {emp.nip}</div>
+        <div style={{ fontSize: 11, color: "#64748b", marginTop: 4, fontFamily: "monospace" }}>NIP. {emp.nip}</div>
         <div style={{
-          marginTop: 14, display: "inline-block",
+          marginTop: 16, 
+          display: "inline-block",
           background: cfg.pts.bg,
           color: cfg.pts.color,
-          fontWeight: 800, borderRadius: 20,
-          padding: rank === 1 ? "7px 22px" : "5px 16px",
-          fontSize: rank === 1 ? 18 : 15,
+          fontWeight: 800, 
+          borderRadius: 100,
+          padding: rank === 1 ? "6px 20px" : "4px 14px",
+          fontSize: rank === 1 ? 16 : 14,
           boxShadow: cfg.pts.shadow,
         }}>
           {emp.total_points} Poin
         </div>
-        <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>
-          <EyeOutlined style={{ marginRight: 4 }} />Klik untuk detail
+        <div style={{ marginTop: 12, fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <EyeOutlined /> Lihat Detail
         </div>
       </div>
     );
@@ -284,39 +256,39 @@ const PengumumanRispeg = () => {
   /* ── Table columns ───────────────────────────────────── */
   const columns = [
     {
-      title: "#", key: "rank", align: "center", width: 56,
-      render: (_, __, i) => <span style={{ fontWeight: 800, fontSize: 15, color: "#94a3b8" }}>#{i + 4}</span>,
+      title: "Peringkat", key: "rank", align: "center", width: 90,
+      render: (_, __, i) => <span style={{ fontWeight: 800, fontSize: 13, color: "#64748b" }}>#{i + 4}</span>,
     },
     {
       title: "Pegawai", key: "emp",
       render: (_, r) => (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <UserAvatar name={r.name} size={40} fontSize={15} />
+          <UserAvatar name={r.name} size={36} fontSize={14} />
           <div>
-            <div style={{ fontWeight: 700, color: "#1e293b" }}>{r.name}</div>
-            <div style={{ fontSize: 12, color: "#94a3b8" }}>NIP. {r.nip}</div>
+            <div style={{ fontWeight: 750, color: "#0f172a", fontSize: 13.5 }}>{r.name}</div>
+            <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>NIP. {r.nip}</div>
           </div>
         </div>
       ),
     },
     {
-      title: "Total Poin", dataIndex: "total_points", align: "center",
+      title: "Total Akumulasi Poin", dataIndex: "total_points", align: "center", width: 200,
       render: pts => (
-        <Tag style={{ fontWeight: 800, fontSize: 14, padding: "4px 14px", borderRadius: 20, color: "#dc2626", background: "#fff1f2", border: "1.5px solid #fecaca" }}>
+        <Tag style={{ fontWeight: 800, fontSize: 13, padding: "4px 14px", borderRadius: 20, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca" }}>
           {pts} Poin
         </Tag>
       ),
     },
     {
-      title: "", align: "center",
+      title: "Opsi", align: "center", width: 110,
       render: (_, r) => (
         <Button
           size="small"
           icon={<EyeOutlined />}
           onClick={(e) => { e.stopPropagation(); showDetail(r); }}
-          style={{ borderRadius: 8, background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#475569", fontWeight: 600 }}
+          style={{ borderRadius: 8, background: "#f8fafc", border: "1px solid #cbd5e1", color: "#475569", fontWeight: 700, fontSize: 12 }}
         >
-          Detail
+          Rincian
         </Button>
       ),
     },
@@ -324,169 +296,160 @@ const PengumumanRispeg = () => {
 
   return (
     <>
-      {/* ── Global Keyframe Styles ─────────────────────── */}
       <style>{`
-        @keyframes rain {
-          0%   { transform: translateY(-20px); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 0.5; }
-          100% { transform: translateY(110vh); opacity: 0; }
-        }
-        @keyframes floatUp {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10%  { opacity: 1; }
-          80%  { opacity: 0.7; }
-          100% { transform: translateY(-110vh) rotate(15deg); opacity: 0; }
-        }
-        @keyframes sadPulse {
-          0%, 100% { transform: scale(1); }
-          50%       { transform: scale(1.08); }
-        }
-        @keyframes titleSlide {
-          from { opacity: 0; transform: translateY(-24px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes wobble {
-          0%, 100% { transform: rotate(0deg); }
-          20%  { transform: rotate(-5deg); }
-          40%  { transform: rotate(5deg); }
-          60%  { transform: rotate(-3deg); }
-          80%  { transform: rotate(3deg); }
-        }
         .pr-row:hover { background: #fff5f5 !important; cursor: pointer; }
         .pr-table .ant-table { background: transparent !important; }
-        .pr-table .ant-table-thead > tr > th { background: #f8fafc !important; color: #64748b !important; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
+        .pr-table .ant-table-thead > tr > th { background: #f8fafc !important; color: #475569 !important; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
         .pr-table .ant-table-tbody > tr > td { border-bottom: 1px solid #f1f5f9; }
       `}</style>
 
-      {/* ── Rain + Emoji FX ──────────────────────────────── */}
-      <RainEffect />
-      <SadEmojis show={entered} />
+      {/* ── Ambient Background FX ─────────────────────────── */}
+      <div 
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #f1f5f9 100%)",
+          zIndex: 0,
+          pointerEvents: "none"
+        }}
+      />
+      <div 
+        style={{
+          position: "fixed",
+          top: "-10%",
+          left: "-10%",
+          width: "50%",
+          height: "50%",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(99, 102, 241, 0.04), transparent 70%)",
+          zIndex: 1,
+          pointerEvents: "none",
+          filter: "blur(40px)"
+        }}
+      />
+      <div 
+        style={{
+          position: "fixed",
+          bottom: "-10%",
+          right: "-10%",
+          width: "50%",
+          height: "50%",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(14, 165, 233, 0.04), transparent 70%)",
+          zIndex: 1,
+          pointerEvents: "none",
+          filter: "blur(40px)"
+        }}
+      />
 
-      {/* ── Main Full-Screen Container — LIGHT THEME ─────── */}
-      <div style={{
-        minHeight: "100vh",
-        background: "linear-gradient(160deg, #f0f4ff 0%, #fafbff 50%, #f5f0ff 100%)",
-        position: "relative",
-        zIndex: 2,
-        overflowX: "hidden",
-      }}>
-
-        {/* ── Sticky Header ─────────────────────────────── */}
+      {/* ── Main Dashboard Panel ── */}
+      <div style={{ position: "relative", zIndex: 2, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        
+        {/* Sticky Header Bar */}
         <div style={{
-          padding: "20px 32px",
+          padding: "16px 32px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
-          backdropFilter: "blur(16px)",
-          background: "rgba(255,255,255,0.80)",
-          position: "sticky", top: 0, zIndex: 100,
-          boxShadow: "0 2px 20px rgba(0,0,0,0.04)",
+          borderBottom: "1px solid #e2e8f0",
+          backdropFilter: "blur(12px)",
+          background: "rgba(255, 255, 255, 0.85)",
+          position: "sticky", 
+          top: 0, 
+          zIndex: 100,
+          boxShadow: "0 4px 20px -12px rgba(15, 23, 42, 0.08)",
         }}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate("/app/layanan-mandiri")}
-            style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 12, height: 40, padding: "0 16px", fontWeight: 600 }}
+            style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#475569", borderRadius: 10, height: 38, padding: "0 16px", fontWeight: 700 }}
           >
             Kembali
           </Button>
 
-          <div style={{ textAlign: "center", animation: entered ? "titleSlide 0.8s cubic-bezier(0.34,1.56,0.64,1) both" : "none" }}>
-            <div style={{ fontSize: 26, lineHeight: 1, animation: "wobble 3s ease-in-out 1s infinite" }}>😢</div>
-            <div style={{ color: "#1e293b", fontWeight: 900, fontSize: 20, letterSpacing: "-0.02em", marginTop: 4 }}>
+          <div style={{ textAlign: "center" }}>
+            <h2 style={{ color: "#0f172a", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", margin: 0 }}>
               Papan Pelanggaran Disiplin
-            </div>
-            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>Rekapitulasi RISPEG – Siapa Paling Tidak Disiplin?</div>
+            </h2>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 2 }}>
+              Monitoring RISPEG – Sistem Rekapitulasi Pembinaan Disiplin Pegawai
+            </Text>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Bulan:</span>
-              <DatePicker
-                picker="month"
-                value={selectedMonth}
-                onChange={d => d && setSelectedMonth(d)}
-                allowClear={false}
-                format="MMM YYYY"
-                style={{ borderRadius: 12, width: 140 }}
-              />
-              {isAdmin && (
-                <Button
-                  icon={<PushpinOutlined />}
-                  loading={savingDefault}
-                  onClick={handleSetDefaultMonth}
-                  style={{ borderRadius: 12, height: 32, fontSize: 12, fontWeight: 600, background: "#f0fdf4", border: "1px solid #86efac", color: "#16a34a" }}
-                >
-                  Set Default
-                </Button>
-              )}
-            </div>
-            {defaultMonthLabel && (
-              <div style={{ fontSize: 11, color: "#94a3b8" }}>
-                <PushpinOutlined style={{ marginRight: 4 }} />Default: {defaultMonthLabel}
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <DatePicker
+              picker="month"
+              value={selectedMonth}
+              onChange={d => d && setSelectedMonth(d)}
+              allowClear={false}
+              format="MMMM YYYY"
+              style={{ borderRadius: 10, width: 150, height: 38 }}
+            />
+            {isAdmin && (
+              <Button
+                icon={<PushpinOutlined />}
+                loading={savingDefault}
+                onClick={handleSetDefaultMonth}
+                style={{ borderRadius: 10, height: 38, fontWeight: 700, background: "#f0fdf4", border: "1px solid #86efac", color: "#16a34a" }}
+              >
+                Set Default
+              </Button>
             )}
           </div>
         </div>
 
-        {/* ── Body ──────────────────────────────────────── */}
-        <div style={{ padding: "44px 32px 80px", maxWidth: 1100, margin: "0 auto" }}>
-
+        {/* ── Content Grid ── */}
+        <div style={{ padding: "40px 24px 80px", maxWidth: 1100, margin: "0 auto", width: "100%", flex: 1 }}>
           {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 20 }}>
-              <div style={{ fontSize: 60, animation: "sadPulse 1.5s ease-in-out infinite" }}>😭</div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: 16 }}>
               <Spin size="large" />
-              <div style={{ color: "#94a3b8", fontSize: 15 }}>Memuat data pelanggaran...</div>
+              <div style={{ color: "#64748b", fontSize: 14, fontWeight: 500 }}>Memproses data kepatuhan...</div>
             </div>
           ) : activeOffenders.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 20, textAlign: "center" }}>
-              <div style={{ fontSize: 80 }}>🎉</div>
-              <div style={{ color: "#1e293b", fontWeight: 800, fontSize: 28 }}>Tidak Ada Pelanggaran!</div>
-              <div style={{ color: "#64748b", fontSize: 16 }}>Seluruh pegawai tertib pada bulan {selectedMonth.format("MMMM YYYY")}.</div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh", gap: 20, textAlign: "center" }}>
+              <div style={{ fontSize: 72 }}>🎉</div>
+              <div style={{ color: "#0f172a", fontWeight: 800, fontSize: 24 }}>Seluruh Pegawai Disiplin!</div>
+              <div style={{ color: "#64748b", fontSize: 14, maxWidth: 400, lineHeight: 1.6 }}>
+                Tidak terdeteksi adanya pelanggaran absensi atau apel pada periode bulan {selectedMonth.format("MMMM YYYY")}.
+              </div>
             </div>
           ) : (
             <>
-              {/* ── Podium Section ───────────────────────── */}
-              <div style={{ marginBottom: 56 }}>
-                <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 32 }}>
-                  🚨 &nbsp; Pelanggaran Terbanyak Bulan {selectedMonth.format("MMMM YYYY")} &nbsp; 🚨
+              {/* Podium Section */}
+              <div style={{ marginBottom: 48 }}>
+                <div style={{ textAlign: "center", color: "#64748b", fontSize: 11, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 28 }}>
+                  Tiga Pegawai Dengan Akumulasi Poin Tertinggi
                 </div>
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 24, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 20, flexWrap: "wrap" }}>
                   <PodiumCard emp={p2} rank={2} />
                   <PodiumCard emp={p1} rank={1} />
                   <PodiumCard emp={p3} rank={3} />
                 </div>
               </div>
 
-              {/* ── Tear divider ─────────────────────────── */}
+              {/* Leaderboard Table Section */}
               {rest.length > 0 && (
-                <div style={{ textAlign: "center", marginBottom: 24, color: "#94a3b8", fontSize: 13 }}>
-                  <span style={{ fontSize: 16 }}>💧</span>&nbsp; Peringkat berikutnya &nbsp;<span style={{ fontSize: 16 }}>💧</span>
-                </div>
-              )}
-
-              {/* ── Leaderboard Table ─────────────────────── */}
-              {rest.length > 0 && (
-                <div style={{
-                  background: "#fff",
-                  borderRadius: 24,
-                  border: "1px solid #e2e8f0",
-                  overflow: "hidden",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.04)",
-                  opacity: entered ? 1 : 0,
-                  transform: entered ? "none" : "translateY(30px)",
-                  transition: "all 0.8s ease 0.6s",
-                }}>
-                  <Table
-                    dataSource={rest}
-                    columns={columns}
-                    rowKey="employee_id"
-                    pagination={false}
-                    rowClassName="pr-row"
-                    onRow={(r) => ({ onClick: () => showDetail(r) })}
-                    className="pr-table"
-                  />
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", paddingLeft: 4 }}>
+                    Daftar Urutan Pegawai Lainnya
+                  </div>
+                  <div style={{
+                    background: "#ffffff",
+                    borderRadius: 20,
+                    border: "1px solid #cbd5e1",
+                    overflow: "hidden",
+                    boxShadow: "0 10px 30px -15px rgba(15, 23, 42, 0.05)",
+                  }}>
+                    <Table
+                      dataSource={rest}
+                      columns={columns}
+                      rowKey="employee_id"
+                      pagination={false}
+                      rowClassName="pr-row"
+                      onRow={(r) => ({ onClick: () => showDetail(r) })}
+                      className="pr-table"
+                    />
+                  </div>
                 </div>
               )}
             </>
@@ -494,47 +457,46 @@ const PengumumanRispeg = () => {
         </div>
       </div>
 
-      {/* ── Detail Modal ─────────────────────────────────── */}
+      {/* ── Detail Modal ── */}
       <Modal
         title={null}
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
-        width={620}
-        styles={{ content: { borderRadius: 28, overflow: "hidden", padding: 0 }, body: { padding: 0 } }}
+        width={580}
+        styles={{ content: { borderRadius: 24, overflow: "hidden", padding: 0 }, body: { padding: 0 } }}
         centered
       >
         {selectedEmployee && (
           <div>
-            {/* Modal header — kept dark for contrast */}
-            <div style={{ background: "linear-gradient(135deg,#1e293b,#0f172a)", padding: "28px 28px 24px", display: "flex", alignItems: "center", gap: 18 }}>
-              <UserAvatar name={selectedEmployee.name} size={64} fontSize={24} />
+            {/* Modal header */}
+            <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", padding: "28px", display: "flex", alignItems: "center", gap: 16 }}>
+              <UserAvatar name={selectedEmployee.name} size={60} fontSize={22} />
               <div>
-                <div style={{ color: "#f8fafc", fontWeight: 800, fontSize: 20 }}>{selectedEmployee.name}</div>
-                <div style={{ color: "#64748b", fontSize: 13, marginTop: 2 }}>NIP. {selectedEmployee.nip}</div>
-                <div style={{ marginTop: 10 }}>
-                  <span style={{ background: "#ef4444", color: "#fff", fontWeight: 800, borderRadius: 20, padding: "5px 16px", fontSize: 15 }}>
+                <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 18 }}>{selectedEmployee.name}</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2, fontFamily: "monospace" }}>NIP. {selectedEmployee.nip}</div>
+                <div style={{ marginTop: 8 }}>
+                  <Tag color="red" style={{ borderRadius: 6, fontWeight: 700, padding: "2px 10px" }}>
                     Total {selectedEmployee.total_points} Poin Pelanggaran
-                  </span>
+                  </Tag>
                 </div>
               </div>
-              <div style={{ marginLeft: "auto", fontSize: 40 }}>😢</div>
             </div>
 
             {/* Violation list */}
-            <div style={{ padding: "24px 28px 28px", background: "#fff" }}>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: "#1e293b" }}>Rincian Tanggal Pelanggaran:</div>
+            <div style={{ padding: "24px 28px 28px", background: "#ffffff" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14, color: "#1e293b" }}>Rincian Kejadian Pelanggaran:</div>
               {employeeViolations.length === 0 ? (
-                <Empty description="Tidak ada data rincian harian." />
+                <Empty description="Tidak ada rincian kejadian." />
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 340, overflowY: "auto", paddingRight: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
                   {employeeViolations.map((v, i) => (
-                    <div key={i} style={{ background: "#f8fafc", borderRadius: 14, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#475569", fontWeight: 600 }}>
-                        <CalendarOutlined />
-                        {dayjs(v.date).format("DD MMMM YYYY")}
+                    <div key={i} style={{ background: "#f8fafc", borderRadius: 12, padding: "12px 16px", border: "1px solid #cbd5e1", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#475569", fontWeight: 700, fontSize: 13 }}>
+                        <CalendarOutlined style={{ color: "#ea580c" }} />
+                        {dayjs(v.date).format("DD MMM YYYY")}
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end" }}>
                         {v.violation_details.split(", ").map((d, idx) => (
                           <span key={idx}>{getViolationTag(d)}</span>
                         ))}
@@ -543,115 +505,93 @@ const PengumumanRispeg = () => {
                   ))}
                 </div>
               )}
-              <Button block type="primary" onClick={() => setIsModalVisible(false)} style={{ marginTop: 20, borderRadius: 12, height: 44, fontWeight: 700 }}>
-                Tutup
+              <Button block type="primary" size="large" onClick={() => setIsModalVisible(false)} style={{ marginTop: 20, borderRadius: 10, fontWeight: 700, height: 42 }}>
+                Selesai
               </Button>
             </div>
           </div>
         )}
       </Modal>
-      {/* ── Floating Info Button ──────────────────────────── */}
+
+      {/* ── Floating Info Button ── */}
       <div
         onClick={() => setShowInfoModal(true)}
         title="Cara Penilaian"
         style={{
           position: "fixed",
-          bottom: 28,
+          bottom: 24,
           right: 24,
           zIndex: 1000,
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           borderRadius: "50%",
-          background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          boxShadow: "0 4px 20px rgba(99,102,241,0.5)",
-          animation: "floatBtn 3s ease-in-out infinite",
-          transition: "transform 0.2s",
+          boxShadow: "0 4px 16px rgba(15, 23, 42, 0.25)",
+          transition: "all 0.2s ease",
         }}
-        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.12)"}
-        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1) translateY(-2px)"}
+        onMouseLeave={e => e.currentTarget.style.transform = "scale(1) translateY(0)"}
       >
-        <InfoCircleOutlined style={{ color: "#fff", fontSize: 22 }} />
+        <InfoCircleOutlined style={{ color: "#ffffff", fontSize: 20 }} />
       </div>
 
-      {/* ── Info / Scoring Modal ──────────────────────────── */}
+      {/* ── Info / Scoring Modal ── */}
       <Modal
         title={null}
         open={showInfoModal}
         onCancel={() => setShowInfoModal(false)}
         footer={null}
-        width={560}
-        styles={{ content: { borderRadius: 28, overflow: "hidden", padding: 0 }, body: { padding: 0 } }}
+        width={540}
+        styles={{ content: { borderRadius: 24, overflow: "hidden", padding: 0 }, body: { padding: 0 } }}
         centered
       >
         {/* Modal Header */}
-        <div style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", padding: "28px 28px 22px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <TrophyOutlined style={{ color: "#fff", fontSize: 26 }} />
+        <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", padding: "24px 28px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "center" }}>
+              <TrophyOutlined style={{ color: "#ffffff", fontSize: 22 }} />
             </div>
             <div>
-              <div style={{ color: "#fff", fontWeight: 900, fontSize: 18, lineHeight: 1.2 }}>Cara Penilaian RISPEG</div>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 4 }}>Sistem Rekap Pelanggaran Disiplin Pegawai</div>
+              <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 16 }}>Metode Penilaian RISPEG</div>
+              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Panduan Akumulasi Poin Disiplin Pegawai</div>
             </div>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: "24px 28px 28px", background: "#fff" }}>
-
-          {/* Penjelasan Umum */}
-          <div style={{ background: "#f8fafc", borderRadius: 16, padding: "16px 18px", marginBottom: 20, borderLeft: "4px solid #6366f1" }}>
-            <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 14, marginBottom: 6 }}>
-              📋 Dasar Penilaian
-            </div>
-            <div style={{ color: "#475569", fontSize: 13, lineHeight: 1.7 }}>
-              Penilaian dilakukan berdasarkan <strong>intensitas pelanggaran</strong> Bapak/Ibu selama bulan yang dipilih.
-              Setiap jenis pelanggaran memiliki bobot poin tersendiri — semakin banyak dan berat pelanggarannya,
-              semakin tinggi total poin yang terakumulasi.
+        <div style={{ padding: "24px 28px 28px", background: "#ffffff" }}>
+          <div style={{ background: "#f8fafc", borderRadius: 12, padding: "14px 16px", marginBottom: 18, borderLeft: "4px solid #475569" }}>
+            <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13, marginBottom: 4 }}>📋 Mekanisme Penilaian</div>
+            <div style={{ color: "#475569", fontSize: 12.5, lineHeight: 1.6 }}>
+              Sistem akan menghitung pelanggaran kehadiran harian secara otomatis. Poin pelanggaran bersifat kumulatif dalam bulan yang aktif. Semakin banyak temuan ketidakdisiplinan, total poin akan bertambah.
             </div>
           </div>
 
-          {/* Metode Perhitungan */}
-          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 14, marginBottom: 12 }}>
-            <ClockCircleOutlined style={{ marginRight: 8, color: "#6366f1" }} />
-            Metode Perhitungan
-          </div>
-          <div style={{ background: "#f8fafc", borderRadius: 16, padding: "16px 18px", marginBottom: 20 }}>
-            <div style={{ color: "#475569", fontSize: 13, lineHeight: 1.8 }}>
-              <div style={{ marginBottom: 6 }}>• Setiap hari dihitung secara kumulatif dalam satu bulan.</div>
-              <div style={{ marginBottom: 6 }}>• Satu hari dapat memiliki <strong>lebih dari satu pelanggaran</strong> sekaligus.</div>
-              <div style={{ marginBottom: 6 }}>• Total poin = <strong>jumlah seluruh kejadian pelanggaran × bobot masing-masing</strong>.</div>
-              <div>• Peringkat ditentukan dari total poin tertinggi (pelanggaran terbanyak/terberat).</div>
-            </div>
-          </div>
-
-          {/* Jenis Pelanggaran */}
-          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 14, marginBottom: 12 }}>
-            <WarningOutlined style={{ marginRight: 8, color: "#f59e0b" }} />
-            Jenis Pelanggaran &amp; Bobot Poin
+          <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13, marginBottom: 8 }}>
+            Daftar Pembobotan Poin Pelanggaran:
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
             {[
-              { label: "Terlambat Masuk",     color: "#ff6b35", bg: "#fff4e6", poin: 1, desc: "Hadir melewati jam masuk yang ditentukan" },
-              { label: "Pulang Cepat",        color: "#20c997", bg: "#e6fcf5", poin: 1, desc: "Pulang sebelum jam kerja selesai" },
-              { label: "Tidak Berseragam",    color: "#4dabf7", bg: "#e7f5ff", poin: 1, desc: "Tidak mengenakan seragam dinas yang ditentukan" },
-              { label: "terlambat Absen Apel pagi", color: "#cc5de8", bg: "#f3f0ff", poin: 1, desc: "Tidak hadir tepat waktu di apel pagi" },
-              { label: "Lupa Absen Masuk",    color: "#22b8cf", bg: "#e3fafc", poin: 1, desc: "Tidak melakukan absensi saat datang" },
-              { label: "Lupa Absen Pulang",   color: "#f06595", bg: "#fff0f6", poin: 1, desc: "Tidak melakukan absensi saat pulang" },
+              { label: "Terlambat Masuk",     color: "#ea580c", bg: "#fff7ed", poin: 1, desc: "Datang melewati batas toleransi jam kerja" },
+              { label: "Pulang Cepat",        color: "#0d9488", bg: "#f0fdfa", poin: 1, desc: "Meninggalkan kantor sebelum jam operasional selesai" },
+              { label: "Tidak Berseragam",    color: "#2563eb", bg: "#eff6ff", poin: 1, desc: "Tidak mengenakan pakaian dinas sesuai ketentuan hari" },
+              { label: "terlambat Absen Apel pagi", color: "#7c3aed", bg: "#f5f3ff", poin: 1, desc: "Terlambat melakukan absensi pada sesi apel pagi" },
+              { label: "Lupa Absen Masuk",    color: "#0891b2", bg: "#ecfeff", poin: 1, desc: "Tidak merekam kehadiran saat masuk kerja" },
+              { label: "Lupa Absen Pulang",   color: "#db2777", bg: "#fdf2f8", poin: 1, desc: "Tidak merekam kehadiran saat pulang kerja" },
             ].map((item) => (
-              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, background: item.bg, borderRadius: 12, padding: "10px 14px", border: `1px solid ${item.color}30` }}>
-                <div style={{ flexShrink: 0 }}>
-                  <Tag style={{ color: item.color, background: "transparent", border: `1px solid ${item.color}`, borderRadius: 8, fontWeight: 700, fontSize: 11, margin: 0 }}>
-                    +{item.poin} poin
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, background: item.bg, borderRadius: 12, padding: "10px 14px", border: `1px solid ${item.color}20` }}>
+                <div>
+                  <Tag style={{ color: item.color, background: "transparent", border: `1px solid ${item.color}`, borderRadius: 6, fontWeight: 700, fontSize: 11, margin: 0 }}>
+                    +{item.poin} Poin
                   </Tag>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: item.color, fontSize: 13 }}>{item.label}</div>
-                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{item.desc}</div>
+                  <div style={{ fontWeight: 700, color: item.color, fontSize: 12.5 }}>{item.label}</div>
+                  <div style={{ color: "#64748b", fontSize: 11, marginTop: 1 }}>{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -660,20 +600,14 @@ const PengumumanRispeg = () => {
           <Button
             block
             type="primary"
+            size="large"
             onClick={() => setShowInfoModal(false)}
-            style={{ borderRadius: 12, height: 44, fontWeight: 700, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none" }}
+            style={{ borderRadius: 10, height: 42, fontWeight: 700, background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", border: "none" }}
           >
             Mengerti
           </Button>
         </div>
       </Modal>
-
-      <style>{`
-        @keyframes floatBtn {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-6px); }
-        }
-      `}</style>
     </>
   );
 };
