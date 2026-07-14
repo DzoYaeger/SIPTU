@@ -357,7 +357,7 @@ function CounterCard({ counter, isAnimating }) {
   const isActive = counter.status === "active";
   const code = counter.counter_code;
   const colorClass = code === "A" ? "counter-a" : "counter-b";
-  const description = code === "A" ? "Layanan Pengaduan dan Informasi" : "Layanan Sertifikasi/Pendampingan";
+  const description = counter.counter_name || (code === "A" ? "Layanan Pengaduan dan Informasi" : "Layanan Sertifikasi/Pendampingan");
 
   if (!isActive) {
     return (
