@@ -920,6 +920,8 @@ class BmnLoanController extends Controller
 
         $this->updateAssetStatus($loan, 'tersedia');
 
+        $this->notifyBorrowerReturned($loan);
+
         return response()->json($loan);
     }
 
@@ -1126,6 +1128,56 @@ class BmnLoanController extends Controller
         ]));
 
         \Illuminate\Support\Facades\Log::info("[BmnLoan] Sending approval notification to {$target} for SPA {$loan->spa_number}");
+
+        $result = app(FonnteService::class)->send(
+            $setting->fonnte_endpoint ?? '',
+            $setting->fonnte_token ?? '',
+            [$target],
+            $message
+        );
+
+        \Illuminate\Support\Facades\Log::info("[BmnLoan] Fonnte result: " . json_encode($result));
+    }
+
+    private function notifyBorrowerReturned(BmnLoan $loan): void
+    {
+        $setting = NotificationSetting::first();
+        if (!$setting) {
+            \Illuminate\Support\Facades\Log::warning('[BmnLoan] notifyBorrowerReturned: No NotificationSetting found.');
+            return;
+        }
+        $target = $this->resolveBorrowerPhone($loan);
+        if (!$target) {
+            \Illuminate\Support\Facades\Log::warning("[BmnLoan] notifyBorrowerReturned: No phone found for loan #{$loan->id} (borrower: {$loan->borrower_name}, nip: {$loan->borrower_nip})");
+            return;
+        }
+
+        $frontendUrl = config('app.frontend_url');
+        $loanLink = "{$frontendUrl}/peminjaman-aset/track/{$loan->token}";
+
+        $message = implode("\n", array_filter([
+            '🔄 *PENGEMBALIAN ASET BMN SELESAI*',
+            '━━━━━━━━━━━━━━━━━━━',
+            '',
+            "Halo *{$loan->borrower_name}*,",
+            'Pengembalian aset BMN yang Anda pinjam telah *selesai dikonfirmasi* oleh petugas.',
+            '',
+            "📌 *No. SPA:* {$loan->spa_number}",
+            "📅 *Tanggal Pengembalian:* " . now()->translatedFormat('d F Y'),
+            "📝 *Kondisi Barang Kembali:* " . ($loan->kondisi_barang_kembali ?? '-'),
+            '',
+            ...$this->buildAssetLines($loan),
+            '',
+            '━━━━━━━━━━━━━━━━━━━',
+            'Terima kasih telah mengembalikan aset tepat waktu dan menjaga kondisi barang dengan baik.',
+            '',
+            "🔗 *Detail Peminjaman:*",
+            $loanLink,
+            '',
+            '⏰ Dikonfirmasi: ' . now()->translatedFormat('d F Y, H:i') . ' WITA',
+        ]));
+
+        \Illuminate\Support\Facades\Log::info("[BmnLoan] Sending return confirmation notification to {$target} for SPA {$loan->spa_number}");
 
         $result = app(FonnteService::class)->send(
             $setting->fonnte_endpoint ?? '',
