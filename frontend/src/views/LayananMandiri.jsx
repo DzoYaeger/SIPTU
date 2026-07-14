@@ -71,6 +71,8 @@ const LayananMandiri = () => {
   const [showPdtt, setShowPdtt] = useState(false);
   const [showProcurementProposalService, setShowProcurementProposalService] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [currentFeedIndex, setCurrentFeedIndex] = useState(0);
+  const [isFeedHovered, setIsFeedHovered] = useState(false);
   
   // Activity Hub Slideshow State
   const [currentHubSlide, setCurrentHubSlide] = useState(0);
@@ -181,10 +183,29 @@ const LayananMandiri = () => {
     return () => clearInterval(timer);
   }, [recentActivities]);
 
+  // Live Feed Automatic Slideshow with Pause on Hover
+  useEffect(() => {
+    if (recentActivities.length <= 1 || isFeedHovered) return;
+    const interval = setInterval(() => {
+      setCurrentFeedIndex((prev) => (prev + 1) % recentActivities.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [recentActivities.length, isFeedHovered]);
+
   const hubActivities = useMemo(() => {
     const start = currentHubSlide * itemsPerSlide;
     return recentActivities.slice(start, start + itemsPerSlide);
   }, [recentActivities, currentHubSlide]);
+
+  const displayedActivities = useMemo(() => {
+    if (recentActivities.length <= 5) return recentActivities;
+    const items = [];
+    for (let i = 0; i < 5; i++) {
+      const idx = (currentFeedIndex + i) % recentActivities.length;
+      items.push(recentActivities[idx]);
+    }
+    return items;
+  }, [recentActivities, currentFeedIndex]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -240,8 +261,8 @@ const LayananMandiri = () => {
     }));
   }, [newsPosts, navigate]);
 
-  // Preload hero images and service icons to prevent lag, blinking, or visual pop-in
   useEffect(() => {
+    // Preload hero images to prevent lag
     if (heroSlides && Array.isArray(heroSlides)) {
       heroSlides.forEach((slide) => {
         if (slide.image) {
@@ -250,15 +271,7 @@ const LayananMandiri = () => {
         }
       });
     }
-    if (services && Array.isArray(services)) {
-      services.forEach((service) => {
-        if (service.id) {
-          const img = new Image();
-          img.src = `/icons/${service.id}.png`;
-        }
-      });
-    }
-  }, [heroSlides, services]);
+  }, [heroSlides]);
 
   const dashboardPath = useMemo(() => {
     if (!user) return "/app";
@@ -510,78 +523,6 @@ const LayananMandiri = () => {
             </div>
           )}
         </div>
-
-        {/* ─── Profile Completeness Cards ─── */}
-        {!profileComplete && (
-          <div className="lm-profile-completeness">
-            <div className="lm-completeness-header">
-              <span className="lm-completeness-icon">⚠️</span>
-              <div>
-                <h3 className="lm-completeness-title">Lengkapi Data Profil Anda</h3>
-                <p className="lm-completeness-subtitle">Data yang lengkap memastikan layanan kepegawaian berjalan lancar.</p>
-              </div>
-              <button
-                className="lm-completeness-update-btn"
-                onClick={() => navigate('/app/account-settings')}
-              >
-                <SettingOutlined /> Update Profil
-              </button>
-            </div>
-
-            <div className="lm-completeness-cards">
-              {/* Foto */}
-              <div className={`lm-complete-card ${hasPhoto ? 'complete' : 'incomplete'}`}>
-                <div className="lm-complete-card-icon">
-                  {hasPhoto ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <UserOutlined style={{ color: '#f59e0b' }} />}
-                </div>
-                <div className="lm-complete-card-body">
-                  <span className="lm-complete-card-label">Foto Profil</span>
-                  <span className="lm-complete-card-value">
-                    {hasPhoto ? 'Sudah diunggah' : 'Belum ada foto'}
-                  </span>
-                </div>
-                <div className={`lm-complete-card-badge ${hasPhoto ? 'ok' : 'warn'}`}>
-                  {hasPhoto ? '✓ Lengkap' : '! Belum'}
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className={`lm-complete-card ${hasEmail ? 'complete' : 'incomplete'}`}>
-                <div className="lm-complete-card-icon">
-                  {hasEmail ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <MailOutlined style={{ color: '#f59e0b' }} />}
-                </div>
-                <div className="lm-complete-card-body">
-                  <span className="lm-complete-card-label">Alamat Email</span>
-                  <span className="lm-complete-card-value">
-                    {hasEmail ? user.email : 'Belum diisi'}
-                  </span>
-                </div>
-                <div className={`lm-complete-card-badge ${hasEmail ? 'ok' : 'warn'}`}>
-                  {hasEmail ? '✓ Lengkap' : '! Belum'}
-                </div>
-              </div>
-
-              {/* No HP */}
-              <div className={`lm-complete-card ${hasPhone ? 'complete' : 'incomplete'}`}>
-                <div className="lm-complete-card-icon">
-                  {hasPhone ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <PhoneOutlined style={{ color: '#f59e0b' }} />}
-                </div>
-                <div className="lm-complete-card-body">
-                  <span className="lm-complete-card-label">No. HP / Telepon</span>
-                  <span className="lm-complete-card-value">
-                    {hasPhone
-                      ? (user?.phone_number || user?.employee?.phone_number || user?.phone || user?.no_hp)
-                      : 'Belum diisi'
-                    }
-                  </span>
-                </div>
-                <div className={`lm-complete-card-badge ${hasPhone ? 'ok' : 'warn'}`}>
-                  {hasPhone ? '✓ Lengkap' : '! Belum'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ─── 3-Column Layout ─── */}
@@ -611,7 +552,7 @@ const LayananMandiri = () => {
 
             <div className="profile-metadata-list">
               <div className="metadata-item">
-                <span className="metadata-icon"><CalendarOutlined style={{ color: "#3b82f6" }} /></span>
+                <span className="metadata-icon"><CalendarOutlined /></span>
                 <div className="metadata-details">
                   <span className="metadata-label">KGB Terakhir</span>
                   <span className="metadata-value">{kgbTerakhir}</span>
@@ -619,7 +560,7 @@ const LayananMandiri = () => {
               </div>
 
               <div className="metadata-item">
-                <span className="metadata-icon"><SafetyCertificateOutlined style={{ color: "#10b981" }} /></span>
+                <span className="metadata-icon"><ClockCircleOutlined /></span>
                 <div className="metadata-details">
                   <span className="metadata-label">KGB Mendatang</span>
                   <span className="metadata-value">{kgbAkanDatang}</span>
@@ -627,7 +568,7 @@ const LayananMandiri = () => {
               </div>
 
               <div className="metadata-item">
-                <span className="metadata-icon"><MailOutlined style={{ color: "#f59e0b" }} /></span>
+                <span className="metadata-icon"><MailOutlined /></span>
                 <div className="metadata-details">
                   <span className="metadata-label">Email</span>
                   <span className="metadata-value truncate-text" title={user?.email}>{user?.email || "-"}</span>
@@ -635,7 +576,7 @@ const LayananMandiri = () => {
               </div>
 
               <div className="metadata-item">
-                <span className="metadata-icon"><PhoneOutlined style={{ color: "#8b5cf6" }} /></span>
+                <span className="metadata-icon"><PhoneOutlined /></span>
                 <div className="metadata-details">
                   <span className="metadata-label">No. HP / Telepon</span>
                   <span className="metadata-value">{user?.phone_number || user?.employee?.phone_number || user?.phone || user?.no_hp || "-"}</span>
@@ -649,12 +590,100 @@ const LayananMandiri = () => {
               <UserOutlined /> My Profile
             </button>
           </div>
+          
         </aside>
 
         {/* 🏛️ Center Column: Services */}
         <main className="lm-center-col">
-          <div className="lm-services-header-box" style={{ marginBottom: '16px' }}>
-            <h2 className="lm-services-section-title" style={{ margin: 0 }}>Daftar Layanan</h2>
+          {/* ─── Profile Completeness Cards ─── */}
+          {!profileComplete && (
+            <div className="lm-profile-completeness">
+              <div className="lm-completeness-header">
+                <span className="lm-completeness-icon">⚠️</span>
+                <div>
+                  <h3 className="lm-completeness-title">Lengkapi Data Profil Anda</h3>
+                  <p className="lm-completeness-subtitle">Data yang lengkap memastikan layanan kepegawaian berjalan lancar.</p>
+                </div>
+                <button
+                  className="lm-completeness-update-btn"
+                  onClick={() => navigate('/app/account-settings')}
+                >
+                  <SettingOutlined /> Update Profil
+                </button>
+              </div>
+
+              <div className="lm-completeness-cards">
+                {/* Foto */}
+                <div className={`lm-complete-card ${hasPhoto ? 'complete' : 'incomplete'}`}>
+                  <div className="lm-complete-card-icon">
+                    {hasPhoto ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <UserOutlined style={{ color: '#f59e0b' }} />}
+                  </div>
+                  <div className="lm-complete-card-body">
+                    <span className="lm-complete-card-label">Foto Profil</span>
+                    <span className="lm-complete-card-value">
+                      {hasPhoto ? 'Sudah diunggah' : 'Belum ada foto'}
+                    </span>
+                  </div>
+                  <div className={`lm-complete-card-badge ${hasPhoto ? 'ok' : 'warn'}`}>
+                    {hasPhoto ? '✓ Lengkap' : '! Belum'}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className={`lm-complete-card ${hasEmail ? 'complete' : 'incomplete'}`}>
+                  <div className="lm-complete-card-icon">
+                    {hasEmail ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <MailOutlined style={{ color: '#f59e0b' }} />}
+                  </div>
+                  <div className="lm-complete-card-body">
+                    <span className="lm-complete-card-label">Alamat Email</span>
+                    <span className="lm-complete-card-value">
+                      {hasEmail ? user.email : 'Belum diisi'}
+                    </span>
+                  </div>
+                  <div className={`lm-complete-card-badge ${hasEmail ? 'ok' : 'warn'}`}>
+                    {hasEmail ? '✓ Lengkap' : '! Belum'}
+                  </div>
+                </div>
+
+                {/* No HP */}
+                <div className={`lm-complete-card ${hasPhone ? 'complete' : 'incomplete'}`}>
+                  <div className="lm-complete-card-icon">
+                    {hasPhone ? <CheckCircleFilled style={{ color: '#10b981' }} /> : <PhoneOutlined style={{ color: '#f59e0b' }} />}
+                  </div>
+                  <div className="lm-complete-card-body">
+                    <span className="lm-complete-card-label">No. HP / Telepon</span>
+                    <span className="lm-complete-card-value">
+                      {hasPhone
+                        ? (user?.phone_number || user?.employee?.phone_number || user?.phone || user?.no_hp)
+                        : 'Belum diisi'
+                      }
+                    </span>
+                  </div>
+                  <div className={`lm-complete-card-badge ${hasPhone ? 'ok' : 'warn'}`}>
+                    {hasPhone ? '✓ Lengkap' : '! Belum'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="lm-services-header-box">
+            <h2 className="lm-services-section-title">Daftar Layanan</h2>
+            <div className="lm-search-container-center">
+              <SearchOutlined className="search-icon-inside" />
+              <input
+                type="text"
+                placeholder="Cari layanan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input-premium"
+              />
+              {searchTerm && (
+                <button className="search-clear-btn" onClick={() => setSearchTerm("")}>
+                  <CloseOutlined />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Grid Menu Layanan */}
@@ -673,11 +702,13 @@ const LayananMandiri = () => {
                 style={{ "--card-accent": service.accent }}
               >
                 <div className="lm-card-icon-container" aria-hidden="true">
-                  {service.id === "bmn" || service.id === "ruangan"
+                  {service.id === "bmn"
                     ? <BankOutlined />
-                    : service.id === "bmn-pemeliharaan-keluhan"
-                      ? <SafetyCertificateOutlined />
-                      : service.icon}
+                    : service.id === "ruangan"
+                      ? <CalendarOutlined />
+                      : service.id === "bmn-pemeliharaan-keluhan"
+                        ? <SettingOutlined />
+                        : service.icon}
                 </div>
                 <h3 className="lm-card-title-premium">{service.title}</h3>
               </div>
@@ -730,51 +761,67 @@ const LayananMandiri = () => {
 
         {/* 👉 Right Column: Autoscrolling Live Feed */}
         <aside className="lm-right-col">
-          <div className="lm-live-feed-card">
+          <div 
+            className="lm-live-feed-card"
+            onMouseEnter={() => setIsFeedHovered(true)}
+            onMouseLeave={() => setIsFeedHovered(false)}
+          >
             <div className="feed-header-navy">
               <span className="feed-dot-blink-navy" />
               <h3 className="feed-title-navy">LIVE FEED AKTIVITAS</h3>
             </div>
 
             <div className="feed-scroll-container">
-              <div className="feed-scroll-track">
-                {recentActivities.length > 0 ? (
-                  // Duplikasi array aktivitas agar loop marquee berjalan mulus
-                  [...recentActivities, ...recentActivities].map((activity, idx) => (
-                    <div 
-                      key={`${activity.id || idx}-${idx}`} 
-                      className="feed-item-card-premium clickable"
-                      onClick={() => handleActivityClick(activity)}
-                    >
-                      <div className={`feed-item-icon-circle ${activity.type}`}>
-                        {activity.type === 'selaras' ? <CloudUploadOutlined /> :
-                          activity.type === 'bmn' ? <FundOutlined /> :
-                          activity.type === 'ruangan' ? <BankOutlined /> :
-                          activity.type === 'izin_keluar' ? <LogoutOutlined /> :
-                          activity.type === 'it_helpdesk' ? <ToolOutlined /> :
-                          activity.type === 'surat_tugas' ? <FileProtectOutlined /> :
-                          <AppstoreOutlined />}
-                      </div>
-                      <div className="feed-item-body-premium">
-                        <div className="feed-item-meta-premium">
-                          <span className={`feed-item-badge ${activity.type}`}>
-                            {activity.type === 'izin_keluar' ? 'Izin Keluar' : activity.type.toUpperCase().replace('_', ' ')}
-                          </span>
-                          <span className="feed-item-time">{dayjs(activity.date).fromNow()}</span>
-                        </div>
-                        <h4 className="feed-item-title-premium">{activity.title}</h4>
-                        <p className="feed-item-desc-premium">{activity.description}</p>
-                      </div>
+              {displayedActivities.length > 0 ? (
+                displayedActivities.map((activity, index) => (
+                  <div 
+                    key={activity.id || index} 
+                    className="feed-item-card-premium clickable feed-item-fade"
+                    onClick={() => handleActivityClick(activity)}
+                    style={{ animationDelay: `${index * 80}ms` }}
+                  >
+                    <div className={`feed-item-icon-circle ${activity.type}`}>
+                      {activity.type === 'selaras' ? <CloudUploadOutlined /> :
+                        activity.type === 'bmn' ? <FundOutlined /> :
+                        activity.type === 'ruangan' ? <BankOutlined /> :
+                        activity.type === 'izin_keluar' ? <LogoutOutlined /> :
+                        activity.type === 'it_helpdesk' ? <ToolOutlined /> :
+                        activity.type === 'surat_tugas' ? <FileProtectOutlined /> :
+                        <AppstoreOutlined />}
                     </div>
-                  ))
-                ) : (
-                  <div className="feed-empty-state-navy">
-                    <HistoryOutlined className="empty-icon-spin" />
-                    <p>Menunggu aktivitas terbaru...</p>
+                    <div className="feed-item-body-premium">
+                      <div className="feed-item-meta-premium">
+                        <span className={`feed-item-badge ${activity.type}`}>
+                          {activity.type === 'izin_keluar' ? 'Izin Keluar' : activity.type.toUpperCase().replace('_', ' ')}
+                        </span>
+                        <span className="feed-item-time">{dayjs(activity.date).fromNow()}</span>
+                      </div>
+                      <h4 className="feed-item-title-premium">{activity.title}</h4>
+                      <p className="feed-item-desc-premium">{activity.description}</p>
+                    </div>
                   </div>
-                )}
-              </div>
+                ))
+              ) : (
+                <div className="feed-empty-state-navy">
+                  <HistoryOutlined className="empty-icon-spin" />
+                  <p>Menunggu aktivitas terbaru...</p>
+                </div>
+              )}
             </div>
+
+            {/* Pagination Dots */}
+            {recentActivities.length > 1 && (
+              <div className="feed-pagination-dots">
+                {recentActivities.slice(0, 8).map((_, idx) => (
+                  <button
+                    key={idx}
+                    className={`feed-dot ${idx === currentFeedIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentFeedIndex(idx)}
+                    aria-label={`Aktivitas ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </aside>
 

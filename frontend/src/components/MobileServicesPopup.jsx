@@ -72,16 +72,7 @@ const MobileServicesPopup = ({ isOpen, onClose }) => {
               onClick={() => handleNavigate(service.link)}
             >
               <div className="msp-item-icon-box" style={{ background: `${service.color}15`, color: service.color }}>
-                <img 
-                  src={`/icons/${service.id}.png`} 
-                  alt={service.title} 
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                  className="msp-item-img"
-                />
-                <span className="msp-item-emoji" style={{ display: 'none' }}>{service.emoji}</span>
+                <span className="msp-item-emoji">{service.emoji}</span>
               </div>
               <span className="msp-item-title">{service.title}</span>
             </button>

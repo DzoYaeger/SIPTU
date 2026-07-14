@@ -25,6 +25,7 @@ import {
   FundOutlined,
   DatabaseOutlined,
   CustomerServiceOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 
@@ -36,6 +37,7 @@ const iconMap = {
   kearsipan: <FileProtectOutlined style={{ color: '#3D6B99' }} />,
   'kearsipan-peminjaman': <FolderOpenOutlined style={{ color: '#26415C' }} />,
   'kearsipan-pencatatan-surat': <FormOutlined style={{ color: '#26415C' }} />,
+  'kearsipan-arsip-vital': <SafetyCertificateOutlined style={{ color: '#2F6DA0' }} />,
   'kepegawaian-data-pegawai': <SolutionOutlined style={{ color: '#2F6DA0' }} />,
   'kepegawaian-kgb': <ScheduleOutlined style={{ color: '#2F6DA0' }} />,
   'kepegawaian-bangkom': <FileProtectOutlined style={{ color: '#2F6DA0' }} />,
@@ -45,6 +47,8 @@ const iconMap = {
   'keuangan-revisi': <FileTextOutlined style={{ color: '#2F6DA0' }} />,
   'keuangan-invoice': <FileTextOutlined style={{ color: '#2F6DA0' }} />,
   'keuangan-realisasi-anggaran': <FundOutlined style={{ color: '#2F6DA0' }} />,
+  'keuangan-lpj': <FileTextOutlined style={{ color: '#2F6DA0' }} />,
+  'keuangan-pejabat': <UserOutlined style={{ color: '#2F6DA0' }} />,
   perjadin: <CarOutlined style={{ color: '#3A79A0' }} />,
   'perjadin-st': <FileTextOutlined style={{ color: '#2F6DA0' }} />,
   'perjadin-lpj': <FileDoneOutlined style={{ color: '#2F6DA0' }} />,
@@ -64,7 +68,9 @@ const iconMap = {
   'it-helpdesk': <ToolOutlined style={{ color: '#26415C' }} />,
   'it-helpdesk-pelaporan': <FormOutlined style={{ color: '#2F6DA0' }} />,
   'it-helpdesk-rekapan': <DatabaseOutlined style={{ color: '#2F6DA0' }} />,
-  'pengadaan-pdtt': <ShoppingCartOutlined style={{ color: '#2F6DA0' }} />
+  'pengadaan-pdtt': <ShoppingCartOutlined style={{ color: '#2F6DA0' }} />,
+  'pengadaan-pdtt-katalog': <AppstoreOutlined style={{ color: '#2F6DA0' }} />,
+  'pengadaan-pdtt-rekapan': <FileTextOutlined style={{ color: '#2F6DA0' }} />
 };
 
 const SidebarMenu = ({

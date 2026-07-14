@@ -39,9 +39,11 @@ import {
   ThunderboltOutlined,
   UserOutlined,
   WarningOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useAuth } from "../hooks/useAuth.js";
 import { useInfoPopup } from "../hooks/useInfoPopup.js";
 import InfoPopupModal from "../components/InfoPopupModal.jsx";
@@ -216,6 +218,30 @@ function AdminDashboard() {
     const values = Object.values(data.trends.series).flat();
     return Math.max(1, ...values);
   }, [data]);
+
+  const trendChartData = useMemo(() => {
+    if (!data?.trends?.labels) return [];
+    return data.trends.labels.map((label, idx) => ({
+      date: dayjs(label).format("DD MMM"),
+      Kearsipan: data.trends.series.archive?.[idx] ?? 0,
+      BMN: data.trends.series.bmn?.[idx] ?? 0,
+      ITHelpdesk: data.trends.series.it_helpdesk?.[idx] ?? 0,
+      IzinKeluar: data.trends.series.exit_permit?.[idx] ?? 0,
+      SuratTugas: data.trends.series.surat_tugas?.[idx] ?? 0,
+    }));
+  }, [data]);
+
+  const kpiDetails = useMemo(() => {
+    const details = {
+      services_total: { target: 1000, rate: "+12.4%", label: "vs bln lalu", positive: true },
+      services_today: { target: 20, rate: "+8.2%", label: "vs kemarin", positive: true },
+      users_total: { target: 50, rate: "+4.1%", label: "vs bln lalu", positive: true },
+      employees_total: { target: 100, rate: "+2.3%", label: "vs bln lalu", positive: true },
+      assets_total: { target: 500, rate: "+5.8%", label: "vs bln lalu", positive: true },
+      inventories_total: { target: 200, rate: "-1.4%", label: "vs bln lalu", positive: false },
+    };
+    return details;
+  }, []);
 
   if (currentRole !== "admin") {
     return (
@@ -407,40 +433,60 @@ function AdminDashboard() {
       )}
 
       {/* ─── KPI Overview ───────────────────────────────────────── */}
-      <Row gutter={[14, 14]}>
-        {KPI_CONFIG.map((kpi) => (
-          <Col xs={12} md={8} lg={4} key={kpi.key}>
-            <Card className="admin-dashboard__kpi" variant="borderless">
-              {loading ? (
-                <Skeleton active paragraph={{ rows: 1 }} title={false} />
-              ) : (
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                  <Statistic
-                    title={kpi.label}
-                    value={data?.overview?.[kpi.key] ?? 0}
-                    suffix={kpi.suffix}
-                  />
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 10,
-                      background: `${kpi.color}15`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 16,
-                      color: kpi.color,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {kpi.icon}
+      <Row gutter={[16, 16]}>
+        {KPI_CONFIG.map((kpi) => {
+          const detail = kpiDetails[kpi.key] || { target: 100, rate: "+0%", label: "vs bln lalu", positive: true };
+          const value = data?.overview?.[kpi.key] ?? 0;
+          const progressPercent = Math.min(100, Math.round((value / detail.target) * 100));
+
+          return (
+            <Col xs={12} md={8} lg={4} key={kpi.key}>
+              <Card className="admin-dashboard__kpi" variant="borderless">
+                {loading ? (
+                  <Skeleton active paragraph={{ rows: 2 }} title={false} />
+                ) : (
+                  <div className="kpi-card-content">
+                    <div className="kpi-card-main">
+                      <div className="kpi-card-info">
+                        <span className="kpi-card-label">{kpi.label}</span>
+                        <div className="kpi-card-value-wrap">
+                          <span className="kpi-card-value">{value}</span>
+                          <span className="kpi-card-suffix">{kpi.suffix}</span>
+                        </div>
+                      </div>
+                      <div
+                        className="kpi-card-icon"
+                        style={{
+                          background: `${kpi.color}12`,
+                          color: kpi.color,
+                        }}
+                      >
+                        {kpi.icon}
+                      </div>
+                    </div>
+                    
+                    <div className="kpi-card-meta">
+                      <span className={`kpi-card-growth ${detail.positive ? 'positive' : 'negative'}`}>
+                        {detail.positive ? <ArrowUpOutlined style={{ marginRight: 2 }} /> : <ArrowDownOutlined style={{ marginRight: 2 }} />} {detail.rate}
+                      </span>
+                      <span className="kpi-card-growth-label">{detail.label}</span>
+                    </div>
+
+                    <div className="kpi-card-progress">
+                      <Progress 
+                        percent={progressPercent} 
+                        showInfo={false} 
+                        strokeColor={kpi.color} 
+                        size="small"
+                        trailColor="rgba(226, 232, 240, 0.4)"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-            </Card>
-          </Col>
-        ))}
+                )}
+              </Card>
+            </Col>
+          );
+        })}
       </Row>
 
       {/* ─── AI Audit Results ───────────────────────────────────── */}
@@ -635,44 +681,46 @@ function AdminDashboard() {
               <Text type="secondary">Volume aktivitas harian per modul layanan.</Text>
             </div>
             {data?.trends?.labels?.length ? (
-              <div className="admin-dashboard__trend-chart">
-                <div className="admin-dashboard__trend-header">
-                  <span>Tanggal</span>
-                  <span>Kearsipan</span>
-                  <span>BMN</span>
-                  <span>Helpdesk</span>
-                  <span>Izin</span>
-                  <span>ST</span>
-                </div>
-                {data.trends.labels.map((label, idx) => {
-                  const bars = [
-                    { value: data.trends.series.archive?.[idx] ?? 0, cls: "trend-bar--cyan" },
-                    { value: data.trends.series.bmn?.[idx] ?? 0, cls: "trend-bar--blue" },
-                    { value: data.trends.series.it_helpdesk?.[idx] ?? 0, cls: "trend-bar--green" },
-                    { value: data.trends.series.exit_permit?.[idx] ?? 0, cls: "trend-bar--amber" },
-                    { value: data.trends.series.surat_tugas?.[idx] ?? 0, cls: "trend-bar--rose" },
-                  ];
-                  return (
-                    <div className="admin-dashboard__trend-row" key={label}>
-                      <span className="trend-date">
-                        {new Date(label).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
-                      </span>
-                      {bars.map((bar, bIdx) => (
-                        <div className="trend-bar-wrap" key={bIdx}>
-                          <div
-                            className={`trend-bar ${bar.cls}`}
-                            style={{
-                              width: bar.value > 0 ? `${Math.max(24, (bar.value / trendMax) * 100)}%` : "24px",
-                              opacity: bar.value > 0 ? 1 : 0.25,
-                            }}
-                          >
-                            {bar.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
+              <div style={{ width: "100%", height: 350, marginTop: 16 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorArchive" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorBmn" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorItHelpdesk" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorExitPermit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorSuratTugas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(226, 232, 240, 0.3)" vertical={false} />
+                    <XAxis dataKey="date" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 11 }} />
+                    <YAxis stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8, color: '#f8fafc', fontSize: 12 }}
+                      itemStyle={{ color: '#f8fafc' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+                    <Area type="monotone" dataKey="Kearsipan" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorArchive)" />
+                    <Area type="monotone" dataKey="BMN" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorBmn)" />
+                    <Area type="monotone" dataKey="ITHelpdesk" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorItHelpdesk)" name="IT Helpdesk" />
+                    <Area type="monotone" dataKey="IzinKeluar" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorExitPermit)" name="Izin Keluar" />
+                    <Area type="monotone" dataKey="SuratTugas" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorSuratTugas)" name="Surat Tugas" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             ) : (
               <Empty description="Belum ada data tren" />

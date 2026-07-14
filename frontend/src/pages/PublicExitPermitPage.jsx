@@ -9,6 +9,7 @@ import {
   FieldTimeOutlined,
   ArrowRightOutlined,
   QuestionCircleOutlined,
+  CheckOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
@@ -264,6 +265,7 @@ const PublicExitPermitPage = () => {
   const handleExit = () => {
     Modal.confirm({
       title: "Konfirmasi Izin Keluar",
+      className: "pep-modal-confirm",
       icon: <QuestionCircleOutlined style={{ color: RISPEG_COLORS.primary }} />,
       content: "Apakah Anda yakin ingin mencatat izin keluar sekarang?",
       okText: "Ya, Izin Keluar",
@@ -298,6 +300,7 @@ const PublicExitPermitPage = () => {
 
     Modal.confirm({
       title: "Konfirmasi Kembali",
+      className: "pep-modal-confirm",
       icon: <QuestionCircleOutlined style={{ color: RISPEG_COLORS.primary }} />,
       content: "Apakah Anda yakin ingin mencatat waktu kembali sekarang?",
       okText: "Ya, Kembali",
@@ -348,12 +351,6 @@ const PublicExitPermitPage = () => {
           <div className="pep-orb pep-orb-2" />
         </div>
         <div className="pep-container">
-          {/* Back Navigation */}
-          <div style={{ marginBottom: 20 }}>
-            <a href="/app/layanan-mandiri" className="pep-back-btn">
-              <ArrowLeftOutlined /> Kembali
-            </a>
-          </div>
 
           <div className="pep-header">
             <div
@@ -388,6 +385,11 @@ const PublicExitPermitPage = () => {
 
           {phase === "lookup" && (
             <div className="pep-glass-card">
+              <div className="pep-card-header-nav">
+                <a href="/app/layanan-mandiri" className="pep-card-back-btn">
+                  <ArrowLeftOutlined /> Kembali
+                </a>
+              </div>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 <h2
                   style={{
@@ -432,6 +434,11 @@ const PublicExitPermitPage = () => {
 
           {phase === "confirm" && employee && (
             <div className="pep-glass-card pep-card--confirm">
+              <div className="pep-card-header-nav">
+                <a onClick={handleReset} className="pep-card-back-btn">
+                  <ArrowLeftOutlined /> Kembali
+                </a>
+              </div>
               <div className="pep-profile">
                 <div
                   className="pep-profile__avatar"
@@ -529,6 +536,11 @@ const PublicExitPermitPage = () => {
 
           {phase === "out" && employee && activePermit && (
             <div className="pep-glass-card pep-card--out">
+              <div className="pep-card-header-nav">
+                <a href="/app/layanan-mandiri" className="pep-card-back-btn">
+                  <ArrowLeftOutlined /> Dashboard
+                </a>
+              </div>
               <div className="pep-profile pep-profile--compact">
                 <div
                   className="pep-profile__avatar pep-profile__avatar--out"
@@ -629,14 +641,19 @@ const PublicExitPermitPage = () => {
 
           {phase === "done" && result && (
             <div className="pep-glass-card pep-card--done">
+              <div className="pep-card-header-nav">
+                <a onClick={handleReset} className="pep-card-back-btn">
+                  <ArrowLeftOutlined /> {isHistoryMode ? "Kembali" : "Mulai Baru"}
+                </a>
+              </div>
               <div
                 className="pep-done-icon"
                 style={{
-                  background: RISPEG_COLORS.gradient,
-                  boxShadow: `0 8px 20px ${RISPEG_COLORS.shadowColor}`,
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  boxShadow: "0 8px 20px rgba(16, 185, 129, 0.25)",
                 }}
               >
-                <ClockCircleOutlined style={{ color: "#fff", fontSize: 32 }} />
+                <CheckOutlined style={{ color: "#fff", fontSize: 32 }} />
               </div>
               <h2 className="pep-done-title">{isHistoryMode ? "Detail Izin Keluar" : "Tercatat!"}</h2>
               <p className="pep-done-sub">
@@ -646,75 +663,80 @@ const PublicExitPermitPage = () => {
               </p>
 
               <div className="pep-receipt">
-                <div className="pep-receipt__row">
-                  <span className="pep-receipt__label">Nama</span>
-                  <span className="pep-receipt__value">{result.employee_name}</span>
+                <div className="pep-receipt__section">
+                  <div className="pep-receipt__row">
+                    <span className="pep-receipt__label">Nama</span>
+                    <span className="pep-receipt__value">{result.employee_name}</span>
+                  </div>
+                  <div className="pep-receipt__row">
+                    <span className="pep-receipt__label">NIP</span>
+                    <span className="pep-receipt__value">{result.nip}</span>
+                  </div>
+                  <div className="pep-receipt__row">
+                    <span className="pep-receipt__label">Tanggal</span>
+                    <span className="pep-receipt__value">
+                      {new Date(result.date).toLocaleDateString("id-ID", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
-                <div className="pep-receipt__row">
-                  <span className="pep-receipt__label">NIP</span>
-                  <span className="pep-receipt__value">{result.nip}</span>
+
+                <div className="pep-receipt__tear-line">
+                  <div className="pep-receipt__hole pep-receipt__hole--left" />
+                  <div className="pep-receipt__hole pep-receipt__hole--right" />
+                  <div className="pep-receipt__dash" />
                 </div>
-                <div className="pep-receipt__row">
-                  <span className="pep-receipt__label">Tanggal</span>
-                  <span className="pep-receipt__value">
-                    {new Date(result.date).toLocaleDateString("id-ID", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </span>
-                </div>
-                <div className="pep-receipt__divider" />
-                <div className="pep-receipt__row">
-                  <span className="pep-receipt__label">Jam Keluar</span>
-                  <span className="pep-receipt__value pep-receipt__value--time">
-                    {formatTime(result.exit_time)}
-                  </span>
-                </div>
-                <div className="pep-receipt__row">
-                  <span className="pep-receipt__label">Jam Kembali</span>
-                  <span className="pep-receipt__value pep-receipt__value--time">
-                    {formatTime(result.return_time)}
-                  </span>
-                </div>
-                <div className="pep-receipt__divider" />
-                <div className="pep-receipt__row pep-receipt__row--highlight">
-                  <span className="pep-receipt__label">Total Durasi</span>
-                  <span className="pep-receipt__value pep-receipt__value--duration">
-                    {result.duration_seconds_effective != null
-                      ? formatDuration(result.duration_seconds_effective)
-                      : result.duration_minutes != null
-                        ? formatDuration(result.duration_minutes * 60)
-                        : "-"}
-                  </span>
-                </div>
-                {result.reason && (
-                  <>
-                    <div className="pep-receipt__divider" />
+
+                <div className="pep-receipt__section">
+                  <div className="pep-receipt__row">
+                    <span className="pep-receipt__label">Jam Keluar</span>
+                    <span className="pep-receipt__value pep-receipt__value--time">
+                      {formatTime(result.exit_time)} WIB
+                    </span>
+                  </div>
+                  <div className="pep-receipt__row">
+                    <span className="pep-receipt__label">Jam Kembali</span>
+                    <span className="pep-receipt__value pep-receipt__value--time">
+                      {formatTime(result.return_time)} WIB
+                    </span>
+                  </div>
+                  
+                  <div className="pep-receipt__row pep-receipt__row--highlight">
+                    <span className="pep-receipt__label">Total Durasi</span>
+                    <span className="pep-receipt__value pep-receipt__value--duration">
+                      {result.duration_seconds_effective != null
+                        ? formatDuration(result.duration_seconds_effective)
+                        : result.duration_minutes != null
+                          ? formatDuration(result.duration_minutes * 60)
+                          : "-"}
+                    </span>
+                  </div>
+
+                  {result.reason && (
                     <div className="pep-receipt__row">
                       <span className="pep-receipt__label">Keperluan</span>
-                      <span className="pep-receipt__value" style={{ textAlign: "right" }}>
-                        {result.reason}
-                      </span>
+                      <span className="pep-receipt__value">{result.reason}</span>
                     </div>
-                  </>
-                )}
-                {result.permit_type && (
-                  <>
-                    <div className="pep-receipt__divider" />
+                  )}
+
+                  {result.permit_type && (
                     <div className="pep-receipt__row">
                       <span className="pep-receipt__label">Jenis Urusan</span>
-                      <span className="pep-receipt__value" style={{
-                        textAlign: "right",
-                        fontWeight: 700,
-                        color: result.permit_type === 'Kantor' ? '#2563eb' : '#f59e0b',
-                      }}>
+                      <span className={`pep-receipt__badge pep-receipt__badge--${result.permit_type.toLowerCase()}`}>
                         {result.permit_type === 'Kantor' ? 'Urusan Kantor' : 'Urusan Pribadi'}
                       </span>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
+
+                <div className="pep-receipt__footer-note">
+                  <div className="pep-receipt__footer-status">✓ VALIDASI DIGITAL SIPTU</div>
+                  <div className="pep-receipt__footer-timestamp">Pencatatan Otomatis - BPOM Palopo</div>
+                </div>
               </div>
 
               <button

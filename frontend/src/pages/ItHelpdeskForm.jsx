@@ -31,13 +31,6 @@ import {
 } from "@ant-design/icons";
 import "./ItHelpdeskForm.css";
 
-// IT Helpdesk Module Colors (from Layanan Mandiri)
-const ITHELPDESK_COLORS = {
-  primary: "#ec4899",
-  gradient: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-  shadowColor: "rgba(236, 72, 153, 0.4)",
-};
-
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
 const reportOptions = [
@@ -144,52 +137,61 @@ const ItHelpdeskForm = () => {
         <div
           className="it-helpdesk-container"
           style={{
-            maxWidth: 600,
-            padding: 40,
+            maxWidth: 540,
+            height: "auto",
+            maxHeight: "none",
+            padding: "48px 32px",
             alignItems: "center",
             justifyContent: "center",
             flexDirection: "column",
+            textAlign: "center"
           }}
         >
           <div
             style={{
-              width: 80,
-              height: 80,
+              width: 64,
+              height: 64,
               borderRadius: "50%",
-              background: ITHELPDESK_COLORS.gradient,
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 24px",
-              boxShadow: `0 8px 20px ${ITHELPDESK_COLORS.shadowColor}`,
+              marginBottom: 20,
             }}
           >
-            <ToolOutlined style={{ fontSize: 40, color: "#fff" }} />
+            <CheckCircleFilled style={{ fontSize: 32, color: "#10b981" }} />
           </div>
           <Typography.Title
-            level={2}
-            style={{ marginBottom: 8, color: "#0f172a" }}
+            level={3}
+            style={{ marginBottom: 8, color: "#0f172a", fontWeight: 800 }}
           >
-            Laporan Terkirim!
+            Laporan Berhasil Terkirim
           </Typography.Title>
           <Typography.Text
             type="secondary"
-            style={{ display: "block", marginBottom: 24 }}
+            style={{ display: "block", marginBottom: 24, fontSize: 14 }}
           >
-            Nomor Tiket Anda
+            Tiket bantuan Anda telah terdaftar dalam antrean sistem support.
           </Typography.Text>
           <div
             style={{
-              background: "#fdf2f8",
-              border: "1px dashed #f9a8d4",
-              padding: "16px 32px",
-              borderRadius: 12,
-              marginBottom: 32,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              padding: "20px 32px",
+              borderRadius: 14,
+              marginBottom: 28,
+              width: "100%",
+              maxWidth: 320,
+              boxSizing: "border-box",
             }}
           >
+            <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6, fontWeight: 700 }}>
+              Nomor Tiket
+            </div>
             <Typography.Text
               strong
-              style={{ fontSize: 24, color: ITHELPDESK_COLORS.primary }}
+              style={{ fontSize: 24, fontFamily: "monospace", color: "#0f172a" }}
               copyable
             >
               {resultTicket.ticket_number}
@@ -200,14 +202,18 @@ const ItHelpdeskForm = () => {
             size="large"
             onClick={() => setResultTicket(null)}
             style={{
-              background: ITHELPDESK_COLORS.gradient,
-              borderColor: ITHELPDESK_COLORS.primary,
+              background: "#0f172a",
+              borderColor: "#0f172a",
+              height: 48,
+              borderRadius: 12,
+              fontWeight: 600,
+              padding: "0 32px",
             }}
           >
             Buat Laporan Baru
           </Button>
-          <Typography.Text type="secondary" style={{ marginTop: 24 }}>
-            Notifikasi WhatsApp telah dikirim ke tim IT.
+          <Typography.Text type="secondary" style={{ marginTop: 24, fontSize: 12 }}>
+            Pemberitahuan otomatis telah dikirim ke Tim IT BPOM Palopo.
           </Typography.Text>
         </div>
       </div>
@@ -232,13 +238,12 @@ const ItHelpdeskForm = () => {
             </a>
             <Typography.Title
               level={3}
-              style={{ color: ITHELPDESK_COLORS.primary, marginBottom: 8 }}
+              style={{ color: "#0f172a", marginBottom: 8, fontWeight: 800 }}
             >
               Halo, {displayName.split(" ")[0]}! 👋
             </Typography.Title>
-            <Typography.Text type="secondary">
-              Silakan lengkapi formulir di sebelah kanan untuk mengirimkan
-              laporan kendala IT Anda.
+            <Typography.Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5, display: "block" }}>
+              Silakan lengkapi formulir laporan kendala IT Anda di sebelah kanan.
             </Typography.Text>
           </div>
 
@@ -246,16 +251,15 @@ const ItHelpdeskForm = () => {
             <div
               className="passport-avatar"
               style={{
-                background: ITHELPDESK_COLORS.gradient,
-                boxShadow: `0 4px 12px ${ITHELPDESK_COLORS.shadowColor}`,
+                border: "1px solid #e2e8f0",
               }}
             >
-              <UserOutlined style={{ color: "#fff" }} />
+              <UserOutlined style={{ color: "#475569" }} />
             </div>
-            <Typography.Title level={5} style={{ margin: 0 }}>
+            <Typography.Title level={5} style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
               {displayName}
             </Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 500 }}>
               {displayRole}
             </Typography.Text>
 
@@ -263,27 +267,27 @@ const ItHelpdeskForm = () => {
 
             <div className="passport-info-row">
               <Space>
-                <IdcardOutlined /> <span>NIP</span>
+                <IdcardOutlined style={{ color: "#64748b" }} /> <span>NIP</span>
               </Space>
-              <span style={{ fontWeight: 500 }}>{displayNip}</span>
+              <span style={{ fontWeight: 600, color: "#334155" }}>{displayNip}</span>
             </div>
             <div className="passport-info-row">
               <Space>
-                <ApartmentOutlined /> <span>Unit</span>
+                <ApartmentOutlined style={{ color: "#64748b" }} /> <span>Unit</span>
               </Space>
-              <span style={{ fontWeight: 500 }}>{displayUnit}</span>
+              <span style={{ fontWeight: 600, color: "#334155" }}>{displayUnit}</span>
             </div>
             <div className="passport-info-row">
               <Space>
-                <SafetyCertificateOutlined /> <span>Status</span>
+                <SafetyCertificateOutlined style={{ color: "#64748b" }} /> <span>Status</span>
               </Space>
-              <span style={{ color: "#52c41a", fontWeight: 500 }}>Online</span>
+              <span style={{ color: "#10b981", fontWeight: 600 }}>Online</span>
             </div>
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              SIPTU Ultra &bull; IT Support System
+            <Typography.Text type="secondary" style={{ fontSize: 11, color: "#94a3b8" }}>
+              SIPTU Enterprise &bull; IT Support System
             </Typography.Text>
           </div>
         </div>
@@ -305,9 +309,9 @@ const ItHelpdeskForm = () => {
             <Typography.Title
               level={5}
               className="animate-slide-up delay-200"
-              style={{ marginBottom: 16 }}
+              style={{ marginBottom: 16, fontWeight: 700, color: "#334155" }}
             >
-              Apa kendala yang Anda alami?
+              Pilih Jenis Kendala
             </Typography.Title>
 
             <Form.Item
@@ -333,7 +337,7 @@ const ItHelpdeskForm = () => {
             <div className="animate-slide-up delay-300">
               <Form.Item
                 name="problem_details"
-                label="Ceritakan detail masalahnya"
+                label={<span style={{ fontWeight: 600, color: "#334155" }}>Detail Deskripsi Laporan</span>}
                 rules={[
                   { required: true, message: "Mohon jelaskan masalahnya" },
                 ]}
@@ -341,29 +345,29 @@ const ItHelpdeskForm = () => {
                 <Input.TextArea
                   className="custom-input"
                   rows={4}
-                  placeholder="Contoh: Printer di ruang rapat tidak bisa connect..."
+                  placeholder="Ceritakan detail masalah yang dialami (misal: Komputer tidak mau menyala, printer paper jam, dll.)"
                   style={{ resize: "none" }}
                 />
               </Form.Item>
 
               <Form.Item
                 name="password"
-                label="Konfirmasi Password SIPTU"
+                label={<span style={{ fontWeight: 600, color: "#334155" }}>Konfirmasi Password SIPTU</span>}
                 rules={[{ required: true, message: "Password SIPTU diperlukan sebagai TTE" }]}
                 extra={
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    *Gunakan password login SIPTU Anda sebagai Tanda Tangan Elektronik (TTE)
+                  <Typography.Text type="secondary" style={{ fontSize: 11, color: "#94a3b8" }}>
+                    *Gunakan password akun SIPTU Anda untuk menandatangani dan memvalidasi laporan ini secara elektronik (TTE).
                   </Typography.Text>
                 }
               >
                 <Input.Password
                   className="custom-input"
                   placeholder="Masukkan password login SIPTU Anda"
-                  prefix={<SafetyCertificateOutlined style={{ color: "#bfbfbf" }} />}
+                  prefix={<SafetyCertificateOutlined style={{ color: "#94a3b8" }} />}
                 />
               </Form.Item>
 
-              <div className="mobile-sticky-bottom-action">
+              <div className="mobile-sticky-bottom-action" style={{ marginTop: 24 }}>
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -371,13 +375,14 @@ const ItHelpdeskForm = () => {
                   block
                   icon={<SendOutlined />}
                   style={{
-                    background: ITHELPDESK_COLORS.gradient,
-                    borderColor: ITHELPDESK_COLORS.primary,
+                    background: "#0f172a",
+                    borderColor: "#0f172a",
                     height: 48,
                     fontWeight: 600,
+                    borderRadius: 12,
                   }}
                 >
-                  Kirim Laporan
+                  Kirim Laporan Resmi
                 </Button>
               </div>
             </div>
