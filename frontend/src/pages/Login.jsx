@@ -61,6 +61,13 @@ const Login = () => {
         logo: '/logo/selaras.png',
       };
     }
+    if (redirect.includes('/sso/siamparan') || redirect.includes('siamparan')) {
+      return {
+        name: 'SIAMPARAN',
+        fullName: 'Sistem Pemetaan Sarana (SIAMPARAN)',
+        logo: '/logo/siamparan.png',
+      };
+    }
     return null;
   }, [location.search]);
 

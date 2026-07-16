@@ -130,6 +130,13 @@ const PublicExitPermitPage = () => {
   const [returningIds, setReturningIds] = useState([]);
   const debounceRef = useRef(null);
 
+  // Search Suggestions variables
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [fetchingSuggestions, setFetchingSuggestions] = useState(false);
+  const suggestionRef = useRef(null);
+  const suggestDebounceRef = useRef(null);
+
   const searchEmployees = async (value) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!value) {
@@ -154,6 +161,43 @@ const PublicExitPermitPage = () => {
       }
     }, 500);
   };
+
+  const searchSuggestions = async (val) => {
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    if (!val.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setFetchingSuggestions(true);
+    setShowSuggestions(true);
+    suggestDebounceRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/public/employees/search?q=${val}`);
+        if (r.ok) {
+          const data = await r.json();
+          setSuggestions(data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setFetchingSuggestions(false);
+      }
+    }, 300);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (phase === "out" && activePermit?.group_id) {
@@ -239,10 +283,10 @@ const PublicExitPermitPage = () => {
     };
   }, [ticketIdParam, token, user?.nip, message]);
 
-  const handleLookupByNip = async () => {
-    const nip = lookupNip.trim();
+  const handleLookupWithNip = async (targetNip) => {
+    const nip = targetNip.trim();
     if (!nip) {
-      message.error("NIP wajib diisi.");
+      message.error("NIP atau Nama wajib diisi.");
       return;
     }
 
@@ -261,6 +305,8 @@ const PublicExitPermitPage = () => {
       setLoading(false);
     }
   };
+
+  const handleLookupByNip = () => handleLookupWithNip(lookupNip);
 
   const handleExit = () => {
     Modal.confirm({
@@ -399,30 +445,76 @@ const PublicExitPermitPage = () => {
                     fontWeight: 800,
                   }}
                 >
-                  Masukkan NIP
+                  Masukkan NIP / Nama
                 </h2>
                 <p style={{ color: "#6b7280", margin: "8px 0 0" }}>
-                  Tidak perlu login. Isi NIP untuk melanjutkan izin keluar.
+                  Tidak perlu login. Isi NIP atau Nama pegawai untuk melanjutkan izin keluar.
                 </p>
               </div>
 
-              <div className="pep-lookup-form">
-                <input
-                  type="text"
-                  className="pep-input"
-                  placeholder="Contoh: 199003052010121003"
-                  value={lookupNip}
-                  onChange={(e) => setLookupNip(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleLookupByNip();
-                    }
-                  }}
-                />
+              <div className="pep-lookup-form" ref={suggestionRef}>
+                <div className="pep-input-wrapper">
+                  <input
+                    type="text"
+                    className="pep-input"
+                    placeholder="Ketik NIP atau nama pegawai..."
+                    value={lookupNip}
+                    onChange={(e) => {
+                      setLookupNip(e.target.value);
+                      searchSuggestions(e.target.value);
+                    }}
+                    onFocus={() => {
+                      if (lookupNip.trim()) setShowSuggestions(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        setShowSuggestions(false);
+                        handleLookupByNip();
+                      }
+                    }}
+                  />
+                  {showSuggestions && (
+                    <div className="pep-suggestions-dropdown">
+                      {fetchingSuggestions && (
+                        <div className="pep-suggestion-loading">
+                          <Spin size="small" /> Memuat saran...
+                        </div>
+                      )}
+                      {!fetchingSuggestions && suggestions.length === 0 && (
+                        <div className="pep-suggestion-empty">
+                          Tidak ada data pegawai yang cocok
+                        </div>
+                      )}
+                      {!fetchingSuggestions && suggestions.length > 0 && (
+                        <ul className="pep-suggestions-list">
+                          {suggestions.map((emp) => (
+                            <li
+                              key={emp.id}
+                              className="pep-suggestion-item"
+                              onClick={() => {
+                                setLookupNip(emp.nip);
+                                setShowSuggestions(false);
+                                handleLookupWithNip(emp.nip);
+                              }}
+                            >
+                              <div className="pep-suggestion-item__name">{emp.name}</div>
+                              <div className="pep-suggestion-item__nip">
+                                NIP: {emp.nip} {emp.function_area ? `• ${emp.function_area}` : ""}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   className="pep-btn pep-btn--primary pep-btn--full"
-                  onClick={handleLookupByNip}
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    handleLookupByNip();
+                  }}
                   disabled={loading}
                 >
                   {loading ? <span className="pep-spinner" /> : <ArrowRightOutlined />}

@@ -72,6 +72,30 @@ const SSOSelarasRedirect = () => {
   );
 };
 
+const SSOSiamparanRedirect = () => {
+  const { token, user } = useAuth();
+
+  useEffect(() => {
+    if (token && user?.nip) {
+      const siamparanUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? `http://localhost:8000/auth/sso?token=${token}&user=${user.nip}`
+        : `https://siamparan.bpompalopo.com/auth/sso?token=${token}&user=${user.nip}`;
+      window.location.href = siamparanUrl;
+    }
+  }, [token, user]);
+
+  if (!token) {
+    return <Navigate to="/login?redirect=/sso/siamparan" replace />;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', height: '100vh', gap: '16px', background: '#0f172a', color: '#fff', fontFamily: 'sans-serif' }}>
+      <Spin size="large" />
+      <div style={{ fontSize: '16px', fontWeight: 'bold' }}>Mengalihkan ke Siamparan...</div>
+    </div>
+  );
+};
+
 function App() {
   const { token, user, refreshProfile, currentRole } = useAuth();
   const location = useLocation();
@@ -391,6 +415,7 @@ function App() {
         element={token ? <PengumumanRispeg /> : <Navigate to="/login?redirect=/app/pengumuman-rispeg" replace />}
       />
       <Route path="/sso/selaras" element={<SSOSelarasRedirect />} />
+      <Route path="/sso/siamparan" element={<SSOSiamparanRedirect />} />
       <Route path="/app/*" element={protectedElement} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -66,6 +66,27 @@ const AIAssistantWidget = () => {
 
   return (
     <div className={`ai-widget-container ${isOpen ? "is-open" : ""} ${isMinimized ? "is-minimized" : ""}`}>
+      {/* SiamparanV2 Bubble */}
+      {!isOpen && user && (
+        <button 
+          className="siamparan-floating-btn" 
+          onClick={() => {
+            const ssoUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+              ? `http://localhost:8000/auth/sso?token=${token}&user=${user.nip}`
+              : `https://siamparan.bpompalopo.com/auth/sso?token=${token}&user=${user.nip}`;
+            window.open(ssoUrl, '_blank');
+          }}
+        >
+          <div className="siamparan-stars">
+            <div className="siamparan-star s1">★</div>
+            <div className="siamparan-star s2">✦</div>
+            <div className="siamparan-star s3">✨</div>
+          </div>
+          <img src="/logo/siamparan.png" alt="SiamparanV2" className="siamparan-icon-img" />
+          <span className="siamparan-btn-label">SIAMPARAN V2</span>
+        </button>
+      )}
+
       {/* Selaras Bubble */}
       {!isOpen && user && (
         <button 
