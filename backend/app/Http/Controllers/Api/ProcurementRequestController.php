@@ -69,7 +69,7 @@ class ProcurementRequestController extends Controller
 
         $query = ProcurementRequest::query()->with(['items.pdttItem', 'creator:id,name']);
 
-        if ($request->has('period')) {
+        if ($request->filled('period')) {
             $query->where('period', $request->input('period'));
         }
 
@@ -84,16 +84,22 @@ class ProcurementRequestController extends Controller
         }
 
         $payload = $request->validate([
-            'status' => ['required', 'string', 'in:pending,approved,rejected,processed'],
+            'status' => ['sometimes', 'required', 'string', 'in:pending,approved,rejected,processed'],
+            'period' => ['sometimes', 'required', 'string'],
         ]);
 
         $procurementRequest = ProcurementRequest::findOrFail($id);
-        $procurementRequest->update(['status' => $payload['status']]);
+        $procurementRequest->update($payload);
 
         return response()->json([
-            'message' => 'Status pengajuan berhasil diperbarui.',
+            'message' => 'Data pengajuan berhasil diperbarui.',
             'data' => $procurementRequest->load(['items.pdttItem', 'creator:id,name']),
         ]);
+    }
+
+    public function updateAdmin(Request $request, $id)
+    {
+        return $this->updateStatus($request, $id);
     }
 
     public function destroyAdmin(Request $request, $id)
@@ -132,14 +138,23 @@ class ProcurementRequestController extends Controller
             return response()->json(['message' => 'Unauthorized. Access Denied.'], 403);
         }
 
-        $saldo = $authUser ? ($authUser->jumlah_hari * 19000) : 0;
-
         $payload = $request->validate([
             'period' => ['required', 'date_format:Y-m'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_id' => ['required', 'exists:pdtt_items,id'],
             'items.*.jumlah' => ['required', 'integer', 'min:1'],
         ]);
+
+        $jumlah_hari = 0;
+        if ($authUser) {
+            $periodString = $payload['period'];
+            if (is_array($authUser->periods) && isset($authUser->periods[$periodString])) {
+                $jumlah_hari = (int) $authUser->periods[$periodString];
+            } else {
+                $jumlah_hari = (int) $authUser->jumlah_hari;
+            }
+        }
+        $saldo = $jumlah_hari * 19000;
 
         [$itemsData, $totalPrice] = $this->calculateItemsAndTotal($payload['items'], $payload['period']);
 

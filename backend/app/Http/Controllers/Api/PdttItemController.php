@@ -265,7 +265,15 @@ class PdttItemController extends Controller
             ], 200);
         }
 
-        $jumlah_hari = $authUser ? $authUser->jumlah_hari : 0;
+        $jumlah_hari = 0;
+        if ($authUser) {
+            $periodString = $period->format('Y-m');
+            if (is_array($authUser->periods) && isset($authUser->periods[$periodString])) {
+                $jumlah_hari = (int) $authUser->periods[$periodString];
+            } else {
+                $jumlah_hari = (int) $authUser->jumlah_hari;
+            }
+        }
         $saldo = $jumlah_hari * 19000;
 
         $items = PdttItem::where('is_requestable', true)

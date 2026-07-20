@@ -11,6 +11,7 @@ import {
     Badge,
     Tooltip,
     Dropdown,
+    DatePicker,
 } from "antd";
 import {
     ReloadOutlined,
@@ -20,6 +21,9 @@ import {
     DeleteOutlined,
     FileExcelOutlined,
     MoreOutlined,
+    CalendarOutlined,
+    EditOutlined,
+    CheckSquareOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import dayjs from "dayjs";
@@ -29,7 +33,6 @@ import * as XLSX from "xlsx";
 dayjs.locale("id");
 
 const { Title, Text } = Typography;
-// const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
 export default function AdminPengajuanPdtt() {
     const { apiFetch, token } = useAuth();
@@ -44,24 +47,68 @@ export default function AdminPengajuanPdtt() {
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [generatingPdf, setGeneratingPdf] = useState(false);
 
+    // Period management state
+    const [filterPeriod, setFilterPeriod] = useState(dayjs());
+    const [allPeriodsFilter, setAllPeriodsFilter] = useState(false);
+    const [changePeriodModalVisible, setChangePeriodModalVisible] = useState(false);
+    const [targetRequestForPeriod, setTargetRequestForPeriod] = useState(null);
+    const [newPeriodValue, setNewPeriodValue] = useState(dayjs());
+    const [savingPeriod, setSavingPeriod] = useState(false);
+
     const fetchRequests = useCallback(async () => {
         if (!token) return;
         setLoading(true);
         try {
-            const res = await apiFetch("/admin/procurement-requests");
+            const periodStr = (!allPeriodsFilter && filterPeriod) ? filterPeriod.format("YYYY-MM") : "";
+            const url = periodStr ? `/admin/procurement-requests?period=${periodStr}` : "/admin/procurement-requests";
+            const res = await apiFetch(url);
             const data = await res.json();
             if (!res.ok) throw new Error(data?.message ?? "Gagal memuat data pengajuan");
             setRequests(data?.data || []);
+            setSelectedRowKeys([]); // Reset selection when period changes
         } catch (error) {
             message.error(error.message);
         } finally {
             setLoading(false);
         }
-    }, [apiFetch, message, token]);
+    }, [apiFetch, message, token, filterPeriod, allPeriodsFilter]);
 
     useEffect(() => {
         fetchRequests();
     }, [fetchRequests]);
+
+    const handleChangePeriod = async () => {
+        if (!targetRequestForPeriod || !newPeriodValue) return;
+        setSavingPeriod(true);
+        try {
+            const periodStr = newPeriodValue.format("YYYY-MM");
+            const res = await apiFetch(`/admin/procurement-requests/${targetRequestForPeriod.id}`, {
+                method: "PUT",
+                body: JSON.stringify({ period: periodStr }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.message ?? "Gagal mengubah periode pengajuan");
+
+            message.success(`Periode pengajuan berhasil diubah menjadi ${newPeriodValue.format("MMMM YYYY")}`);
+            fetchRequests();
+
+            if (selectedRequest && selectedRequest.id === targetRequestForPeriod.id) {
+                setSelectedRequest((prev) => ({ ...prev, period: periodStr }));
+            }
+            setChangePeriodModalVisible(false);
+            setTargetRequestForPeriod(null);
+        } catch (error) {
+            message.error(error.message);
+        } finally {
+            setSavingPeriod(false);
+        }
+    };
+
+    const handleSelectAllFiltered = () => {
+        const keys = requests.map(r => r.id);
+        setSelectedRowKeys(keys);
+        message.info(`${keys.length} pengajuan berhasil dipilih.`);
+    };
 
     const updateStatus = async (id, status) => {
         setStatusUpdating(true);
@@ -180,7 +227,8 @@ export default function AdminPengajuanPdtt() {
             XLSX.utils.book_append_sheet(wb, ws, "Rekapan PDTT");
 
             // Download
-            const filename = `Rekapan_PDTT_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`;
+            const periodText = allPeriodsFilter ? "Semua_Periode" : filterPeriod.format("YYYY-MM");
+            const filename = `Rekapan_PDTT_${periodText}_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`;
             XLSX.writeFile(wb, filename);
             message.success(`File ${filename} berhasil diunduh.`);
         } catch (error) {
@@ -226,7 +274,7 @@ export default function AdminPengajuanPdtt() {
             title: "Periode",
             dataIndex: "period",
             key: "period",
-            render: (v) => dayjs(v).format("MMMM YYYY"),
+            render: (v) => <Tag color="blue">{dayjs(v).format("MMMM YYYY")}</Tag>,
         },
         {
             title: "Waktu Pengajuan",
@@ -237,7 +285,7 @@ export default function AdminPengajuanPdtt() {
         {
             title: "Total Item",
             key: "total_items",
-            render: (_, r) => <Badge count={r.items?.length || 0} showZero color="#1890ff" />,
+            render: (_, r) => <Badge count={r.items?.length || 0} showZero color="#0F5B99" />,
         },
         {
             title: "Estimasi Total",
@@ -263,8 +311,18 @@ export default function AdminPengajuanPdtt() {
                     {
                         key: 'detail',
                         label: 'Detail',
-                        icon: <EyeOutlined style={{ color: '#1890ff' }} />,
+                        icon: <EyeOutlined style={{ color: '#0F5B99' }} />,
                         onClick: () => handleOpenDetail(r)
+                    },
+                    {
+                        key: 'change-period',
+                        label: 'Ubah Periode',
+                        icon: <CalendarOutlined style={{ color: '#fa8c16' }} />,
+                        onClick: () => {
+                            setTargetRequestForPeriod(r);
+                            setNewPeriodValue(dayjs(r.period));
+                            setChangePeriodModalVisible(true);
+                        }
                     },
                     {
                         key: 'delete',
@@ -324,22 +382,51 @@ export default function AdminPengajuanPdtt() {
 
     return (
         <div className="module-section">
-            <div className="module-toolbar">
+            <div className="module-toolbar" style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                    <Title level={3} className="module-title">
+                    <Title level={3} className="module-title" style={{ margin: 0 }}>
                         Rekapan Pengajuan PDTT
                     </Title>
                     <Text className="module-subtitle">
                         Daftar usulan PDTT yang diajukan oleh masing-masing pegawai dari Layanan Mandiri.
                     </Text>
                 </div>
-                <Space>
+                <Space wrap>
+                    {/* Period Filter Control */}
+                    <Space style={{ background: "#ffffff", padding: "4px 12px", borderRadius: 8, border: "1px solid #d9d9d9" }}>
+                        <CalendarOutlined style={{ color: "#0F5B99" }} />
+                        <Text strong style={{ fontSize: 13 }}>Periode:</Text>
+                        <DatePicker
+                            picker="month"
+                            value={allPeriodsFilter ? null : filterPeriod}
+                            onChange={(val) => {
+                                if (val) {
+                                    setFilterPeriod(val);
+                                    setAllPeriodsFilter(false);
+                                }
+                            }}
+                            format="MMMM YYYY"
+                            allowClear={false}
+                            disabled={allPeriodsFilter}
+                            style={{ width: 150 }}
+                        />
+                        <Button
+                            type={allPeriodsFilter ? "primary" : "default"}
+                            size="small"
+                            onClick={() => setAllPeriodsFilter(!allPeriodsFilter)}
+                            style={allPeriodsFilter ? { background: "#0F5B99" } : {}}
+                        >
+                            {allPeriodsFilter ? "Tampilkan Per Bulan" : "Semua Periode"}
+                        </Button>
+                    </Space>
+
                     <Button
                         type="primary"
                         icon={<FileExcelOutlined />}
                         onClick={generateCrossTabXLSX}
                         loading={generatingPdf}
                         disabled={selectedRowKeys.length === 0}
+                        style={{ background: "#0F5B99" }}
                     >
                         Tarik Rekapan Excel ({selectedRowKeys.length})
                     </Button>
@@ -349,11 +436,29 @@ export default function AdminPengajuanPdtt() {
                 </Space>
             </div>
 
-            <Card className="content-card" styles={{ body: { padding: 16 } }}>
-                <Space>
-                    <Tag color="blue">Total Pengajuan: {requests.length}</Tag>
-                    <Text type="secondary">Kelola status pengajuan dan hapus data jika diperlukan.</Text>
-                </Space>
+            <Card className="content-card" styles={{ body: { padding: "12px 16px" } }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                    <Space wrap>
+                        <Tag color="blue" style={{ fontSize: 13, padding: "4px 10px" }}>
+                            Periode Aktif: {allPeriodsFilter ? "Semua Periode" : filterPeriod.format("MMMM YYYY")}
+                        </Tag>
+                        <Tag color="geekblue" style={{ fontSize: 13, padding: "4px 10px" }}>
+                            Total Pengajuan: {requests.length}
+                        </Tag>
+                        <Text type="secondary" style={{ fontSize: 13 }}>
+                            Pilih baris pegawai untuk menarik rekapan Excel, atau ubah periode pengajuan jika diperlukan.
+                        </Text>
+                    </Space>
+                    {requests.length > 0 && (
+                        <Button
+                            size="small"
+                            icon={<CheckSquareOutlined />}
+                            onClick={handleSelectAllFiltered}
+                        >
+                            Pilih Semua ({requests.length})
+                        </Button>
+                    )}
+                </div>
             </Card>
 
             <Card className="table-card" style={{ padding: 0 }}>
@@ -368,10 +473,11 @@ export default function AdminPengajuanPdtt() {
                 />
             </Card>
 
+            {/* Modal Detail Pengajuan */}
             <Modal
                 title={
                     <Space>
-                        <EyeOutlined />
+                        <EyeOutlined style={{ color: "#0F5B99" }} />
                         <span>Detail Pengajuan PDTT</span>
                     </Space>
                 }
@@ -383,14 +489,30 @@ export default function AdminPengajuanPdtt() {
                 {selectedRequest && (
                     <Space direction="vertical" size="large" style={{ width: "100%", marginTop: 16 }}>
                         <Card size="small" style={{ background: "#f8fafc" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
                                 <div>
                                     <Text type="secondary" style={{ display: "block" }}>Pegawai Pengusul</Text>
                                     <Text strong style={{ fontSize: 16 }}>{selectedRequest.creator?.name}</Text>
                                 </div>
                                 <div>
                                     <Text type="secondary" style={{ display: "block" }}>Periode</Text>
-                                    <Text strong>{dayjs(selectedRequest.period).format("MMMM YYYY")}</Text>
+                                    <Space size="small">
+                                        <Tag color="blue" style={{ margin: 0, fontSize: 13 }}>
+                                            {dayjs(selectedRequest.period).format("MMMM YYYY")}
+                                        </Tag>
+                                        <Button
+                                            type="link"
+                                            size="small"
+                                            icon={<EditOutlined />}
+                                            onClick={() => {
+                                                setTargetRequestForPeriod(selectedRequest);
+                                                setNewPeriodValue(dayjs(selectedRequest.period));
+                                                setChangePeriodModalVisible(true);
+                                            }}
+                                        >
+                                            Ubah
+                                        </Button>
+                                    </Space>
                                 </div>
                                 <div>
                                     <Text type="secondary" style={{ display: "block" }}>Waktu Submit</Text>
@@ -420,7 +542,7 @@ export default function AdminPengajuanPdtt() {
                                             <Text strong>Total Akhir Estimasi:</Text>
                                         </Table.Summary.Cell>
                                         <Table.Summary.Cell index={1}>
-                                            <Text strong style={{ color: "#0ea5e9", fontSize: 16 }}>{formatCurrency(total)}</Text>
+                                            <Text strong style={{ color: "#0F5B99", fontSize: 16 }}>{formatCurrency(total)}</Text>
                                         </Table.Summary.Cell>
                                     </Table.Summary.Row>
                                 );
@@ -460,6 +582,7 @@ export default function AdminPengajuanPdtt() {
                                         icon={<CheckCircleOutlined />}
                                         loading={statusUpdating}
                                         onClick={() => updateStatus(selectedRequest.id, "approved")}
+                                        style={{ background: "#059669" }}
                                     >
                                         Setujui
                                     </Button>
@@ -477,6 +600,56 @@ export default function AdminPengajuanPdtt() {
                             )}
                         </div>
                     </Space>
+                )}
+            </Modal>
+
+            {/* Modal Ubah Periode */}
+            <Modal
+                title={
+                    <Space>
+                        <CalendarOutlined style={{ color: "#0F5B99" }} />
+                        <span>Ubah Periode Pengajuan</span>
+                    </Space>
+                }
+                open={changePeriodModalVisible}
+                onCancel={() => {
+                    setChangePeriodModalVisible(false);
+                    setTargetRequestForPeriod(null);
+                }}
+                onOk={handleChangePeriod}
+                confirmLoading={savingPeriod}
+                okText="Simpan Periode"
+                cancelText="Batal"
+                width={420}
+                centered
+            >
+                {targetRequestForPeriod && (
+                    <div style={{ padding: "12px 0" }}>
+                        <Text style={{ display: "block", marginBottom: 12 }}>
+                            Ubah periode pengajuan untuk <strong>{targetRequestForPeriod.creator?.name}</strong>:
+                        </Text>
+                        <div style={{ marginBottom: 16 }}>
+                            <Text type="secondary" style={{ display: "block", fontSize: 12, marginBottom: 4 }}>
+                                Periode Saat Ini:
+                            </Text>
+                            <Tag color="blue" style={{ fontSize: 13, padding: "2px 8px" }}>
+                                {dayjs(targetRequestForPeriod.period).format("MMMM YYYY")}
+                            </Tag>
+                        </div>
+                        <div>
+                            <Text strong style={{ display: "block", marginBottom: 6 }}>
+                                Pilih Periode Baru:
+                            </Text>
+                            <DatePicker
+                                picker="month"
+                                value={newPeriodValue}
+                                onChange={(val) => setNewPeriodValue(val || dayjs())}
+                                format="MMMM YYYY"
+                                allowClear={false}
+                                style={{ width: "100%" }}
+                            />
+                        </div>
+                    </div>
                 )}
             </Modal>
         </div>

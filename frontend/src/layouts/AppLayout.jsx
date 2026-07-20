@@ -369,7 +369,7 @@ function AppLayout() {
     addChild(pdttModule, "pengadaan-pbj", "Proses Pengadaan PBJ");
     addChild(pdttModule, "pengadaan-pdtt-katalog", "Katalog Barang");
     addChild(pdttModule, "pengadaan-pdtt-rekapan", "Rekapan Pengajuan");
-    addChild(pdttModule, "pengelola-pegawai-pdtt", "Hak Akses Pegawai");
+    addChild(pdttModule, "pengelola-pegawai-pdtt", "Jumlah Hari Pegawai");
 
     const keuanganModule = createModule("keuangan", "Keuangan");
     addChild(keuanganModule, "keuangan-lpj", "Pembuatan LPJ");

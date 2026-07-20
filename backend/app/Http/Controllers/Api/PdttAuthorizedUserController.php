@@ -55,6 +55,7 @@ class PdttAuthorizedUserController extends Controller
                     'email' => $item->user->email ?? '',
                     'role' => $item->user->base_role ?? '',
                     'jumlah_hari' => $item->jumlah_hari,
+                    'periods' => $item->periods,
                     'saldo' => $item->jumlah_hari * 19000,
                 ];
             });
@@ -105,11 +106,13 @@ class PdttAuthorizedUserController extends Controller
         $payload = $request->validate([
             'user_id' => ['required', 'exists:users,id', 'unique:pdtt_authorized_users,user_id'],
             'jumlah_hari' => ['required', 'integer', 'min:0'],
+            'periods' => ['sometimes', 'nullable', 'array'],
         ]);
 
         $item = PdttAuthorizedUser::create([
             'user_id' => $payload['user_id'],
             'jumlah_hari' => $payload['jumlah_hari'],
+            'periods' => $payload['periods'] ?? null,
         ]);
 
         return response()->json([
@@ -127,9 +130,13 @@ class PdttAuthorizedUserController extends Controller
         $item = PdttAuthorizedUser::findOrFail($id);
         $payload = $request->validate([
             'jumlah_hari' => ['required', 'integer', 'min:0'],
+            'periods' => ['sometimes', 'nullable', 'array'],
         ]);
 
-        $item->update(['jumlah_hari' => $payload['jumlah_hari']]);
+        $item->update([
+            'jumlah_hari' => $payload['jumlah_hari'],
+            'periods' => $payload['periods'] ?? null,
+        ]);
 
         return response()->json([
             'message' => 'Pengaturan pegawai berhasil diperbarui.',

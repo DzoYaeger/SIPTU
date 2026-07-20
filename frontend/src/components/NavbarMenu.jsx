@@ -86,6 +86,7 @@ const iconMap = {
   "it-helpdesk-pelaporan": <FormOutlined />,
   "it-helpdesk-rekapan": <DatabaseOutlined />,
   "pengadaan-pdtt": <ShoppingCartOutlined />,
+  "pengadaan-pbj": <AuditOutlined />,
   "pengadaan-pdtt-katalog": <AppstoreOutlined />,
   "pengadaan-pdtt-rekapan": <FileTextOutlined />,
   "pengadaan-pdtt-pengajuan-pdtt": <ShoppingCartOutlined />,

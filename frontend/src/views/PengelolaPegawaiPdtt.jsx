@@ -14,9 +14,11 @@ import {
     Tooltip,
     InputNumber,
     Switch,
+    DatePicker,
 } from "antd";
-import { PlusOutlined, DeleteOutlined, EditOutlined, MoreOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, EditOutlined, MoreOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 // const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
@@ -106,9 +108,21 @@ export default function PengelolaPegawaiPdtt() {
     const submitForm = async (values) => {
         setSubmitting(true);
         try {
+            const periods = {};
+            (values.period_allocations || []).forEach((item) => {
+                if (item && item.period && item.jumlah_hari !== undefined) {
+                    const formattedPeriod = item.period.format("YYYY-MM");
+                    periods[formattedPeriod] = item.jumlah_hari;
+                }
+            });
+            const payload = {
+                user_id: values.user_id,
+                jumlah_hari: values.jumlah_hari,
+                periods: periods,
+            };
             const res = await apiFetch('/pdtt-authorized-users', {
                 method: "POST",
-                body: JSON.stringify(values),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.message || "Gagal menambahkan pegawai");
@@ -125,20 +139,39 @@ export default function PengelolaPegawaiPdtt() {
 
     const openEdit = (record) => {
         setEditingUser(record);
-        editForm.setFieldsValue({ jumlah_hari: record.jumlah_hari });
+        const periodsObj = record.periods || {};
+        const periodAllocations = Object.keys(periodsObj).map((key) => ({
+            period: dayjs(key, "YYYY-MM"),
+            jumlah_hari: periodsObj[key],
+        }));
+        editForm.setFieldsValue({
+            jumlah_hari: record.jumlah_hari,
+            period_allocations: periodAllocations,
+        });
         setEditModalOpen(true);
     };
 
     const submitEdit = async (values) => {
         setSubmitting(true);
         try {
+            const periods = {};
+            (values.period_allocations || []).forEach((item) => {
+                if (item && item.period && item.jumlah_hari !== undefined) {
+                    const formattedPeriod = item.period.format("YYYY-MM");
+                    periods[formattedPeriod] = item.jumlah_hari;
+                }
+            });
+            const payload = {
+                jumlah_hari: values.jumlah_hari,
+                periods: periods,
+            };
             const res = await apiFetch(`/pdtt-authorized-users/${editingUser.id}`, {
                 method: "PUT",
-                body: JSON.stringify(values),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.message || "Gagal memperbarui pegawai");
-            message.success("Jumlah hari pegawai berhasil diperbarui");
+            message.success("Pengaturan pegawai berhasil diperbarui");
             setEditModalOpen(false);
             fetchUsers();
         } catch (error) {
@@ -175,13 +208,35 @@ export default function PengelolaPegawaiPdtt() {
             render: (role) => <Tag color={role === "admin" ? "blue" : "default"}>{role || "user"}</Tag>,
         },
         {
-            title: "Jumlah Hari",
+            title: "Hari Bawaan",
             dataIndex: "jumlah_hari",
             key: "jumlah_hari",
+            width: 120,
         },
         {
-            title: "Saldo (Rp)",
+            title: "Alokasi Periode",
+            key: "periods",
+            render: (_, record) => {
+                const periods = record.periods || {};
+                const keys = Object.keys(periods).sort();
+                if (keys.length === 0) {
+                    return <Text type="secondary">-</Text>;
+                }
+                return (
+                    <Space size={[0, 4]} wrap>
+                        {keys.map((p) => (
+                            <Tag color="blue" key={p}>
+                                {dayjs(p, "YYYY-MM").format("MMMM YYYY")}: <strong>{periods[p]} Hari</strong>
+                            </Tag>
+                        ))}
+                    </Space>
+                );
+            }
+        },
+        {
+            title: "Saldo Bawaan (Rp)",
             key: "saldo",
+            width: 150,
             render: (_, record) => <Text strong>{formatCurrency(record.saldo)}</Text>,
         },
         {
@@ -301,12 +356,44 @@ export default function PengelolaPegawaiPdtt() {
                     </Form.Item>
                     <Form.Item
                         name="jumlah_hari"
-                        label="Alokasi Jumlah Hari"
-                        rules={[{ required: true, message: "Masukkan jumlah hari" }]}
+                        label="Alokasi Jumlah Hari Bawaan"
+                        rules={[{ required: true, message: "Masukkan jumlah hari bawaan" }]}
                         initialValue={0}
-                        extra="Satu hari akan dikalikan dengan 19.000 untuk menjadi saldo PDTT"
+                        extra="Nilai bawaan jika tidak ada alokasi khusus bulanan. Satu hari akan dikalikan dengan 19.000 untuk menjadi saldo PDTT"
                     >
                         <InputNumber min={0} style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item label="Alokasi Khusus Bulanan / Periode (Opsional)">
+                        <Form.List name="period_allocations">
+                            {(fields, { add, remove }) => (
+                                <>
+                                    {fields.map(({ key, name, ...restField }) => (
+                                        <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'period']}
+                                                rules={[{ required: true, message: 'Pilih bulan' }]}
+                                            >
+                                                <DatePicker picker="month" format="MMMM YYYY" placeholder="Pilih Bulan" style={{ width: 180 }} />
+                                            </Form.Item>
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'jumlah_hari']}
+                                                rules={[{ required: true, message: 'Masukkan hari' }]}
+                                            >
+                                                <InputNumber min={0} placeholder="Hari" style={{ width: 120 }} />
+                                            </Form.Item>
+                                            <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f', fontSize: 16, cursor: 'pointer' }} />
+                                        </Space>
+                                    ))}
+                                    <Form.Item>
+                                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                            Tambah Alokasi Periode
+                                        </Button>
+                                    </Form.Item>
+                                </>
+                            )}
+                        </Form.List>
                     </Form.Item>
                     <Button type="primary" htmlType="submit" loading={submitting} block>
                         Tambahkan
@@ -324,11 +411,43 @@ export default function PengelolaPegawaiPdtt() {
                 <Form form={editForm} layout="vertical" requiredMark={false} onFinish={submitEdit}>
                     <Form.Item
                         name="jumlah_hari"
-                        label="Alokasi Jumlah Hari"
-                        rules={[{ required: true, message: "Masukkan jumlah hari" }]}
-                        extra="Satu hari akan dikalikan dengan 19.000 untuk menjadi saldo PDTT"
+                        label="Alokasi Jumlah Hari Bawaan"
+                        rules={[{ required: true, message: "Masukkan jumlah hari bawaan" }]}
+                        extra="Nilai bawaan jika tidak ada alokasi khusus bulanan. Satu hari akan dikalikan dengan 19.000 untuk menjadi saldo PDTT"
                     >
                         <InputNumber min={0} style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item label="Alokasi Khusus Bulanan / Periode (Opsional)">
+                        <Form.List name="period_allocations">
+                            {(fields, { add, remove }) => (
+                                <>
+                                    {fields.map(({ key, name, ...restField }) => (
+                                        <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'period']}
+                                                rules={[{ required: true, message: 'Pilih bulan' }]}
+                                            >
+                                                <DatePicker picker="month" format="MMMM YYYY" placeholder="Pilih Bulan" style={{ width: 180 }} />
+                                            </Form.Item>
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'jumlah_hari']}
+                                                rules={[{ required: true, message: 'Masukkan hari' }]}
+                                            >
+                                                <InputNumber min={0} placeholder="Hari" style={{ width: 120 }} />
+                                            </Form.Item>
+                                            <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f', fontSize: 16, cursor: 'pointer' }} />
+                                        </Space>
+                                    ))}
+                                    <Form.Item>
+                                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                            Tambah Alokasi Periode
+                                        </Button>
+                                    </Form.Item>
+                                </>
+                            )}
+                        </Form.List>
                     </Form.Item>
                     <Button type="primary" htmlType="submit" loading={submitting} block>
                         Simpan Perubahan

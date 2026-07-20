@@ -242,23 +242,28 @@ function PengadaanPbjInner() {
                 }, 
                 styles: { 
                     font: 'helvetica', 
-                    fontSize: 8, 
+                    fontSize: 7.5, 
                     cellPadding: 2, 
                     lineColor: [200, 200, 200],
                     lineWidth: 0.1,
+                    overflow: 'linebreak',
                 },
                 alternateRowStyles: {
                     fillColor: [248, 250, 252] // slate-50
                 },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 8 },
-                    2: { halign: 'center', cellWidth: 20 },
-                    3: { halign: 'center', cellWidth: 20 },
-                    4: { halign: 'center', cellWidth: 20 },
+                    1: { halign: 'left', cellWidth: 48 },
+                    2: { halign: 'center', cellWidth: 18 },
+                    3: { halign: 'center', cellWidth: 18 },
+                    4: { halign: 'center', cellWidth: 18 },
+                    5: { halign: 'left', cellWidth: 35 },
+                    6: { halign: 'left', cellWidth: 25 },
                     7: { halign: 'right', cellWidth: 25 },
-                    8: { halign: 'center', cellWidth: 20 },
-                    9: { halign: 'center', cellWidth: 20 },
-                    11: { halign: 'center', cellWidth: 20 }
+                    8: { halign: 'center', cellWidth: 18 },
+                    9: { halign: 'center', cellWidth: 18 },
+                    10: { halign: 'left', cellWidth: 20 },
+                    11: { halign: 'center', cellWidth: 18 }
                 },
                 didDrawPage: (data) => {
                     // Footer page info

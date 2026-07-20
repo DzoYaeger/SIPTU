@@ -58,10 +58,10 @@ const LOKASI_OPTIONS = [
 
 /* ════════════ Step Definitions ════════════ */
 const STEPS = [
-  { key: "pegawai", title: "Nama Pegawai", subtitle: "Pilih pegawai yang akan ditugaskan", icon: <TeamOutlined />, color: "#0F5B99", gradient: "linear-gradient(135deg, #0F5B99, #4A90E2)" },
-  { key: "tanggal", title: "Jadwal & Lokasi", subtitle: "Tentukan periode dan tujuan penugasan", icon: <CalendarOutlined />, color: "#4A90E2", gradient: "linear-gradient(135deg, #4A90E2, #7ab2f3)" },
-  { key: "anggaran", title: "MAK & Sarana", subtitle: "Lengkapi data anggaran dan sarana", icon: <DollarOutlined />, color: "#0ea5e9", gradient: "linear-gradient(135deg, #0ea5e9, #38bdf8)" },
-  { key: "review", title: "Konfirmasi", subtitle: "Periksa kembali sebelum mengirim", icon: <CheckCircleOutlined />, color: "#10b981", gradient: "linear-gradient(135deg, #10b981, #34d399)" },
+  { key: "pegawai", title: "Nama Pegawai", subtitle: "Pilih pegawai yang akan ditugaskan", icon: <TeamOutlined />, color: "#0F5B99" },
+  { key: "tanggal", title: "Jadwal & Lokasi", subtitle: "Tentukan periode dan tujuan penugasan", icon: <CalendarOutlined />, color: "#0F5B99" },
+  { key: "anggaran", title: "MAK & Sarana", subtitle: "Lengkapi data anggaran dan sarana", icon: <DollarOutlined />, color: "#0F5B99" },
+  { key: "review", title: "Konfirmasi", subtitle: "Periksa kembali sebelum mengirim", icon: <CheckCircleOutlined />, color: "#10B981" },
 ];
 
 /* ════════════ Injected Styles ════════════ */
@@ -70,96 +70,139 @@ const injectStyles = () => {
   const s = document.createElement("style");
   s.id = "stw-styles";
   s.textContent = `
-    .stw-page { min-height:100vh; background:#f8f9fc; position:relative; overflow-x:hidden; }
-    .stw-page::before { content:''; position:absolute; top:-200px; right:-200px; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle,rgba(15,91,153,.06),transparent 70%); pointer-events:none; }
-    .stw-container { position:relative; z-index:1; max-width:680px; margin:0 auto; padding:40px 20px 60px; }
+    .stw-page { min-height:100vh; background:#f8fafc; position:relative; overflow-x:hidden; font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+    .stw-container { position:relative; z-index:1; max-width:720px; margin:0 auto; padding:32px 20px 60px; }
+
+    /* Top Action Bar with Precision Back Button */
+    .stw-top-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+    .stw-back-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; color:#334155; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s ease; }
+    .stw-back-btn:hover { color:#0f5b99; border-color:#0f5b99; background:#e6f2fc; transform:translateX(-2px); }
+    .stw-top-pill { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:0.5px; color:#64748b; text-transform:uppercase; background:#f1f5f9; padding:4px 12px; border-radius:6px; border:1px solid #e2e8f0; }
+    .stw-top-dot { width:6px; height:6px; border-radius:50%; background:#0f5b99; }
 
     /* Header */
-    .stw-header { text-align:center; margin-bottom:40px; animation:stw-fadeD .6s ease-out; }
-    @keyframes stw-fadeD { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
-    .stw-logo { width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#0F5B99,#4A90E2);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:26px;box-shadow:0 8px 24px rgba(15,91,153,.25);margin-bottom:16px; }
-    .stw-header h2 { margin:0 0 4px!important; font-size:24px!important; font-weight:700!important; color:#1e293b!important; }
-    .stw-header-sub { color:#94a3b8; font-size:14px; }
+    .stw-header { text-align:center; margin-bottom:28px; animation:stw-fadeD .4s ease-out; }
+    @keyframes stw-fadeD { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+    .stw-logo { width:48px; height:48px; border-radius:12px; background:#0f5b99; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:22px; margin-bottom:12px; }
+    .stw-header h2 { margin:0 0 4px!important; font-size:20px!important; font-weight:700!important; color:#1e293b!important; }
+    .stw-header-sub { color:#64748b; font-size:13px; font-weight:400; }
 
-    /* Back */
-    .stw-back { position:absolute;top:40px;left:20px;z-index:5;color:#94a3b8!important;border:1px solid #e2e8f0!important;background:#fff!important;border-radius:12px!important;box-shadow:0 1px 4px rgba(0,0,0,.04)!important;transition:all .2s ease!important; }
-    .stw-back:hover { color:#0F5B99!important;border-color:#a5c9f5!important;transform:translateX(-2px)!important; }
-
-    /* Progress */
-    .stw-progress { display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px;animation:stw-fadeD .6s ease-out .1s both; }
-    .stw-dot { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .5s cubic-bezier(.4,0,.2,1);position:relative;z-index:2;flex-shrink:0; }
-    .stw-dot.active { background:linear-gradient(135deg,#0F5B99,#4A90E2);color:#fff;box-shadow:0 4px 16px rgba(15,91,153,.35);transform:scale(1.1); }
-    .stw-dot.done { background:#10b981;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.3); }
-    .stw-dot.pending { background:#f1f5f9;color:#cbd5e1;border:2px solid #e2e8f0; }
-    .stw-line { width:60px;height:3px;border-radius:2px;transition:all .5s ease;flex-shrink:0; }
+    /* Progress Stepper */
+    .stw-progress { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; padding:0 4px; }
+    .stw-dot { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .2s ease; position:relative; z-index:2; flex-shrink:0; }
+    .stw-dot.active { background:#0f5b99; color:#fff; font-weight:700; }
+    .stw-dot.done { background:#10b981; color:#fff; }
+    .stw-dot.pending { background:#fff; color:#94a3b8; border:1px solid #cbd5e1; }
+    .stw-line { flex:1; height:2px; margin:0 8px; border-radius:1px; transition:all .2s ease; }
     .stw-line.done { background:#10b981; }
     .stw-line.pending { background:#e2e8f0; }
 
-    /* Card */
-    .stw-card { background:#fff;border-radius:24px;box-shadow:0 4px 24px rgba(0,0,0,.04),0 1px 4px rgba(0,0,0,.02);border:1px solid #f1f5f9;padding:36px 32px 32px;position:relative;overflow:hidden; }
+    /* Main Card */
+    .stw-card { background:#fff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 2px 12px rgba(0,0,0,.03); padding:28px 24px; position:relative; overflow:hidden; }
 
-    /* Fade */
-    .stw-fe { opacity:0; transform:translateY(24px); }
-    .stw-fa { opacity:1; transform:translateY(0); transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1); }
-    .stw-fo { opacity:0; transform:translateY(-16px); transition:opacity .3s ease,transform .3s ease; }
+    /* Fade Animations */
+    .stw-fe { opacity:0; transform:translateY(12px); }
+    .stw-fa { opacity:1; transform:translateY(0); transition:opacity .3s ease,transform .3s ease; }
+    .stw-fo { opacity:0; transform:translateY(-8px); transition:opacity .2s ease,transform .2s ease; }
 
-    /* Step header */
-    .stw-sh { display:flex;align-items:center;gap:16px;margin-bottom:28px; }
-    .stw-si { width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0; }
-    .stw-st { font-size:18px!important;font-weight:700!important;color:#1e293b!important;margin:0!important; }
-    .stw-ss { color:#94a3b8;font-size:13px;margin-top:2px; }
+    /* Step header inside card */
+    .stw-sh { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9; }
+    .stw-si { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; flex-shrink:0; background:#0f5b99; }
+    .stw-st { font-size:16px!important; font-weight:700!important; color:#1e293b!important; margin:0!important; }
+    .stw-ss { color:#64748b; font-size:12.5px; margin-top:2px; }
 
-    /* Form overrides */
-    .stw-card .ant-form-item-label>label { font-weight:600;color:#334155;font-size:13px; }
-    .stw-card .ant-select-selector,.stw-card .ant-input,.stw-card .ant-input-affix-wrapper,.stw-card .ant-picker { border-radius:14px!important;border-color:#e2e8f0!important;transition:all .3s ease!important;min-height:44px!important; }
-    .stw-card .ant-select-selector:hover,.stw-card .ant-input:hover,.stw-card .ant-input-affix-wrapper:hover,.stw-card .ant-picker:hover { border-color:#93c5fd!important; }
-    .stw-card .ant-select-focused .ant-select-selector,.stw-card .ant-input:focus,.stw-card .ant-input-affix-wrapper-focused,.stw-card .ant-picker-focused { border-color:#0F5B99!important;box-shadow:0 0 0 3px rgba(15,91,153,.1)!important; }
+    /* Form Overrides */
+    .stw-card .ant-form-item-label>label { font-weight:600; color:#334155; font-size:13px; }
+    .stw-card .ant-select-selector, .stw-card .ant-input, .stw-card .ant-input-affix-wrapper, .stw-card .ant-picker { border-radius:10px!important; border-color:#cbd5e1!important; transition:all .2s ease!important; min-height:42px!important; font-size:13px!important; }
+    .stw-card .ant-select-selector:hover, .stw-card .ant-input:hover, .stw-card .ant-input-affix-wrapper:hover, .stw-card .ant-picker:hover { border-color:#0f5b99!important; }
+    .stw-card .ant-select-focused .ant-select-selector, .stw-card .ant-input:focus, .stw-card .ant-input-affix-wrapper-focused, .stw-card .ant-picker-focused { border-color:#0f5b99!important; box-shadow:0 0 0 2px rgba(15,91,153,.15)!important; }
+    .mak-autocomplete { height: 42px!important; display: block!important; }
+    .mak-autocomplete .ant-select-selector { height: 42px!important; min-height: 42px!important; border: none!important; padding: 0!important; background: transparent!important; }
+    .mak-autocomplete .ant-input-affix-wrapper { height: 42px!important; min-height: 42px!important; }
 
-    /* Nav */
-    .stw-nav { display:flex;justify-content:space-between;gap:12px;margin-top:28px; }
-    .stw-bn { height:48px!important;border-radius:14px!important;font-weight:600!important;font-size:15px!important;border:none!important;padding:0 32px!important;background:linear-gradient(135deg,#0F5B99,#4A90E2)!important;box-shadow:0 4px 16px rgba(15,91,153,.3)!important;transition:all .3s ease!important; }
-    .stw-bn:hover { transform:translateY(-2px)!important;box-shadow:0 8px 24px rgba(15,91,153,.4)!important; }
-    .stw-bp { height:48px!important;border-radius:14px!important;font-weight:600!important;font-size:15px!important;color:#64748b!important;border:1px solid #e2e8f0!important;padding:0 24px!important;transition:all .3s ease!important; }
-    .stw-bp:hover { color:#0F5B99!important;border-color:#a5c9f5!important; }
-    .stw-bs { height:52px!important;border-radius:16px!important;font-weight:700!important;font-size:16px!important;border:none!important;background:linear-gradient(135deg,#10b981,#059669)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)!important;transition:all .3s ease!important; }
-    .stw-bs:hover { transform:translateY(-2px)!important;box-shadow:0 10px 32px rgba(16,185,129,.4)!important; }
+    /* Nav Buttons */
+    .stw-nav { display:flex; justify-content:space-between; gap:12px; margin-top:28px; }
+    .stw-bn { height:44px!important; border-radius:10px!important; font-weight:600!important; font-size:14px!important; border:none!important; padding:0 24px!important; background:#0f5b99!important; color:#fff!important; transition:all .2s ease!important; }
+    .stw-bn:hover { background:#0b4a7d!important; }
+    .stw-bp { height:44px!important; border-radius:10px!important; font-weight:600!important; font-size:14px!important; color:#475569!important; border:1px solid #cbd5e1!important; padding:0 20px!important; background:#fff!important; transition:all .2s ease!important; }
+    .stw-bp:hover { color:#0f5b99!important; border-color:#0f5b99!important; background:#e6f2fc!important; }
+    .stw-bs { height:44px!important; border-radius:10px!important; font-weight:700!important; font-size:14px!important; border:none!important; background:#10b981!important; color:#fff!important; transition:all .2s ease!important; }
+    .stw-bs:hover { background:#059669!important; }
 
-    /* Pegawai detail card */
-    .stw-emp-card { display:flex;align-items:center;gap:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px;margin-bottom:8px;transition:all .3s ease;animation:stw-cardIn .3s ease-out both; }
-    @keyframes stw-cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    .stw-emp-card:hover { border-color:#a5c9f5;background:#e6f2fc; }
-    .stw-emp-avatar { width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#0F5B99,#4A90E2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0; }
-    .stw-emp-info { flex:1;min-width:0; }
-    .stw-emp-name { font-weight:600;color:#1e293b;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .stw-emp-nip { font-size:12px;color:#94a3b8;font-family:monospace; }
-    .stw-emp-rm { width:28px;height:28px;border-radius:8px;border:none;background:#fee2e2;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0; }
-    .stw-emp-rm:hover { background:#fca5a5; }
+    /* Employee & Sarana Cards */
+    .stw-emp-card { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:8px; transition:all .2s ease; }
+    .stw-emp-card:hover { border-color:#0f5b99; background:#e6f2fc; }
+    .stw-emp-avatar { width:34px; height:34px; border-radius:8px; background:#0f5b99; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0; }
+    .stw-emp-info { flex:1; min-width:0; }
+    .stw-emp-name { font-weight:600; color:#1e293b; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .stw-emp-nip { font-size:11px; color:#64748b; font-family:monospace; }
+    .stw-emp-rm { width:26px; height:26px; border-radius:6px; border:none; background:#fee2e2; color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; }
+    .stw-emp-rm:hover { background:#fca5a5; color:#991b1b; }
 
-    /* Sarana detail card */
-    .stw-sar-card { display:flex;align-items:center;gap:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:14px 18px;margin-bottom:8px;animation:stw-cardIn .3s ease-out both; }
-    .stw-sar-card:hover { border-color:#86efac; }
-    .stw-sar-icon { width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#10b981,#34d399);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0; }
-    .stw-sar-name { font-weight:600;color:#065f46;font-size:14px; }
-    .stw-sar-loc { font-size:12px;color:#6ee7b7;display:flex;align-items:center;gap:4px; }
+    /* Sarana Card */
+    .stw-sar-card { display:flex; align-items:center; gap:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px 14px; margin-bottom:8px; }
+    .stw-sar-icon { width:34px; height:34px; border-radius:8px; background:#10b981; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0; }
+    .stw-sar-name { font-weight:600; color:#065f46; font-size:13px; }
+    .stw-sar-loc { font-size:11px; color:#059669; display:flex; align-items:center; gap:4px; }
 
-    /* Lokasi pills (like BMN) */
-    .stw-loc-pills { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
-    .stw-loc-pill { padding:8px 16px;border-radius:24px;font-size:13px;cursor:pointer;border:1px solid;transition:all .25s ease;font-weight:500;user-select:none; }
-    .stw-loc-pill:hover { transform:translateY(-1px); }
-    .stw-loc-pill.sel { border-color:#0F5B99;background:#e6f2fc;color:#0b4a7d; }
-    .stw-loc-pill.idle { border-color:#e2e8f0;background:#fff;color:#64748b; }
+    /* Lokasi Pills */
+    .stw-loc-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .stw-loc-pill { padding:6px 14px; border-radius:20px; font-size:12.5px; cursor:pointer; border:1px solid; transition:all .2s ease; font-weight:600; user-select:none; }
+    .stw-loc-pill.sel { border-color:#0f5b99; background:#0f5b99; color:#fff; }
+    .stw-loc-pill.idle { border-color:#cbd5e1; background:#fff; color:#475569; }
+    .stw-loc-pill.idle:hover { border-color:#0f5b99; color:#0f5b99; }
 
-    /* Review */
-    .stw-rg { background:#f8fafc;border:1px solid #f1f5f9;border-radius:16px;padding:20px 24px;margin-bottom:16px; }
-    .stw-rl { font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-weight:600;margin-bottom:6px; }
-    .stw-rv { color:#1e293b;font-weight:500;font-size:15px;line-height:1.6; }
+    /* Review / Executive Summary Sheet */
+    .stw-summary-sheet { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+    .stw-summary-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .stw-summary-title { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.6px; color: #0f5b99; text-transform: uppercase; }
+    .stw-summary-icon { font-size: 14px; }
+    .stw-summary-badge { font-size: 10px; font-weight: 700; color: #0f5b99; background: #e6f2fc; padding: 2px 8px; border-radius: 4px; border: 1px solid #b9ddf8; letter-spacing: 0.5px; }
 
-    /* Success */
-    .stw-success { text-align:center;animation:stw-fadeD .6s ease-out; }
-    @keyframes stw-pop { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
-    .stw-scheck { width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;animation:stw-pop .7s cubic-bezier(.175,.885,.32,1.275) .2s both;box-shadow:0 8px 32px rgba(16,185,129,.3); }
-    .stw-success h2 { color:#1e293b!important;font-size:22px!important;font-weight:700!important; }
-    .stw-success-sub { color:#64748b;font-size:14px;line-height:1.8; }
+    .stw-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: #e2e8f0; }
+    .stw-summary-cell { background: #ffffff; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; }
+    .stw-col-full { grid-column: span 2; }
+    .stw-summary-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+    .stw-summary-value { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .stw-val-flex { display: flex; align-items: center; gap: 6px; }
+    .stw-empty-val { color: #94a3b8; font-weight: 400; }
+
+    .stw-katim-pill { display: inline-flex; align-items: center; gap: 6px; background: #fffbeb; border: 1px solid #fde68a; padding: 6px 12px; border-radius: 8px; }
+    .stw-katim-name { font-size: 13px; font-weight: 700; color: #92400e; }
+    .stw-katim-nip { font-size: 11px; color: #b45309; font-family: monospace; }
+
+    .stw-members-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+    .stw-member-tag { display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 5px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #334155; }
+    .stw-member-icon { color: #0f5b99; font-size: 12px; }
+    .stw-ext-tag { background: #f1f5f9; color: #64748b; }
+
+    .stw-mak-code { font-family: monospace; font-size: 12.5px; font-weight: 700; color: #0f5b99; background: #e6f2fc; padding: 4px 10px; border-radius: 6px; border: 1px solid #b9ddf8; display: inline-block; }
+    .stw-summary-desc-box { background: #f8fafc; border-left: 3px solid #0f5b99; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 13px; line-height: 1.5; color: #334155; font-weight: 500; }
+
+    .stw-sarana-summary-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+    .stw-sar-sum-item { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; }
+    .stw-sar-sum-head { display: flex; align-items: center; gap: 6px; }
+    .stw-sar-sum-title { font-size: 13px; font-weight: 700; color: #065f46; }
+    .stw-sar-sum-loc { font-size: 11.5px; color: #059669; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+    .stw-sar-sum-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .stw-sar-tag { font-size: 10.5px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+
+    .stw-tte-box { background: #e6f2fc; border: 1px solid #b9ddf8; border-radius: 10px; padding: 16px; margin-top: 16px; }
+    .stw-tte-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+    .stw-tte-icon { font-size: 20px; color: #0f5b99; margin-top: 2px; }
+    .stw-tte-title { font-size: 13px; font-weight: 700; color: #0f5b99; }
+    .stw-tte-sub { font-size: 12px; color: #1e3a5f; line-height: 1.4; margin-top: 2px; }
+
+    @media (max-width: 640px) {
+      .stw-summary-grid { grid-template-columns: 1fr; }
+      .stw-col-full { grid-column: span 1; }
+    }
+
+    /* Success Screen */
+    .stw-success { text-align:center; }
+    .stw-scheck { width:64px; height:64px; border-radius:50%; background:#10b981; display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px; }
+    .stw-success h2 { color:#1e293b!important; font-size:20px!important; font-weight:700!important; }
+    .stw-success-sub { color:#64748b; font-size:13px; line-height:1.6; }
   `;
   document.head.appendChild(s);
 };
@@ -439,9 +482,7 @@ const SuratTugasForm = () => {
       if (!lokasiVal) { message.warning("Pilih atau isi lokasi tugas"); return; }
     }
     if (step === 2) {
-      // MAK & sarana optional, just proceed
-    }
-    if (step === 2) {
+      try { await form.validateFields(["mak"]); } catch { return; }
       // Build review
       const vals = form.getFieldsValue(true);
       const lokasiVal = lokasi === "lainnya" ? vals.lokasi_lainnya : lokasi;
@@ -646,12 +687,12 @@ const SuratTugasForm = () => {
               </div>
             )}
             <Button type="primary" size="large" block icon={<RocketOutlined />} onClick={() => navigate("/app/layanan-mandiri")}
-              style={{ height: 48, borderRadius: 14, background: "linear-gradient(135deg,#0F5B99,#4A90E2)", border: "none", fontWeight: 600, marginTop: 24, boxShadow: "0 4px 16px rgba(15,91,153,.3)" }}>
+              style={{ height: 44, borderRadius: 10, background: "#0F5B99", border: "none", fontWeight: 600, marginTop: 24 }}>
               Kembali ke Layanan Mandiri
             </Button>
             <Button size="large" block icon={<FileProtectOutlined />}
               onClick={handleDownloadClick}
-              style={{ height: 48, borderRadius: 14, fontWeight: 600, marginTop: 12, border: "1px solid #10b981", color: "#10b981" }}>
+              style={{ height: 44, borderRadius: 10, fontWeight: 600, marginTop: 12, border: "1px solid #10b981", color: "#10b981", background: "#ffffff" }}>
               Unduh Protokol Kerja (PDF)
             </Button>
 
@@ -704,19 +745,29 @@ const SuratTugasForm = () => {
 
   return (
     <div className="stw-page">
-      <Button className="stw-back" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>Kembali</Button>
       <div className="stw-container">
+        {/* Top Navigation Bar with Precision Back Button */}
+        <div className="stw-top-bar">
+          <button className="stw-back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeftOutlined /> <span>Kembali</span>
+          </button>
+          <div className="stw-top-pill">
+            <span className="stw-top-dot" />
+            SIPTU LAYANAN MANDIRI
+          </div>
+        </div>
+
         {/* Header */}
         <div className="stw-header">
           <div className="stw-logo"><FileProtectOutlined /></div>
           <h2>Input Surat Tugas</h2>
-          <div className="stw-header-sub">Layanan Mandiri — Pembuatan Surat Tugas</div>
+          <div className="stw-header-sub">Sistem Informasi Pelayanan Tata Usaha — BPOM Palopo</div>
         </div>
 
-        {/* Progress */}
+        {/* Progress Stepper */}
         <div className="stw-progress">
           {STEPS.map((s, i) => (
-            <div key={s.key} style={{ display: "flex", alignItems: "center" }}>
+            <div key={s.key} style={{ display: "flex", alignItems: "center", flex: i < STEPS.length - 1 ? 1 : "initial" }}>
               <div className={`stw-dot ${i === step ? "active" : i < step ? "done" : "pending"}`}>
                 {i < step ? <CheckCircleOutlined /> : s.icon}
               </div>
@@ -727,11 +778,11 @@ const SuratTugasForm = () => {
 
         {/* Card */}
         <div className="stw-card">
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, borderRadius: "24px 24px 0 0", background: cur.gradient, transition: "background .5s ease" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, borderRadius: "16px 16px 0 0", background: cur.color || "#0F5B99", transition: "background .3s ease" }} />
           <div className={fadeClass}>
             {/* Step Header */}
             <div className="stw-sh">
-              <div className="stw-si" style={{ background: cur.gradient, boxShadow: `0 4px 16px ${cur.color}40` }}>{cur.icon}</div>
+              <div className="stw-si" style={{ background: cur.color || "#0F5B99" }}>{cur.icon}</div>
               <div><div className="stw-st">{cur.title}</div><div className="stw-ss">{cur.subtitle}</div></div>
             </div>
 
@@ -945,12 +996,31 @@ const SuratTugasForm = () => {
               {/* ══ Step 2: MAK & Sarana ══ */}
               {step === 2 && (
                 <>
-                  <Form.Item name="mak" label="MAK (Mata Anggaran Keluaran)">
+                  <Form.Item
+                    name="mak"
+                    label="MAK (Mata Anggaran Keluaran)"
+                    rules={[
+                      { required: true, message: "MAK wajib diisi, atau tulis '-' jika tidak ada." },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          const val = value.trim();
+                          if (val === "-") return Promise.resolve();
+                          if (val.length < 20) {
+                            return Promise.reject(new Error("MAK minimal 20 karakter (atau tulis '-' jika tidak ada)"));
+                          }
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
+                    extra={<span style={{ fontSize: "12px", color: "#64748b", display: "block", marginTop: "6px" }}>Format pengisian: <strong>3165.BDC.001.051.D.521211</strong> (atau tulis <strong>-</strong> jika tidak ada MAK)</span>}
+                  >
                     <AutoComplete
+                      className="mak-autocomplete"
                       options={makSuggestions}
                       onSearch={handleMakSearch}
                       onFocus={() => { if (makSuggestions.length === 0) fetchMakSuggestions(); }}
-                      placeholder="Contoh: 524111"
+                      placeholder="Contoh: 3165.BDC.001.051.D.521211"
                     >
                       <Input prefix={<DollarOutlined style={{ color: "#94a3b8" }} />} />
                     </AutoComplete>
@@ -1022,84 +1092,144 @@ const SuratTugasForm = () => {
               {/* ══ Step 3: Review ══ */}
               {step === 3 && (
                 <div>
-                  <div className="stw-rg">
-                    <div className="stw-rl">Ketua Tim</div>
-                    <div className="stw-rv">
-                      {reviewData.ketuaTim ? (
-                        <Tag key={reviewData.ketuaTim.id} style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, color: "#92400e", marginBottom: 4, padding: "4px 12px" }}>
-                          <CrownOutlined style={{ marginRight: 4, color: "#d97706" }} />{reviewData.ketuaTim.name}
-                        </Tag>
-                      ) : "-"}
-                    </div>
-                  </div>
-                  <div className="stw-rg">
-                    <div className="stw-rl">Anggota Tim Ditugaskan</div>
-                    <div className="stw-rv">
-                      <ol style={{ paddingLeft: 16, margin: 0 }}>
-                        {(reviewData.empList || []).map((e) => (
-                          <li key={e.id} style={{ marginBottom: 4 }}>
-                            {e.name}
-                          </li>
-                        ))}
-                        {(reviewData.extList || []).map((e) => (
-                          <li key={e.id} style={{ marginBottom: 4, color: "#64748b" }}>
-                            {e.name} <em>(Luar)</em>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  </div>
-                  <div className="stw-rg">
-                    <div className="stw-rl">Tanggal Tugas</div>
-                    <div className="stw-rv">
-                      {reviewData.tanggal_tugas ? `${reviewData.tanggal_tugas[0]?.format("DD MMMM YYYY")} — ${reviewData.tanggal_tugas[1]?.format("DD MMMM YYYY")}` : "-"}
-                    </div>
-                  </div>
-                  {reviewData.deskripsi_tugas && <div className="stw-rg"><div className="stw-rl">Agenda / Deskripsi</div><div className="stw-rv">{reviewData.deskripsi_tugas}</div></div>}
-                  <div className="stw-rg">
-                    <div className="stw-rl">Lokasi Tujuan</div>
-                    <div className="stw-rv">{reviewData.lokasiStr || "-"}</div>
-                  </div>
-                  {reviewData.mak && <div className="stw-rg"><div className="stw-rl">MAK</div><div className="stw-rv">{reviewData.mak}</div></div>}
-                  {reviewData.sarList?.length > 0 && (
-                    <div className="stw-rg">
-                      <div className="stw-rl">Data Sarana</div>
-                      <div className="stw-rv">
-                        {reviewData.sarList.map((s) => (
-                          <div key={s.id} style={{ marginBottom: 10, padding: "10px 14px", background: "#f0fdf4", borderRadius: 12, border: "1px solid #bbf7d0" }}>
-                            <div style={{ fontWeight: 600, color: "#065f46", fontSize: 14 }}>
-                              <BankOutlined style={{ marginRight: 6 }} />{s.nama}
-                            </div>
-                            {s.lokasi && <div style={{ fontSize: 12, color: "#6ee7b7", marginTop: 2 }}><EnvironmentOutlined style={{ marginRight: 4 }} />{s.lokasi}</div>}
-                            {s.jenis?.length > 0 && (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                                {s.jenis.map((j, i) => (
-                                  <Tag key={i} style={{ fontSize: 11, margin: 0, borderRadius: 8, background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "1px 8px", lineHeight: "20px" }}>{j}</Tag>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                  <div className="stw-summary-sheet">
+                    {/* Sheet Header */}
+                    <div className="stw-summary-header">
+                      <div className="stw-summary-title">
+                        <FileProtectOutlined className="stw-summary-icon" />
+                        <span>Ringkasan Penugasan</span>
                       </div>
+                      <div className="stw-summary-badge">DRAF SURAT TUGAS</div>
                     </div>
-                  )}
+
+                    {/* Summary 2-Column Grid */}
+                    <div className="stw-summary-grid">
+                      {/* Ketua Tim */}
+                      <div className="stw-summary-cell stw-col-full">
+                        <span className="stw-summary-label">Ketua Tim</span>
+                        <div className="stw-summary-value">
+                          {reviewData.ketuaTim ? (
+                            <div className="stw-katim-pill">
+                              <CrownOutlined style={{ color: "#d97706" }} />
+                              <span className="stw-katim-name">{reviewData.ketuaTim.name}</span>
+                              {reviewData.ketuaTim.nip && <span className="stw-katim-nip">NIP. {reviewData.ketuaTim.nip}</span>}
+                            </div>
+                          ) : <span className="stw-empty-val">-</span>}
+                        </div>
+                      </div>
+
+                      {/* Periode Tugas */}
+                      <div className="stw-summary-cell">
+                        <span className="stw-summary-label">Periode Tugas</span>
+                        <div className="stw-summary-value stw-val-flex">
+                          <CalendarOutlined style={{ color: "#0f5b99" }} />
+                          <span>{reviewData.tanggal_tugas ? `${reviewData.tanggal_tugas[0]?.format("DD MMMM YYYY")} — ${reviewData.tanggal_tugas[1]?.format("DD MMMM YYYY")}` : "-"}</span>
+                        </div>
+                      </div>
+
+                      {/* Lokasi Tujuan */}
+                      <div className="stw-summary-cell">
+                        <span className="stw-summary-label">Lokasi Tujuan</span>
+                        <div className="stw-summary-value stw-val-flex">
+                          <EnvironmentOutlined style={{ color: "#0f5b99" }} />
+                          <span>{reviewData.lokasiStr || "-"}</span>
+                        </div>
+                      </div>
+
+                      {/* MAK */}
+                      <div className="stw-summary-cell">
+                        <span className="stw-summary-label">MAK (Mata Anggaran Keluaran)</span>
+                        <div className="stw-summary-value">
+                          {reviewData.mak ? <span className="stw-mak-code">{reviewData.mak}</span> : <span className="stw-empty-val">-</span>}
+                        </div>
+                      </div>
+
+                      {/* Total Anggota */}
+                      <div className="stw-summary-cell">
+                        <span className="stw-summary-label">Jumlah Petugas</span>
+                        <div className="stw-summary-value">
+                          {(reviewData.empList?.length || 0) + (reviewData.extList?.length || 0)} Orang
+                        </div>
+                      </div>
+
+                      {/* Anggota Tim */}
+                      <div className="stw-summary-cell stw-col-full">
+                        <span className="stw-summary-label">Anggota Tim Ditugaskan</span>
+                        <div className="stw-summary-value">
+                          <div className="stw-members-tags">
+                            {(reviewData.empList || []).map((e) => (
+                              <div className="stw-member-tag" key={e.id}>
+                                <UserOutlined className="stw-member-icon" />
+                                <span>{e.name}</span>
+                              </div>
+                            ))}
+                            {(reviewData.extList || []).map((e) => (
+                              <div className="stw-member-tag stw-ext-tag" key={e.id}>
+                                <UserOutlined className="stw-member-icon" />
+                                <span>{e.name} <em style={{ fontStyle: "normal", fontSize: 10, opacity: 0.8 }}>(Luar)</em></span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Agenda / Deskripsi */}
+                      {reviewData.deskripsi_tugas && (
+                        <div className="stw-summary-cell stw-col-full">
+                          <span className="stw-summary-label">Agenda / Deskripsi Kegiatan</span>
+                          <div className="stw-summary-desc-box">
+                            {reviewData.deskripsi_tugas}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Data Sarana */}
+                      {reviewData.sarList?.length > 0 && (
+                        <div className="stw-summary-cell stw-col-full">
+                          <span className="stw-summary-label">Data Sarana (Sinkronisasi SIAMPARAN)</span>
+                          <div className="stw-sarana-summary-grid">
+                            {reviewData.sarList.map((s) => (
+                              <div key={s.id} className="stw-sar-sum-item">
+                                <div className="stw-sar-sum-head">
+                                  <BankOutlined style={{ color: "#059669" }} />
+                                  <span className="stw-sar-sum-title">{s.nama}</span>
+                                </div>
+                                {s.lokasi && (
+                                  <div className="stw-sar-sum-loc">
+                                    <EnvironmentOutlined /> {s.lokasi}
+                                  </div>
+                                )}
+                                {s.jenis?.length > 0 && (
+                                  <div className="stw-sar-sum-tags">
+                                    {s.jenis.map((j, i) => (
+                                      <span key={i} className="stw-sar-tag">{j}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   {/* TTE Mandatory for Katim */}
                   {isKatim && (
-                    <div style={{ marginTop: 24, padding: "20px 24px", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)", borderRadius: 16, border: "1px solid #86efac" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#166534", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                        <SafetyCertificateOutlined style={{ color: "#22c55e", fontSize: 18 }} />
-                        Konfirmasi TTE Protokol Kerja
+                    <div className="stw-tte-box">
+                      <div className="stw-tte-head">
+                        <SafetyCertificateOutlined className="stw-tte-icon" />
+                        <div>
+                          <div className="stw-tte-title">Konfirmasi TTE Protokol Kerja</div>
+                          <div className="stw-tte-sub">Anda terdeteksi sebagai <strong>Ketua Tim</strong>. Silakan masukkan password SIPTU Anda untuk menandatangani Protokol Kerja secara otomatis saat pengiriman.</div>
+                        </div>
                       </div>
-                      <p style={{ fontSize: 12, color: "#15803d", marginBottom: 16, lineHeight: 1.6 }}>
-                        Anda terdeteksi sebagai <strong>Ketua Tim</strong>. Silakan masukkan password SIPTU Anda untuk menandatangani Protokol Kerja secara otomatis saat pengiriman.
-                      </p>
                       <Input.Password
                         placeholder="Masukkan password SIPTU Anda..."
                         size="large"
                         value={ttePassword}
                         onChange={(e) => setTtePassword(e.target.value)}
-                        prefix={<LockOutlined style={{ color: "#22c55e" }} />}
+                        prefix={<LockOutlined style={{ color: "#0f5b99" }} />}
                         style={{ borderRadius: 10 }}
                       />
                     </div>

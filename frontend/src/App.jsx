@@ -178,7 +178,7 @@ function App() {
       "/app/bmn-laporan": "SIPTU | BMN - Laporan",
       "/app/pengadaan-pdtt-katalog": "SIPTU | Pengadaan - Katalog Barang",
       "/app/pengadaan-pdtt-rekapan": "SIPTU | Pengadaan - Rekapan Pengajuan",
-      "/app/pengelola-pegawai-pdtt": "SIPTU | Pengadaan - Hak Akses Pegawai",
+      "/app/pengelola-pegawai-pdtt": "SIPTU | Pengadaan - Jumlah Hari Pegawai",
       "/app/keuangan-lpj": "SIPTU | Keuangan - Pembuatan LPJ",
       "/app/keuangan-pejabat": "SIPTU | Keuangan - Pejabat Perbendaharaan",
       "/app/keuangan-revisi": "SIPTU | Keuangan - Revisi Anggaran",

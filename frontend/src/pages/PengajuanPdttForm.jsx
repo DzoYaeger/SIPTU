@@ -9,6 +9,7 @@ import {
     Card,
     InputNumber,
     Space,
+    DatePicker,
 } from "antd";
 import {
     ArrowLeftOutlined,
@@ -61,12 +62,13 @@ export default function PengajuanPdttForm() {
         setConfirmedQuantities(nextConfirmed);
     }, []);
 
-    const fetchPdttItems = useCallback(async () => {
+    const fetchPdttItems = useCallback(async (periodArg = null) => {
         if (!token) return;
         setPdttLoading(true);
         setCanAccessPdtt(true);
         try {
-            const res = await apiFetch(`${API_URL}/pdtt-items/requestable`);
+            const query = periodArg ? `?period=${periodArg}` : "";
+            const res = await apiFetch(`${API_URL}/pdtt-items/requestable${query}`);
             const data = await res.json();
             if (!res.ok) {
                 if (res.status === 403) setCanAccessPdtt(false);
@@ -106,8 +108,14 @@ export default function PengajuanPdttForm() {
     }, [apiFetch, message, token]);
 
     useEffect(() => {
-        fetchPdttItems();
+        fetchPdttItems(periodStr || dayjs().format("YYYY-MM"));
     }, [fetchPdttItems]);
+
+    const handlePeriodChange = (date) => {
+        if (date) {
+            fetchPdttItems(date.format("YYYY-MM"));
+        }
+    };
 
     const handleQuantityChange = (id, val) => {
         setQuantities((prev) => ({ ...prev, [id]: val }));
@@ -359,11 +367,17 @@ export default function PengajuanPdttForm() {
                     />
 
                     <Card className="public-card shadow-sm" styles={{ body: { padding: 0 } }}>
-                        <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
-                            <Text type="secondary">Periode Pengadaan Aktif: </Text>
-                            <Tag color="blue" style={{ marginLeft: 8 }}>{periodStr ? dayjs(periodStr).format("MMMM YYYY") : "-"}</Tag>
+                        <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center' }}>
+                            <Text type="secondary" style={{ marginRight: 12 }}>Periode Pengadaan Aktif: </Text>
+                            <DatePicker.MonthPicker 
+                                value={periodStr ? dayjs(periodStr, "YYYY-MM") : null}
+                                format="MMMM YYYY"
+                                onChange={handlePeriodChange}
+                                allowClear={false}
+                                style={{ width: 180 }}
+                            />
                             {existingRequest && (
-                                <Tag color="gold" style={{ marginLeft: 8 }}>
+                                <Tag color="gold" style={{ marginLeft: 16 }}>
                                     Data pengajuan tersimpan: {dayjs(existingRequest.updated_at || existingRequest.created_at).format("DD MMM YYYY HH:mm")}
                                 </Tag>
                             )}
