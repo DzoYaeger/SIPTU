@@ -474,9 +474,21 @@ const TopViolatorsList = ({ data, maxPoints }) => {
 
 // ── Employee Summary Table ───────────────────────────────────────────
 const EmployeeSummaryTable = ({ data }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data]);
+
   if (!data || data.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Tidak ada pelanggaran pada periode ini" />;
   }
+
+  const dataSourceWithKey = data.map((item, idx) => ({
+    ...item,
+    key: item.employee_id || `emp-${idx}`,
+  }));
 
   const columns = [
     {
@@ -585,11 +597,21 @@ const EmployeeSummaryTable = ({ data }) => {
 
   return (
     <Table
-      dataSource={data}
+      dataSource={dataSourceWithKey}
       columns={columns}
-      rowKey="employee_id"
+      rowKey="key"
       size="middle"
-      pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} pegawai` }}
+      pagination={{
+        current: currentPage,
+        pageSize: pageSize,
+        onChange: (page, newPageSize) => {
+          setCurrentPage(page);
+          setPageSize(newPageSize);
+        },
+        showSizeChanger: true,
+        pageSizeOptions: ["10", "20", "50", "100"],
+        showTotal: (total) => `Total ${total} pegawai`,
+      }}
       scroll={{ x: 900 }}
       rowClassName={(record) =>
         record.total_points >= 4 ? "table-row-high" : record.total_points >= 2 ? "table-row-medium" : ""
@@ -606,20 +628,24 @@ const RispegDashboard = () => {
   const { message } = AntdApp.useApp();
   const notification = buildMessageAdapter(message);
 
-  const [date, setDate] = useState(dayjs());
+  const [dateRange, setDateRange] = useState([
+    dayjs().startOf("month"),
+    dayjs().endOf("month"),
+  ]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
 
   const fetchStats = useCallback(
-    async (selectedDate) => {
+    async (range) => {
+      if (!range || !range[0] || !range[1]) return;
       setLoading(true);
       try {
-        const month = selectedDate.format("M");
-        const year = selectedDate.format("YYYY");
+        const startDate = range[0].format("YYYY-MM-DD");
+        const endDate = range[1].format("YYYY-MM-DD");
         const response = await apiFetch(
-          `/rispeg/dashboard-stats?month=${month}&year=${year}`,
+          `/rispeg/dashboard-stats?start_date=${startDate}&end_date=${endDate}`,
         );
         if (!response.ok) throw new Error("Gagal mengambil data statistik");
         const result = await response.json();
@@ -634,16 +660,17 @@ const RispegDashboard = () => {
   );
 
   useEffect(() => {
-    fetchStats(date);
-  }, [date, fetchStats]);
+    fetchStats(dateRange);
+  }, [dateRange, fetchStats]);
 
   const handleDownloadPdf = async () => {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) return;
     setDownloading(true);
     try {
-      const month = date.format("M");
-      const year = date.format("YYYY");
+      const startDate = dateRange[0].format("YYYY-MM-DD");
+      const endDate = dateRange[1].format("YYYY-MM-DD");
       const response = await apiFetch(
-        `/rispeg/export-pdf?month=${month}&year=${year}`,
+        `/rispeg/export-pdf?start_date=${startDate}&end_date=${endDate}`,
         { method: "GET", headers: { Accept: "application/pdf" } },
       );
       if (!response.ok) throw new Error("Gagal mengunduh laporan PDF");
@@ -651,7 +678,7 @@ const RispegDashboard = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Laporan_Monitoring_Rispeg_${date.format("MMMM_YYYY")}.pdf`;
+      a.download = `Laporan_Monitoring_Rispeg_${startDate}_sd_${endDate}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -793,17 +820,24 @@ const RispegDashboard = () => {
               </div>
               <Typography.Text type="secondary" style={{ fontSize: 13, marginLeft: 48 }}>
                 Rekap pelanggaran disiplin pegawai periode{" "}
-                <strong style={{ color: "#4263eb" }}>{date.format("MMMM YYYY")}</strong>
+                <strong style={{ color: "#4263eb" }}>
+                  {dateRange && dateRange[0] && dateRange[1]
+                    ? `${dateRange[0].format("DD MMM YYYY")} s/d ${dateRange[1].format("DD MMM YYYY")}`
+                    : "-"}
+                </strong>
               </Typography.Text>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <DatePicker
-                picker="month"
-                value={date}
-                onChange={setDate}
+              <DatePicker.RangePicker
+                value={dateRange}
+                onChange={(val) => {
+                  if (val && val[0] && val[1]) {
+                    setDateRange(val);
+                  }
+                }}
                 allowClear={false}
-                format="MMMM YYYY"
-                style={{ width: 180, borderRadius: 8 }}
+                format="DD/MM/YYYY"
+                style={{ width: 260, borderRadius: 8 }}
               />
               <Button
                 type="primary"
@@ -890,7 +924,7 @@ const RispegDashboard = () => {
           >
             <div style={{ width: 4, height: 20, borderRadius: 2, background: "linear-gradient(#4263eb, #7048e8)" }} />
             <Typography.Title level={5} style={{ margin: 0, fontWeight: 700 }}>
-              Rangkuman Pelanggaran Bulan {date.format("MMMM YYYY")}
+              Rangkuman Pelanggaran Periode {dateRange && dateRange[0] && dateRange[1] ? `${dateRange[0].format("DD MMM YYYY")} s/d ${dateRange[1].format("DD MMM YYYY")}` : ""}
             </Typography.Title>
             <Tag color="blue" style={{ borderRadius: 20, fontWeight: 600 }}>
               Total: {totalViolations} kejadian

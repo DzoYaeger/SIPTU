@@ -181,19 +181,21 @@ class EmployeeDailyControlController extends Controller
      */
     public function dashboard(Request $request)
     {
-        $month = $request->input('month', date('m'));
-        $year = $request->input('year', date('Y'));
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
-        // Helper to query base stats
-        $query = EmployeeDailyControl::with('employee')
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month);
+        if ($startDate && $endDate) {
+            $query = EmployeeDailyControl::with('employee')
+                ->whereBetween('date', [$startDate, $endDate]);
+        } else {
+            $month = $request->input('month', date('m'));
+            $year = $request->input('year', date('Y'));
 
-        // Aggregate per employee
-        // We use a raw query or collection aggregation. For simplicity and DB compatibility, let's fetch and collection-process 
-        // if dataset is small, or use DB raw if large. 
-        // Given typically < 200 employees, collection processing is fine and easier to read.
-        
+            $query = EmployeeDailyControl::with('employee')
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month);
+        }
+
         $controls = $query->get();
         
         $employeeStats = $controls->groupBy('employee_id')->map(function ($items, $id) {
@@ -248,8 +250,8 @@ class EmployeeDailyControlController extends Controller
         })->values();
 
         return response()->json([
-            'month' => (int)$month,
-            'year' => (int)$year,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'summary' => [
                 'top_points' => $topPoints,
                 'most_late_entries' => $mostLateEntries,
@@ -265,13 +267,32 @@ class EmployeeDailyControlController extends Controller
     public function exportPdf(Request $request)
     {
         try {
-            $month = $request->input('month', date('m'));
-            $year = $request->input('year', date('Y'));
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
 
-            $query = EmployeeDailyControl::with('employee')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month);
-            
+            if ($startDate && $endDate) {
+                $query = EmployeeDailyControl::with('employee')
+                    ->whereBetween('date', [$startDate, $endDate]);
+                
+                $startFormatted = Carbon::parse($startDate)->translatedFormat('d F Y');
+                $endFormatted = Carbon::parse($endDate)->translatedFormat('d F Y');
+                $periodText = "{$startFormatted} s/d {$endFormatted}";
+                $filenamePeriod = "{$startDate}_sd_{$endDate}";
+                $monthName = Carbon::parse($endDate)->translatedFormat('F');
+                $year = Carbon::parse($endDate)->format('Y');
+            } else {
+                $month = $request->input('month', date('m'));
+                $year = $request->input('year', date('Y'));
+
+                $query = EmployeeDailyControl::with('employee')
+                    ->whereYear('date', $year)
+                    ->whereMonth('date', $month);
+
+                $monthName = Carbon::createFromDate($year, $month, 1)->translatedFormat('F');
+                $periodText = "{$monthName} {$year}";
+                $filenamePeriod = "{$monthName}_{$year}";
+            }
+
             $controls = $query->get();
             
             $employeeStats = $controls->groupBy('employee_id')->map(function ($items, $id) {
@@ -294,6 +315,11 @@ class EmployeeDailyControlController extends Controller
                 ];
             })->values();
 
+            // Filter out employees with 0 violations/points for PDF report
+            $filteredStats = $employeeStats->filter(function ($stat) {
+                return ($stat['total_points'] ?? 0) > 0;
+            })->sortByDesc('total_points')->values();
+
             // 1. Pegawai dengan total point terbanyak
             $topPoints = $employeeStats->sortByDesc('total_points')->first();
 
@@ -303,21 +329,19 @@ class EmployeeDailyControlController extends Controller
             // 3. Pegawai dengan keluar cepat terbanyak (Count)
             $mostEarlyExits = $employeeStats->sortByDesc('total_early_exits')->first();
 
-            $monthName = Carbon::createFromDate($year, $month, 1)->translatedFormat('F');
-
             $pdf = Pdf::loadView('pdf.rispeg_report', [
-                'month' => $month,
-                'year' => $year,
+                'periodText' => $periodText,
                 'monthName' => $monthName,
+                'year' => $year,
                 'summary' => [
                     'top_points' => $topPoints,
                     'most_late_entries' => $mostLateEntries,
                     'most_early_exits' => $mostEarlyExits,
                 ],
-                'allStats' => $employeeStats->sortByDesc('total_points')->values()
+                'allStats' => $filteredStats
             ]);
 
-            return $pdf->download('Laporan_Monitoring_Rispeg_'.$monthName.'_'.$year.'.pdf');
+            return $pdf->download('Laporan_Monitoring_Rispeg_' . $filenamePeriod . '.pdf');
         } catch (\Exception $e) {
             \Log::error('PDF Export Error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());

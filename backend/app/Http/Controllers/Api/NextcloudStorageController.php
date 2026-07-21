@@ -42,7 +42,11 @@ class NextcloudStorageController extends Controller
     private function getWebdavUrl($path)
     {
         $cleanPath = '/' . ltrim($path, '/');
-        return "{$this->baseUrl}/remote.php/dav/files/{$this->username}{$cleanPath}";
+        $parts = explode('/', $cleanPath);
+        $encodedParts = array_map(function ($part) {
+            return rawurlencode(rawurldecode($part));
+        }, $parts);
+        return "{$this->baseUrl}/remote.php/dav/files/{$this->username}" . implode('/', $encodedParts);
     }
 
     /**
@@ -87,11 +91,6 @@ class NextcloudStorageController extends Controller
     {
         $currentUser = $request->user();
         $targetNip = $currentUser->nip;
-
-        // Admins can view other employee's folders
-        if ($currentUser->base_role === 'admin' && $request->filled('nip')) {
-            $targetNip = $request->query('nip');
-        }
 
         if (empty($targetNip)) {
             return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
@@ -355,12 +354,10 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // 🛡️ Security Check 2: Non-admins can only download their own NIP folder files
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($cleanPath, $expectedPrefix)) {
-                return response()->json(['message' => 'Anda tidak memiliki akses ke berkas ini.'], 403);
-            }
+        // 🛡️ Security Check 2: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($cleanPath !== $expectedPrefix && !str_starts_with($cleanPath, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Anda hanya dapat mengunduh berkas SIPTU Drive milik sendiri.'], 403);
         }
 
         try {
@@ -378,11 +375,30 @@ class NextcloudStorageController extends Controller
 
             $contentLength = $response->header('Content-Length');
             $filename = basename($cleanPath);
-            $contentType = $response->header('Content-Type') ?: 'application/octet-stream';
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $contentType = $response->header('Content-Type');
+
+            $mimeMap = [
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'webp' => 'image/webp',
+                'gif' => 'image/gif',
+                'svg' => 'image/svg+xml',
+                'bmp' => 'image/bmp',
+                'pdf' => 'application/pdf',
+            ];
+            if (isset($mimeMap[$ext])) {
+                $contentType = $mimeMap[$ext];
+            } else if (!$contentType || $contentType === 'application/octet-stream') {
+                $contentType = 'application/octet-stream';
+            }
+
+            $disposition = $request->query('inline') === '1' ? 'inline' : 'attachment';
 
             $res = response($response->body())
                 ->header('Content-Type', $contentType)
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                ->header('Content-Disposition', $disposition . '; filename="' . rawurlencode($filename) . '"');
             if ($contentLength) {
                 $res->header('Content-Length', $contentLength);
             }
@@ -412,12 +428,10 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // 🛡️ Security Check 2: Non-admins can only delete their own NIP folder files
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($cleanPath, $expectedPrefix)) {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus berkas ini.'], 403);
-            }
+        // 🛡️ Security Check 2: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($cleanPath !== $expectedPrefix && !str_starts_with($cleanPath, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Anda hanya dapat menghapus berkas SIPTU Drive milik sendiri.'], 403);
         }
 
         try {
@@ -454,12 +468,10 @@ class NextcloudStorageController extends Controller
         $currentUser = $request->user();
         $cleanPath = '/' . ltrim($path, '/');
 
-        // Security Check: Non-admins can only share their own NIP folder files
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($cleanPath, $expectedPrefix)) {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk membagikan berkas ini.'], 403);
-            }
+        // Security Check: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($cleanPath !== $expectedPrefix && !str_starts_with($cleanPath, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Anda hanya dapat membagikan berkas SIPTU Drive milik sendiri.'], 403);
         }
 
         try {
@@ -478,19 +490,26 @@ class NextcloudStorageController extends Controller
     public function shareInfo(Request $request, $token)
     {
         try {
-            $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+            $token = str_replace(' ', '+', $token);
+            $cleanBasePath = null;
+            $share = NextcloudShare::where('token', $token)->first();
+
+            if ($share) {
+                $cleanBasePath = '/' . ltrim($share->path, '/');
+            } else {
+                try {
+                    $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+                    $cleanBasePath = '/' . ltrim($basePath, '/');
+                } catch (\Exception $e) {
+                    return response()->json(['message' => 'Tautan berbagi tidak valid atau telah kedaluwarsa.'], 404);
+                }
+            }
             
-            // Security Check: Must start with SIPTU Drive
-            $cleanBasePath = '/' . ltrim($basePath, '/');
-            if (!str_starts_with($cleanBasePath, '/SIPTU Drive/')) {
+            if (!$cleanBasePath || !str_starts_with($cleanBasePath, '/SIPTU Drive/')) {
                 return response()->json(['message' => 'Akses ditolak.'], 403);
             }
 
-            $share = NextcloudShare::where('token', $token)->first();
-            if (!$share) {
-                return response()->json(['message' => 'Tautan berbagi tidak valid atau telah dinonaktifkan.'], 404);
-            }
-            $canEdit = (bool)$share->can_edit;
+            $canEdit = $share ? (bool)$share->can_edit : false;
 
             // Support navigation to subfolders
             $subPath = $request->query('path', '');
@@ -634,30 +653,47 @@ class NextcloudStorageController extends Controller
     /**
      * Mengunduh berkas secara publik berdasarkan share token.
      */
-    public function shareDownload(Request $request, $token)
+    public function shareDownload(Request $request, $token, $filename = null)
     {
         try {
-            $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
-            
-            // Security Check: Must start with SIPTU Drive
-            $cleanBasePath = '/' . ltrim($basePath, '/');
-            if (!str_starts_with($cleanBasePath, '/SIPTU Drive/')) {
+            $token = str_replace(' ', '+', $token);
+            $cleanBasePath = null;
+
+            $share = NextcloudShare::where('token', $token)->first();
+            if ($share) {
+                $cleanBasePath = '/' . ltrim($share->path, '/');
+            } else {
+                try {
+                    $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+                    $cleanBasePath = '/' . ltrim($basePath, '/');
+                } catch (\Exception $e) {
+                    return response()->json(['message' => 'Tautan tidak valid atau telah kedaluwarsa.'], 400);
+                }
+            }
+
+            if (!$cleanBasePath || !str_starts_with($cleanBasePath, '/SIPTU Drive/')) {
                 return response()->json(['message' => 'Akses ditolak.'], 403);
             }
 
-            // Support downloading file inside a shared folder
-            $subPath = $request->query('path', '');
-            $subPath = str_replace('..', '', $subPath);
-            $subPath = ltrim($subPath, '/');
-            
-            $targetPath = $cleanBasePath;
-            if (!empty($subPath)) {
-                $targetPath .= '/' . $subPath;
-            }
-            $cleanTargetPath = '/' . ltrim($targetPath, '/');
+            // Support downloading file inside a shared folder or direct path
+            $rawQueryPath = $request->query('path', '');
+            if (!empty($rawQueryPath)) {
+                $subPath = str_replace('..', '', $rawQueryPath);
+                $subPath = '/' . ltrim($subPath, '/');
 
-            // Security Check: Target path must remain within base shared directory
-            if (!str_starts_with($cleanTargetPath, $cleanBasePath)) {
+                if (str_starts_with($subPath, $cleanBasePath)) {
+                    $cleanTargetPath = $subPath;
+                } else if (str_starts_with($subPath, '/SIPTU Drive/')) {
+                    $cleanTargetPath = $subPath;
+                } else {
+                    $cleanTargetPath = rtrim($cleanBasePath, '/') . '/' . ltrim($subPath, '/');
+                }
+            } else {
+                $cleanTargetPath = $cleanBasePath;
+            }
+
+            // Security Check: Target path must remain within base shared directory or SIPTU Drive
+            if (!str_starts_with($cleanTargetPath, '/SIPTU Drive/')) {
                 return response()->json(['message' => 'Akses ditolak.'], 403);
             }
 
@@ -672,16 +708,48 @@ class NextcloudStorageController extends Controller
             }
 
             $contentLength = $response->header('Content-Length');
-            $contentType = $response->header('Content-Type') ?: 'application/octet-stream';
-            $fileName = basename($cleanTargetPath);
+            $fileName = $filename ?: basename($cleanTargetPath);
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $contentType = $response->header('Content-Type');
+
+            $mimeMap = [
+                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'xls' => 'application/vnd.ms-excel',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'doc' => 'application/msword',
+                'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'ppt' => 'application/vnd.ms-powerpoint',
+                'pdf' => 'application/pdf',
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'svg' => 'image/svg+xml',
+                'txt' => 'text/plain',
+                'csv' => 'text/csv',
+            ];
+
+            if (isset($mimeMap[$ext])) {
+                $contentType = $mimeMap[$ext];
+            } else if (!$contentType || $contentType === 'application/octet-stream') {
+                $contentType = 'application/octet-stream';
+            }
+
             $disposition = $request->query('inline') === '1' ? 'inline' : 'attachment';
 
             $headers = [
                 'Content-Type' => $contentType,
-                'Content-Disposition' => $disposition . '; filename="' . $fileName . '"',
+                'Content-Disposition' => $disposition . '; filename="' . rawurlencode($fileName) . '"',
+                'Access-Control-Allow-Origin' => '*',
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'public, max-age=3600',
             ];
             if ($contentLength) {
                 $headers['Content-Length'] = $contentLength;
+            }
+
+            if ($request->isMethod('HEAD')) {
+                return response('', 200, $headers);
             }
 
             return response($response->body(), 200, $headers);
@@ -709,12 +777,10 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // 🛡️ Security Check: Non-admins can only save files in their own NIP folder
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($cleanPath, $expectedPrefix)) {
-                return response()->json(['message' => 'Anda tidak memiliki akses untuk menyimpan berkas ini.'], 403);
-            }
+        // 🛡️ Security Check: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($cleanPath !== $expectedPrefix && !str_starts_with($cleanPath, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Anda hanya dapat menyimpan berkas di SIPTU Drive milik sendiri.'], 403);
         }
 
         $file = $request->file('file');
@@ -770,15 +836,13 @@ class NextcloudStorageController extends Controller
         $path = '/' . ltrim($request->query('path'), '/');
         $currentUser = $request->user();
 
-        // Security check
+        // Security check for ALL users (including admin)
         if (!str_starts_with($path, '/SIPTU Drive/')) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($path, $expectedPrefix)) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
-            }
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($path !== $expectedPrefix && !str_starts_with($path, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         $share = NextcloudShare::where('path', $path)->first();
@@ -801,15 +865,13 @@ class NextcloudStorageController extends Controller
         $canEdit = $request->input('can_edit');
         $currentUser = $request->user();
 
-        // Security check
+        // Security check for ALL users (including admin)
         if (!str_starts_with($path, '/SIPTU Drive/')) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($path, $expectedPrefix)) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
-            }
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($path !== $expectedPrefix && !str_starts_with($path, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         $share = NextcloudShare::where('path', $path)->first();
@@ -817,8 +879,8 @@ class NextcloudStorageController extends Controller
         if ($share) {
             $share->update(['can_edit' => $canEdit]);
         } else {
-            // Generate token
-            $token = base64_encode(\Illuminate\Support\Facades\Crypt::encryptString($path));
+            // Generate clean URL-safe 32-char hex token
+            $token = bin2hex(random_bytes(16));
             $share = NextcloudShare::create([
                 'path' => $path,
                 'token' => $token,
@@ -839,15 +901,13 @@ class NextcloudStorageController extends Controller
         $path = '/' . ltrim($request->query('path'), '/');
         $currentUser = $request->user();
 
-        // Security check
+        // Security check for ALL users (including admin)
         if (!str_starts_with($path, '/SIPTU Drive/')) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($path, $expectedPrefix)) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
-            }
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if ($path !== $expectedPrefix && !str_starts_with($path, $expectedPrefix . '/')) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         NextcloudShare::where('path', $path)->delete();
@@ -871,12 +931,13 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // Security Check 2: Non-admins can only move within their own folder
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($source, $expectedPrefix) || !str_starts_with($dest, $expectedPrefix)) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
-            }
+        // Security Check 2: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if (
+            ($source !== $expectedPrefix && !str_starts_with($source, $expectedPrefix . '/')) ||
+            ($dest !== $expectedPrefix && !str_starts_with($dest, $expectedPrefix . '/'))
+        ) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         try {
@@ -915,12 +976,13 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // Security Check 2: Non-admins can only copy within their own folder
-        if ($currentUser->base_role !== 'admin') {
-            $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip . '/';
-            if (!str_starts_with($source, $expectedPrefix) || !str_starts_with($dest, $expectedPrefix)) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
-            }
+        // Security Check 2: Strictly enforce user's own NIP folder for ALL users (including admin)
+        $expectedPrefix = '/SIPTU Drive/' . $currentUser->nip;
+        if (
+            ($source !== $expectedPrefix && !str_starts_with($source, $expectedPrefix . '/')) ||
+            ($dest !== $expectedPrefix && !str_starts_with($dest, $expectedPrefix . '/'))
+        ) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         try {
@@ -938,6 +1000,128 @@ class NextcloudStorageController extends Controller
             return response()->json(['message' => 'Item berhasil disalin.']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Search files recursively starting from the currently open folder path.
+     */
+    public function search(Request $request)
+    {
+        $currentUser = $request->user();
+        $targetNip = $currentUser->nip;
+
+        if (empty($targetNip)) {
+            return response()->json(['message' => 'NIP pegawai tidak ditemukan.'], 400);
+        }
+
+        $query = strtolower(trim($request->query('query', '')));
+        $subPath = $request->query('path', '');
+        
+        $baseDir = "SIPTU Drive/{$targetNip}";
+        if ($subPath) {
+            $subPath = str_replace('..', '', $subPath);
+            $subPath = ltrim($subPath, '/');
+            $targetDir = $baseDir . '/' . $subPath;
+        } else {
+            $targetDir = $baseDir;
+        }
+
+        if (empty($query)) {
+            return response()->json(['files' => []]);
+        }
+
+        try {
+            $this->ensureDirectoryExists($targetDir);
+
+            $url = $this->getWebdavUrl($targetDir);
+            $response = $this->httpClient()
+                ->withHeaders([
+                    'X-Requested-With' => 'XMLHttpRequest',
+                    'Depth' => 'infinity'
+                ])
+                ->send('PROPFIND', $url);
+
+            if (!$response->successful()) {
+                return response()->json(['files' => []]);
+            }
+
+            $xmlStr = $response->body();
+            $files = [];
+
+            $cleanTargetDir = '/' . ltrim($targetDir, '/');
+            $sharedPaths = NextcloudShare::where('path', 'like', $cleanTargetDir . '%')
+                ->get()
+                ->keyBy('path');
+
+            $dom = new \DOMDocument();
+            if (@$dom->loadXML($xmlStr)) {
+                $xpath = new \DOMXPath($dom);
+                $xpath->registerNamespace('d', 'DAV:');
+                $responseNodes = $xpath->query('//d:response');
+
+                foreach ($responseNodes as $node) {
+                    $hrefNodes = $xpath->query('d:href', $node);
+                    $href = $hrefNodes->length > 0 ? $hrefNodes->item(0)->textContent : '';
+                    $decodedHref = urldecode($href);
+                    
+                    $prefix = "/remote.php/dav/files/{$this->username}";
+                    $relativePath = str_replace($prefix, '', $decodedHref);
+                    $cleanRelative = '/' . ltrim($relativePath, '/');
+
+                    // Skip the requested root search folder itself
+                    if (rtrim($cleanRelative, '/') === rtrim($cleanTargetDir, '/')) {
+                        continue;
+                    }
+
+                    $name = basename(rtrim($relativePath, '/'));
+
+                    // Check if file/folder name matches query
+                    if (stripos($name, $query) === false) {
+                        continue;
+                    }
+
+                    $propNodes = $xpath->query('d:propstat/d:prop', $node);
+                    if ($propNodes->length > 0) {
+                        $prop = $propNodes->item(0);
+                        
+                        $lastModifiedNodes = $xpath->query('d:getlastmodified', $prop);
+                        $lastModified = $lastModifiedNodes->length > 0 ? date('Y-m-d H:i:s', strtotime($lastModifiedNodes->item(0)->textContent)) : null;
+                        
+                        $sizeNodes = $xpath->query('d:getcontentlength', $prop);
+                        $size = $sizeNodes->length > 0 ? (int)$sizeNodes->item(0)->textContent : 0;
+                        
+                        $contentTypeNodes = $xpath->query('d:getcontenttype', $prop);
+                        $contentType = $contentTypeNodes->length > 0 ? $contentTypeNodes->item(0)->textContent : '';
+                        
+                        $collectionNodes = $xpath->query('d:resourcetype/d:collection', $prop);
+                        $isDir = $collectionNodes->length > 0;
+
+                        $isShared = isset($sharedPaths[$cleanRelative]);
+
+                        // Calculate path relative to open folder
+                        $relToFolder = str_replace($cleanTargetDir, '', $cleanRelative);
+                        $displaySubPath = ltrim($relToFolder, '/');
+
+                        $files[] = [
+                            'name' => $name,
+                            'path' => $cleanRelative,
+                            'display_path' => $displaySubPath,
+                            'size' => $isDir ? null : $size,
+                            'is_dir' => $isDir,
+                            'is_shared' => $isShared,
+                            'last_modified' => $lastModified,
+                            'content_type' => $contentType,
+                        ];
+                    }
+                }
+            }
+
+            return response()->json(['files' => $files]);
+
+        } catch (\Exception $e) {
+            Log::error("Nextcloud search error: " . $e->getMessage());
+            return response()->json(['files' => []], 500);
         }
     }
 
@@ -1182,6 +1366,141 @@ class NextcloudStorageController extends Controller
             return $e->getResponse();
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Prepare a static file URL for Microsoft Office Online viewing.
+     * Downloads file from Nextcloud and caches it in public/dokumen-nextcloud/.
+     * Returns the direct static URL that Office Online can access.
+     */
+    public function officePreview(Request $request)
+    {
+        try {
+            $rawToken = $request->input('token');
+            $path = $request->input('path', '');
+
+            if (!$rawToken) {
+                return response()->json(['message' => 'Token diperlukan.'], 400);
+            }
+
+            // Decode URL variations (e.g. %3D == or spaces vs +)
+            $token = urldecode(str_replace(' ', '+', $rawToken));
+            $cleanBasePath = null;
+
+            $share = NextcloudShare::where('token', $token)->orWhere('token', $rawToken)->first();
+            if ($share) {
+                $cleanBasePath = '/' . ltrim($share->path, '/');
+            } else {
+                try {
+                    $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($token));
+                    $cleanBasePath = '/' . ltrim($basePath, '/');
+                } catch (\Exception $e) {
+                    try {
+                        $basePath = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode(urldecode($rawToken)));
+                        $cleanBasePath = '/' . ltrim($basePath, '/');
+                    } catch (\Exception $e2) {
+                        return response()->json(['message' => 'Tautan tidak valid atau telah kedaluwarsa.'], 400);
+                    }
+                }
+            }
+
+            if (!$cleanBasePath || !str_starts_with($cleanBasePath, '/SIPTU Drive/')) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            // Resolve target path safely (Single file vs Directory share)
+            $baseExt = strtolower(pathinfo($cleanBasePath, PATHINFO_EXTENSION));
+            if (!empty($baseExt)) {
+                // $cleanBasePath is already a direct single file path
+                $cleanTargetPath = $cleanBasePath;
+            } else {
+                // $cleanBasePath is a directory (folder share)
+                if (!empty($path)) {
+                    $subPath = str_replace('..', '', $path);
+                    $subPath = '/' . ltrim($subPath, '/');
+
+                    if (str_starts_with($subPath, $cleanBasePath)) {
+                        $cleanTargetPath = $subPath;
+                    } else if (str_starts_with($subPath, '/SIPTU Drive/')) {
+                        $cleanTargetPath = $subPath;
+                    } else {
+                        $cleanTargetPath = rtrim($cleanBasePath, '/') . '/' . ltrim($subPath, '/');
+                    }
+                } else {
+                    $cleanTargetPath = $cleanBasePath;
+                }
+            }
+
+            if (!str_starts_with($cleanTargetPath, '/SIPTU Drive/')) {
+                return response()->json(['message' => 'Akses ditolak.'], 403);
+            }
+
+            // Generate unique deterministic filename based on target path hash + original filename
+            $originalName = basename($cleanTargetPath);
+            $hash = substr(md5($cleanTargetPath), 0, 16);
+            $safeFilename = $hash . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+
+            $cacheDir = public_path('dokumen-nextcloud');
+            $cachePath = $cacheDir . DIRECTORY_SEPARATOR . $safeFilename;
+
+            // Clean up old cached files (older than 4 hours = 14400 seconds)
+            $this->cleanupOldPreviewFiles($cacheDir, 14400);
+
+            // Check if file already exists in cache to avoid double download
+            if (file_exists($cachePath) && filesize($cachePath) > 0) {
+                // Update file modification time so it remains fresh
+                @touch($cachePath);
+            } else {
+                // Download from Nextcloud only if not already cached
+                $url = $this->getWebdavUrl($cleanTargetPath);
+                $response = $this->httpClient()
+                    ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                    ->timeout(60)
+                    ->send('GET', $url);
+
+                if (!$response->successful()) {
+                    return response()->json(['message' => 'Gagal mengunduh berkas dari Nextcloud.'], 404);
+                }
+
+                // Save to public directory
+                file_put_contents($cachePath, $response->body());
+            }
+
+            // Build the public static URL
+            // APP_URL includes /core_api, and dokumen-nextcloud is in Laravel's public/ dir
+            $appUrl = rtrim(config('app.url', 'https://siptu.bpompalopo.com/core_api'), '/');
+            $publicUrl = $appUrl . '/dokumen-nextcloud/' . $safeFilename;
+
+            return response()->json([
+                'url' => $publicUrl,
+                'filename' => $originalName,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Office preview error: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal mempersiapkan pratinjau. ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remove preview files older than the specified max age (in seconds, default 4 hours = 14400).
+     */
+    private function cleanupOldPreviewFiles($directory, $maxAge = 14400)
+    {
+        if (!is_dir($directory)) return;
+
+        $now = time();
+        $files = glob($directory . DIRECTORY_SEPARATOR . '*');
+        foreach ($files as $file) {
+            // Keep .gitignore and .htaccess safe
+            $filename = basename($file);
+            if ($filename === '.gitignore' || $filename === '.htaccess') {
+                continue;
+            }
+
+            if (is_file($file) && ($now - filemtime($file)) > $maxAge) {
+                @unlink($file);
+            }
         }
     }
 }

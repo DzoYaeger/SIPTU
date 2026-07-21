@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
     App as AntdApp,
     DatePicker,
@@ -25,14 +25,17 @@ import {
     CodeSandboxOutlined,
     FilePdfOutlined,
     MoreOutlined,
+    ArrowLeftOutlined,
+    ClockCircleOutlined,
+    CheckCircleOutlined,
+    DollarOutlined,
 } from '@ant-design/icons';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { buildMessageAdapter } from '../utils/notify.js';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-// We reuse KearsipanPencatatanSurat CSS for generic table styling
-import './KearsipanPencatatanSurat.css'; 
+import './PengadaanPbj.css'; 
 
 dayjs.locale('id');
 
@@ -40,10 +43,10 @@ const DATE_API = 'YYYY-MM-DD';
 const DATE_UI = 'DD/MM/YYYY';
 
 function DateBadge({ value }) {
-    if (!value) return <span className="ps-bukti-none">—</span>;
+    if (!value) return <span style={{ color: '#94a3b8' }}>—</span>;
     return (
-        <span className="ps-date ps-date--blue">
-            <CalendarOutlined style={{ fontSize: 11 }} />
+        <span className="pbj-date-badge">
+            <CalendarOutlined style={{ fontSize: 11, color: '#0F5B99' }} />
             {dayjs(value).format('DD MMM YYYY')}
         </span>
     );
@@ -85,7 +88,7 @@ function PengadaanPbjInner() {
     const [dataRows, setDataRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
-    const [pagination, setPagination] = useState({ current: 1, pageSize: 25 });
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
     // Inline editing
     const [editingKey, setEditingKey] = useState(null);
@@ -155,14 +158,28 @@ function PengadaanPbjInner() {
         } catch (e) { notification.error({ message: 'Gagal', description: e.message }); }
     };
 
-    const baseData = search
-        ? dataRows.filter(r => ['nama_pengadaan', 'nama_penyedia', 'no_kontrak', 'no_bast']
-            .some(k => (r[k] ?? '').toLowerCase().includes(search.toLowerCase())))
-        : dataRows;
+    const [statusFilter, setStatusFilter] = useState('ALL');
+
+    const filteredRows = useMemo(() => {
+        return dataRows.filter(r => {
+            const matchesSearch = !search || ['nama_pengadaan', 'nama_penyedia', 'no_kontrak', 'no_bast']
+                .some(k => (r[k] ?? '').toLowerCase().includes(search.toLowerCase()));
+            const matchesStatus = statusFilter === 'ALL' || r.status_barang === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [dataRows, search, statusFilter]);
+
+    const kpiStats = useMemo(() => {
+        const total = dataRows.length;
+        const inProgress = dataRows.filter(r => r.status_barang !== 'Selesai').length;
+        const finished = dataRows.filter(r => r.status_barang === 'Selesai').length;
+        const totalAmount = dataRows.reduce((acc, r) => acc + (Number(r.nominal) || 0), 0);
+        return { total, inProgress, finished, totalAmount };
+    }, [dataRows]);
 
     const tableData = editingKey === '__new__'
-        ? [{ key: '__new__' }, ...baseData]
-        : baseData;
+        ? [{ key: '__new__' }, ...filteredRows]
+        : filteredRows;
 
     const setField = (field) => (val) => setDraft(prev => ({ ...prev, [field]: val }));
 
@@ -208,8 +225,8 @@ function PengadaanPbjInner() {
             doc.setFontSize(9);
             doc.text(`Dicetak pada: ${dayjs().format('DD MMMM YYYY HH:mm')}`, margin, 52);
 
-            // Convert baseData to table rows
-            const body = baseData.filter(r => r.key !== '__new__').map((r, index) => [
+            // Convert filteredRows to table rows
+            const body = filteredRows.filter(r => r.key !== '__new__').map((r, index) => [
                 index + 1,
                 r.nama_pengadaan || '-',
                 r.status_barang || '-',
@@ -422,7 +439,7 @@ function PengadaanPbjInner() {
             title: 'No Kontrak', dataIndex: 'no_kontrak', key: 'no_kontrak', width: 150,
             render: (v, r) => isEditing(r.key)
                 ? <InlineInput value={draft.no_kontrak} onChange={setField('no_kontrak')} placeholder="No Kontrak" />
-                : <span className="ps-code">{v || '—'}</span>
+                : <span className="pbj-code-badge">{v || '—'}</span>
         },
         {
             title: 'Nominal', dataIndex: 'nominal', key: 'nominal', width: 150,
@@ -430,7 +447,7 @@ function PengadaanPbjInner() {
                 ? <InputNumber size="small" style={{ width: 130 }} value={draft.nominal} onChange={setField('nominal')}
                     formatter={value => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
                     parser={value => value.replace(/\Rp\s?|(\.*)/g, '')} />
-                : <span>{v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—'}</span>
+                : <span style={{ fontWeight: 700, color: '#0F5B99' }}>{v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—'}</span>
         },
         {
             title: 'Tgl Kirim', dataIndex: 'tanggal_kirim', key: 'tanggal_kirim', width: 140,
@@ -448,7 +465,7 @@ function PengadaanPbjInner() {
             title: 'No BAST', dataIndex: 'no_bast', key: 'no_bast', width: 150,
             render: (v, r) => isEditing(r.key)
                 ? <InlineInput value={draft.no_bast} onChange={setField('no_bast')} placeholder="No BAST" />
-                : <span className="ps-code">{v || '—'}</span>
+                : <span className="pbj-code-badge">{v || '—'}</span>
         },
         {
             title: 'Tgl BAST', dataIndex: 'tanggal_bast', key: 'tanggal_bast', width: 140,
@@ -460,94 +477,163 @@ function PengadaanPbjInner() {
     ];
 
     return (
-        <div className="ps-page">
-            <div style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1a1f36', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <CodeSandboxOutlined style={{ color: '#4f46e5' }} /> Proses Pengadaan PBJ
-                </h2>
+        <div className="pbj-page">
+            {/* Header */}
+            <div className="pbj-header">
+                <div className="pbj-header__left">
+                    <div className="pbj-header__title-group">
+                        <div className="pbj-header__icon-badge">
+                            <CodeSandboxOutlined />
+                        </div>
+                        <div>
+                            <h2 className="pbj-header__title">Proses Pengadaan PBJ</h2>
+                            <p className="pbj-header__subtitle">
+                                Kelola pencatatan, status pengiriman, kontrak, dan BAST pengadaan barang/jasa BPOM.
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 <button
                     type="button"
-                    className="ps-page__add-btn"
+                    className="pbj-back-btn"
                     onClick={() => navigate('/app/dashboard')}
-                    style={{ paddingInline: 14 }}
                 >
-                    Kembali ke Dashboard
+                    <ArrowLeftOutlined /> Kembali ke Dashboard
                 </button>
             </div>
 
-            <div className="ps-page__toolbar" style={{ marginTop: 12 }}>
-                <div className="ps-page__controls" style={{ marginLeft: 'auto', width: '100%', justifyContent: 'space-between' }}>
-                    <Input
-                        className="ps-page__search"
-                        placeholder="Cari pengadaan, penyedia, no kontrak..."
-                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                        allowClear value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{ maxWidth: 300 }}
-                    />
-                    <Space>
-                        <Tooltip title="Ekspor data ke PDF">
+            {/* KPI Cards */}
+            <div className="pbj-kpi-grid">
+                <div className="pbj-kpi-card">
+                    <div className="pbj-kpi-icon pbj-kpi-icon--blue">
+                        <CodeSandboxOutlined />
+                    </div>
+                    <div className="pbj-kpi-info">
+                        <span className="pbj-kpi-label">Total Pengadaan</span>
+                        <span className="pbj-kpi-value">{kpiStats.total} <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Item</span></span>
+                    </div>
+                </div>
+                <div className="pbj-kpi-card">
+                    <div className="pbj-kpi-icon pbj-kpi-icon--amber">
+                        <ClockCircleOutlined />
+                    </div>
+                    <div className="pbj-kpi-info">
+                        <span className="pbj-kpi-label">Dalam Proses</span>
+                        <span className="pbj-kpi-value">{kpiStats.inProgress} <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Item</span></span>
+                    </div>
+                </div>
+                <div className="pbj-kpi-card">
+                    <div className="pbj-kpi-icon pbj-kpi-icon--emerald">
+                        <CheckCircleOutlined />
+                    </div>
+                    <div className="pbj-kpi-info">
+                        <span className="pbj-kpi-label">Selesai</span>
+                        <span className="pbj-kpi-value">{kpiStats.finished} <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Item</span></span>
+                    </div>
+                </div>
+                <div className="pbj-kpi-card">
+                    <div className="pbj-kpi-icon pbj-kpi-icon--indigo">
+                        <DollarOutlined />
+                    </div>
+                    <div className="pbj-kpi-info">
+                        <span className="pbj-kpi-label">Total Nominal</span>
+                        <span className="pbj-kpi-value">Rp {kpiStats.totalAmount.toLocaleString('id-ID')}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Table Card */}
+            <div className="pbj-card">
+                <div className="pbj-toolbar">
+                    <div className="pbj-toolbar__search-group">
+                        <Input
+                            className="pbj-search-input"
+                            placeholder="Cari pengadaan, penyedia, no kontrak..."
+                            prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                            allowClear
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <Select
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            style={{ width: 180 }}
+                        >
+                            <Select.Option value="ALL">Semua Status</Select.Option>
+                            <Select.Option value="Proses Negosiasi">Proses Negosiasi</Select.Option>
+                            <Select.Option value="Proses PPK">Proses PPK</Select.Option>
+                            <Select.Option value="Proses pengiriman">Proses Pengiriman</Select.Option>
+                            <Select.Option value="Proses Pembayaran">Proses Pembayaran</Select.Option>
+                            <Select.Option value="Selesai">Selesai</Select.Option>
+                        </Select>
+                    </div>
+                    <div className="pbj-toolbar__actions">
+                        <Tooltip title="Ekspor data ke laporan PDF resmi">
                             <button
-                                className="ps-page__add-btn"
+                                className="pbj-btn-danger"
                                 type="button"
                                 onClick={exportToPdf}
-                                style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
                             >
-                                <FilePdfOutlined /> Tarik PDF
+                                <FilePdfOutlined /> Tarik Laporan PDF
                             </button>
                         </Tooltip>
                         {isAdmin && (
                             <Tooltip title={editingKey ? 'Selesaikan edit baris ini dulu.' : ''}>
-                                <button className="ps-page__add-btn" type="button" onClick={startNew}
+                                <button
+                                    className="pbj-btn-primary"
+                                    type="button"
+                                    onClick={startNew}
                                     disabled={!!editingKey}
-                                    style={editingKey ? { opacity: .5, cursor: 'not-allowed' } : {}}>
+                                >
                                     <PlusOutlined /> Tambah Data
                                 </button>
                             </Tooltip>
                         )}
-                    </Space>
+                    </div>
                 </div>
-            </div>
 
-            <div className="ps-page__table-card">
                 {editingKey === '__new__' && (
-                    <div className="ps-inline-hint">
-                        ✏️ Isi kolom pada baris baru di bawah, lalu klik <strong>✓</strong> (kanan tabel) untuk menyimpan.
+                    <div className="pbj-inline-hint">
+                        ✏️ Silakan isi rincian pada baris baru di bawah, lalu klik menu aksi <strong>(⋮)</strong> di ujung kanan untuk menyimpan.
                     </div>
                 )}
-                <Table
-                    dataSource={tableData}
-                    columns={columns}
-                    rowKey="key"
-                    loading={loading}
-                    size="small"
-                    scroll={{ x: 'max-content', y: 'calc(100vh - 280px)' }}
-                    rowClassName={(record) => isEditing(record.key) ? 'ps-row-editing' : ''}
-                    pagination={{
-                        current: pagination?.current ?? 1,
-                        pageSize: pagination?.pageSize ?? 25,
-                        showTotal: (n) => `${n} data`,
-                        showSizeChanger: false,
-                        position: ['bottomRight'],
-                        onChange: (page, size) => setPagination({ current: page, pageSize: size }),
-                    }}
-                    locale={{
-                        emptyText: (
-                            <div className="ps-empty">
-                                <div className="ps-empty-icon">📦</div>
-                                <h3>Belum ada data Pengadaan PBJ</h3>
-                                {isAdmin && (
-                                    <>
-                                        <p>Klik tombol <strong>Tambah Data</strong> untuk mulai mencatat.</p>
-                                        <button className="ps-page__add-btn" type="button" onClick={startNew} disabled={!!editingKey}>
-                                            <PlusOutlined /> Tambah Sekarang
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        ),
-                    }}
-                />
+
+                <div className="pbj-table">
+                    <Table
+                        dataSource={tableData}
+                        columns={columns}
+                        rowKey="key"
+                        loading={loading}
+                        size="small"
+                        scroll={{ x: 'max-content', y: 550 }}
+                        rowClassName={(record) => isEditing(record.key) ? 'pbj-row-editing' : ''}
+                        pagination={{
+                            current: pagination?.current ?? 1,
+                            pageSize: pagination?.pageSize ?? 10,
+                            showTotal: (n) => `Total ${n} data pengadaan`,
+                            showSizeChanger: true,
+                            pageSizeOptions: ['10', '25', '50', '100'],
+                            position: ['bottomRight'],
+                            onChange: (page, size) => setPagination({ current: page, pageSize: size }),
+                        }}
+                        locale={{
+                            emptyText: (
+                                <div className="pbj-empty">
+                                    <div className="pbj-empty-icon">📦</div>
+                                    <h3>Belum ada data Pengadaan PBJ</h3>
+                                    {isAdmin && (
+                                        <>
+                                            <p>Klik tombol <strong>Tambah Data</strong> untuk mulai mencatat pengadaan barang/jasa.</p>
+                                            <button className="pbj-btn-primary" type="button" onClick={startNew} disabled={!!editingKey}>
+                                                <PlusOutlined /> Tambah Sekarang
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            ),
+                        }}
+                    />
+                </div>
             </div>
         </div>
     );

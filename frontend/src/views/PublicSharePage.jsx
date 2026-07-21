@@ -17,6 +17,7 @@ import {
   Modal, 
   Upload, 
   Progress,
+  Image,
   message as andMessage 
 } from "antd";
 import {
@@ -50,12 +51,27 @@ import {
   CloseCircleFilled,
   MinusOutlined,
   CloseOutlined,
+  EyeOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
+import DocViewerModal from "../components/DocViewerModal.jsx";
 import dayjs from "dayjs";
 import "./PublicSharePage.css";
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
+
+const isDocViewable = (fileName) => {
+  if (!fileName) return false;
+  const ext = fileName.split(".").pop().toLowerCase();
+  return ["xlsx", "xls", "docx", "doc", "pptx", "ppt"].includes(ext);
+};
+
+const isImageFile = (fileName) => {
+  if (!fileName) return false;
+  const ext = fileName.split(".").pop().toLowerCase();
+  return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"].includes(ext);
+};
 
 const formatBytes = (bytes, decimals = 2) => {
   if (bytes === null || bytes === undefined) return "-";
@@ -196,6 +212,10 @@ export default function PublicSharePage() {
 
   // PDF Preview state
   const [previewPdfFile, setPreviewPdfFile] = useState(null);
+  // Apps Doc View state
+  const [docViewFile, setDocViewFile] = useState(null);
+  // Photo Preview state
+  const [previewImage, setPreviewImage] = useState(null);
 
   const handleDragEnter = (e) => {
     if (!fileInfo?.can_edit) return;
@@ -762,8 +782,14 @@ export default function PublicSharePage() {
           ) : (
             <Text 
               strong 
-              style={{ color: "#202124", cursor: record.name.toLowerCase().endsWith(".pdf") ? "pointer" : "default" }}
-              onClick={() => record.name.toLowerCase().endsWith(".pdf") && window.open(getDownloadUrl(record, true), "_blank")}
+              style={{ color: "#202124", cursor: (isDocViewable(record.name) || record.name.toLowerCase().endsWith(".pdf")) ? "pointer" : "default" }}
+              onClick={() => {
+                if (isDocViewable(record.name)) {
+                  setDocViewFile(record);
+                } else if (record.name.toLowerCase().endsWith(".pdf")) {
+                  window.open(getDownloadUrl(record, true), "_blank");
+                }
+              }}
             >
               {text}
             </Text>
@@ -792,10 +818,20 @@ export default function PublicSharePage() {
     {
       title: "Aksi",
       key: "actions",
-      width: 160,
+      width: 180,
       align: "center",
       render: (_, file) => (
-        <Space>
+        <Space size="small">
+          {isDocViewable(file.name) && (
+            <Tooltip title="Pratinjau Dokumen (apps doc view)">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<EyeOutlined style={{ color: "#1890ff", fontSize: "16px" }} />}
+                onClick={() => setDocViewFile(file)}
+              />
+            </Tooltip>
+          )}
           {file.name.toLowerCase().endsWith(".pdf") && (
             <Tooltip title="Pratinjau PDF">
               <Button
@@ -879,10 +915,14 @@ export default function PublicSharePage() {
   if (loading) {
     return (
       <div className="share-landing-loader">
-        <Space direction="vertical" size="middle" align="center">
-          <Spin size="large" />
-          <Text type="secondary" style={{ fontSize: "16px" }}>Membaca informasi berkas...</Text>
-        </Space>
+        <div className="share-loader-card">
+          <div className="share-loader-icon-ring">
+            <CloudServerOutlined className="share-loader-cloud-icon" />
+            <div className="share-loader-spinner-ring"></div>
+          </div>
+          <h3 className="share-loader-title">Menyiapkan Berkas...</h3>
+          <p className="mf-loader-sub">Membaca & memverifikasi dokumen dari SIPTU Drive Balai POM di Palopo</p>
+        </div>
       </div>
     );
   }
@@ -897,54 +937,251 @@ export default function PublicSharePage() {
     );
   }
 
-  // RENDER CASE 1: Single File Share
+  // RENDER CASE 1: Single File Share (MediaFire Style)
   if (!fileInfo?.is_dir) {
     const isPdf = fileInfo?.name?.toLowerCase().endsWith(".pdf");
+    const isDoc = isDocViewable(fileInfo?.name);
+    const isImg = isImageFile(fileInfo?.name);
+    const fileExt = fileInfo?.name ? fileInfo.name.split(".").pop().toUpperCase() : "FILE";
+    const uploadedDate = fileInfo?.last_modified 
+      ? dayjs(fileInfo.last_modified).format("YYYY-MM-DD HH:mm:ss") 
+      : dayjs().format("YYYY-MM-DD HH:mm:ss");
+
+    const getFormatFullTitle = (ext) => {
+      const e = ext.toLowerCase();
+      if (["xlsx", "xls", "csv"].includes(e)) return "Microsoft Excel Spreadsheet (." + ext + ")";
+      if (["docx", "doc"].includes(e)) return "Microsoft Word Document (." + ext + ")";
+      if (["pptx", "ppt"].includes(e)) return "Microsoft PowerPoint Presentation (." + ext + ")";
+      if (e === "pdf") return "Portable Document Format (." + ext + ")";
+      if (["zip", "rar", "7z"].includes(e)) return "Compressed Archive (." + ext + ")";
+      if (["png", "jpg", "jpeg", "webp"].includes(e)) return "Image File (." + ext + ")";
+      return "Document File (." + ext + ")";
+    };
+
     return (
-      <div className="share-landing-layout">
-        {/* Brand Header */}
-        <div className="share-brand-header">
-          <CloudServerOutlined className="share-logo-icon" />
-          <span className="share-logo-title">SIPTU Drive</span>
-        </div>
-
-        {/* Share Container Card */}
-        <Card className="share-landing-card" hoverable>
-          <div className="share-file-visual">
-            {getFileIcon(fileInfo?.name, false)}
-          </div>
-          <div className="share-file-details">
-            <Title level={4} className="share-file-name" title={fileInfo?.name}>
-              {fileInfo?.name}
-            </Title>
-            <Text type="secondary" className="share-file-size">
-              Ukuran Berkas: {formatBytes(fileInfo?.size)}
-            </Text>
-          </div>
-
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-             <Button
-              type="primary"
-              size="large"
-              icon={<DownloadOutlined />}
-              onClick={() => handleDownload({ name: fileInfo.name, path: fileInfo.path, size: fileInfo.size })}
-              className="share-download-btn"
-              block
-            >
-              Unduh Berkas
-            </Button>
-            {isPdf && (
-              <Button
-                size="large"
-                icon={<SearchOutlined />}
-                onClick={() => window.open(getDownloadUrl({ name: fileInfo.name, path: fileInfo.path }, true), "_blank")}
-                block
+      <div className="mf-share-page">
+        {/* MediaFire Top Header */}
+        <header className="mf-top-header">
+          <div className="mf-header-container">
+            <div className="mf-brand-logo">
+              <CloudServerOutlined className="mf-logo-icon" />
+              <div className="mf-logo-text">
+                <span className="mf-logo-title">SIPTU Drive</span>
+                <span className="mf-logo-sub">Balai POM di Palopo</span>
+              </div>
+            </div>
+            <div className="mf-header-actions">
+              <Button 
+                type="default" 
+                icon={<LinkOutlined />}
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  andMessage.success("Tautan berkas berhasil disalin!");
+                }}
               >
-                Pratinjau PDF
+                Salin Link
               </Button>
-            )}
-          </Space>
-        </Card>
+            </div>
+          </div>
+        </header>
+
+        {/* MediaFire Main Container */}
+        <main className="mf-main-container">
+
+          {/* 1. Iconic Dark MediaFire Download Hero Box */}
+          <div className="mf-download-box">
+            <div className="mf-download-box-inner">
+              {/* File Info Left */}
+              <div className="mf-file-info-left">
+                <div className="mf-file-icon-wrap">
+                  {getFileIcon(fileInfo?.name, false)}
+                </div>
+                <div className="mf-file-text-meta">
+                  <h2 className="mf-file-title" title={fileInfo?.name}>
+                    {fileInfo?.name}
+                  </h2>
+                  <div className="mf-quick-actions">
+                    <Tooltip title="Salin Tautan">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<LinkOutlined style={{ color: "#94a3b8" }} />}
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          andMessage.success("Tautan berkas berhasil disalin!");
+                        }}
+                      />
+                    </Tooltip>
+                    {isImg && (
+                      <Tooltip title="Pratinjau Foto">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<PictureOutlined style={{ color: "#52c41a" }} />}
+                          onClick={() => setPreviewImage({ src: getDownloadUrl(fileInfo, true), title: fileInfo.name })}
+                        />
+                      </Tooltip>
+                    )}
+                    {isDoc && (
+                      <Tooltip title="Pratinjau Dokumen">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EyeOutlined style={{ color: "#38bdf8" }} />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDocViewFile({ name: fileInfo.name, path: fileInfo.path || fileInfo.base_path, is_dir: false });
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                    {isPdf && (
+                      <Tooltip title="Pratinjau PDF">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EyeOutlined style={{ color: "#f87171" }} />}
+                          onClick={() => window.open(getDownloadUrl({ name: fileInfo.name, path: fileInfo.path }, true), "_blank")}
+                        />
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Big Download Button Right */}
+              <div className="mf-download-btn-wrap">
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<DownloadOutlined />}
+                  onClick={() => handleDownload({ name: fileInfo.name, path: fileInfo.path, size: fileInfo.size })}
+                  className="mf-big-download-btn"
+                >
+                  UNDUH BERKAS ({formatBytes(fileInfo?.size)})
+                </Button>
+              </div>
+            </div>
+
+            {/* Sub Banner inside Dark Box */}
+            <div className="mf-download-box-sub">
+              <span>🟢 Berkas resmi terverifikasi aman & bebas virus • Balai POM di Palopo</span>
+            </div>
+          </div>
+
+          <div className="mf-sub-disclaimer">
+            <span>Tombol unduh di atas akan langsung memulai pengunduhan berkas Anda secara aman.</span>
+          </div>
+
+          {/* 2. Content Details Section (2 Columns) */}
+          <div className="mf-details-grid">
+            
+            {/* Left Column - Detailed Spec */}
+            <div className="mf-details-left">
+              <div className="mf-file-card-summary">
+                <div className="mf-summary-icon">
+                  {getFileIcon(fileInfo?.name, false)}
+                </div>
+                <div className="mf-summary-text">
+                  <h3 className="mf-summary-name">{fileInfo?.name}</h3>
+                  <p className="mf-summary-format">{getFormatFullTitle(fileExt)}</p>
+                </div>
+              </div>
+
+              <div className="mf-meta-list">
+                <div className="mf-meta-row">
+                  <span className="mf-meta-label">Ukuran Berkas:</span>
+                  <span className="mf-meta-value">{formatBytes(fileInfo?.size)}</span>
+                </div>
+                <div className="mf-meta-row">
+                  <span className="mf-meta-label">Diunggah:</span>
+                  <span className="mf-meta-value">{uploadedDate}</span>
+                </div>
+                <div className="mf-meta-row">
+                  <span className="mf-meta-label">Keamanan:</span>
+                  <span className="mf-meta-value text-success">🟢 Bebas Virus & Terenkripsi</span>
+                </div>
+              </div>
+
+              <div className="mf-info-box">
+                <h4>Tentang Berkas & Format Dokumen</h4>
+                <p>
+                  Berkas ini di-host secara langsung di server aman SIPTU Drive Balai POM di Palopo.
+                  Anda dapat membuka pratinjau berkas secara langsung di peramban web atau mengunduhnya ke perangkat Anda.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Column - Preview & System Compatibility */}
+            <div className="mf-details-right">
+              {/* Card 1: Pratinjau Dokumen Online */}
+              {(isDoc || isPdf || isImg) && (
+                <div className="mf-side-card">
+                  <h4 className="mf-side-card-title">Pratinjau Berkas Online</h4>
+                  <p className="mf-side-card-sub">
+                    Buka dan lihat isi berkas secara langsung tanpa perlu mengunduh.
+                  </p>
+                  {isImg && (
+                    <Button
+                      type="primary"
+                      icon={<PictureOutlined />}
+                      onClick={() => setPreviewImage({ src: getDownloadUrl(fileInfo, true), title: fileInfo.name })}
+                      style={{ background: "#52c41a", borderColor: "#52c41a", fontWeight: 700 }}
+                      block
+                    >
+                      Pratinjau Foto Halaman Penuh
+                    </Button>
+                  )}
+                  {isDoc && (
+                    <Button
+                      type="primary"
+                      icon={<EyeOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDocViewFile({ name: fileInfo.name, path: fileInfo.path || fileInfo.base_path, is_dir: false });
+                      }}
+                      className="mf-side-btn-office"
+                      block
+                    >
+                      Buka Microsoft Office View
+                    </Button>
+                  )}
+                  {isPdf && (
+                    <Button
+                      type="primary"
+                      icon={<EyeOutlined />}
+                      onClick={() => window.open(getDownloadUrl({ name: fileInfo.name, path: fileInfo.path }, true), "_blank")}
+                      className="mf-side-btn-pdf"
+                      block
+                    >
+                      Pratinjau PDF Halaman Penuh
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Card 2: Kompatibilitas Sistem */}
+              <div className="mf-side-card">
+                <h4 className="mf-side-card-title">Kompatibilitas Perangkat</h4>
+                <div className="mf-compat-select">
+                  <span className="mf-compat-label">Sistem Operasi:</span>
+                  <span className="mf-compat-val">Windows / Android / iOS / Mac</span>
+                </div>
+                <div className="mf-compat-status">
+                  <span className="mf-compat-dot">🟢</span>
+                  <span>Berkas 100% kompatibel dengan sistem peramban Anda.</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </main>
+
+        {/* MediaFire Footer */}
+        <footer className="mf-footer">
+          <p>© {new Date().getFullYear()} SIPTU Drive • Balai POM di Palopo. Terintegrasi Nextcloud Storage.</p>
+        </footer>
 
         {/* Full-screen PDF preview overlay */}
         {previewPdfFile && (
@@ -1055,7 +1292,6 @@ export default function PublicSharePage() {
                             strokeColor="#1a73e8"
                           />
                         )}
-                        {isSuccess && <CheckCircleFilled style={{ color: "#52c41a", fontSize: "18px" }} />}
                         {isError && (
                           <Tooltip title={item.errorMessage}>
                             <CloseCircleFilled style={{ color: "#ff4d4f", fontSize: "18px" }} />
@@ -1069,6 +1305,15 @@ export default function PublicSharePage() {
             )}
           </div>
         )}
+
+        {/* Apps Doc View Modal */}
+        <DocViewerModal
+          open={!!docViewFile}
+          file={docViewFile}
+          onClose={() => setDocViewFile(null)}
+          publicToken={token}
+          onDownload={handleDownload}
+        />
       </div>
     );
   }
@@ -1363,8 +1608,8 @@ export default function PublicSharePage() {
                               <span 
                                 className="share-file-title" 
                                 title={file.name}
-                                onClick={() => isPdf && window.open(getDownloadUrl(file, true), "_blank")}
-                                style={{ cursor: isPdf ? "pointer" : "default" }}
+                                onClick={() => isPdf ? window.open(getDownloadUrl(file, true), "_blank") : handleDownload(file)}
+                                style={{ cursor: "pointer" }}
                               >
                                 {file.name}
                               </span>
@@ -1373,6 +1618,17 @@ export default function PublicSharePage() {
                               </span>
                             </div>
                             <div className="share-file-card-actions" onClick={(e) => e.stopPropagation()}>
+                              {isDocViewable(file.name) && (
+                                <Tooltip title="Pratinjau Dokumen (apps doc view)">
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    shape="circle"
+                                    icon={<EyeOutlined style={{ color: "#1890ff" }} />}
+                                    onClick={() => setDocViewFile(file)}
+                                  />
+                                </Tooltip>
+                              )}
                               {isPdf && (
                                 <Tooltip title="Pratinjau PDF">
                                   <Button
@@ -1804,7 +2060,6 @@ export default function PublicSharePage() {
         </div>
       )}
 
-      {/* Full screen Drag & Drop Overlay */}
       <div 
         className={`drive-drag-overlay ${isDraggingOverPage && fileInfo?.can_edit ? "active" : ""}`}
         onDragLeave={() => setIsDraggingOverPage(false)}
@@ -1817,6 +2072,28 @@ export default function PublicSharePage() {
           <p style={{ pointerEvents: "none" }}>SIPTU Drive terintegrasi Nextcloud</p>
         </div>
       </div>
+
+      {/* Apps Doc View Modal */}
+      <DocViewerModal
+        open={!!docViewFile}
+        file={docViewFile}
+        onClose={() => setDocViewFile(null)}
+        publicToken={token}
+        onDownload={handleDownload}
+      />
+
+      {/* Photo Previewer */}
+      {previewImage && (
+        <Image
+          style={{ display: "none" }}
+          src={previewImage.src}
+          preview={{
+            visible: !!previewImage,
+            onVisibleChange: (visible) => !visible && setPreviewImage(null),
+            src: previewImage.src,
+          }}
+        />
+      )}
     </div>
   );
 }

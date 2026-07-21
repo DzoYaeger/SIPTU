@@ -177,12 +177,15 @@ Route::middleware('throttle:public-api')->group(function () {
 
     // Public Share Links (Nextcloud)
     Route::get('/share/info/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareInfo']);
-    Route::get('/share/download/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDownload']);
+    Route::get('/share/download/{token}/{filename?}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDownload']);
     Route::post('/share/folder/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareCreateFolder']);
     Route::post('/share/upload/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareUpload']);
     Route::delete('/share/delete/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDelete']);
     Route::post('/share/move/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareMove']);
     Route::post('/share/copy/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareCopy']);
+
+    // Office Online preview: cache file as static for Microsoft Office Online viewer
+    Route::post('/share/office-preview', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'officePreview']);
 
 });
 
@@ -218,6 +221,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::delete('/nextcloud/share-settings', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'deleteShareSettings']);
     Route::post('/nextcloud/move', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'move']);
     Route::post('/nextcloud/copy', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'copy']);
+    Route::get('/nextcloud/search', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'search']);
 
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);

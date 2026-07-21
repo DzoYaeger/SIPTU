@@ -19,6 +19,10 @@ import {
   Progress,
   Dropdown,
   Spin,
+  Image,
+  Badge,
+  Popover,
+  List,
   message as andMessage,
 } from "antd";
 import {
@@ -35,6 +39,7 @@ import {
   HomeOutlined,
   PlusOutlined,
   FolderFilled,
+  FolderAddOutlined,
   FilePdfFilled,
   FileExcelFilled,
   FileWordFilled,
@@ -55,13 +60,29 @@ import {
   CloseCircleFilled,
   MinusOutlined,
   CloseOutlined,
+  EyeOutlined,
+  PictureOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
+import DocViewerModal from "../components/DocViewerModal.jsx";
 import dayjs from "dayjs";
 import "./PenyimpananCloud.css";
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
+
+const isDocViewable = (fileName) => {
+  if (!fileName) return false;
+  const ext = fileName.split(".").pop().toLowerCase();
+  return ["xlsx", "xls", "docx", "doc", "pptx", "ppt"].includes(ext);
+};
+
+const isImageFile = (fileName) => {
+  if (!fileName) return false;
+  const ext = fileName.split(".").pop().toLowerCase();
+  return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"].includes(ext);
+};
 
 const getEditableType = (fileName) => {
   if (!fileName) return null;
@@ -131,7 +152,6 @@ export default function PenyimpananCloud() {
   const navigate = useNavigate();
   
   const [employees, setEmployees] = useState([]);
-  const [selectedNip, setSelectedNip] = useState("");
   const [files, setFiles] = useState([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -155,6 +175,9 @@ export default function PenyimpananCloud() {
   const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
   const dragCounter = useRef(0);
 
+  // Apps Doc View state
+  const [docViewFile, setDocViewFile] = useState(null);
+
   // Sharing settings states
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareFile, setShareFile] = useState(null);
@@ -175,11 +198,6 @@ export default function PenyimpananCloud() {
   }, [uploadingFiles]);
 
   const isAdmin = user?.base_role === "admin";
-
-  // Reset path when changing employee NIP
-  useEffect(() => {
-    setCurrentPath("");
-  }, [selectedNip]);
 
   // Fetch employees list if Admin
   const fetchEmployees = useCallback(async () => {
@@ -205,7 +223,7 @@ export default function PenyimpananCloud() {
 
   // Fetch files in the current folder
   const fetchFiles = useCallback(async () => {
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
     if (!nip) {
       setFiles([]);
       return;
@@ -213,7 +231,7 @@ export default function PenyimpananCloud() {
 
     try {
       setLoadingFiles(true);
-      const url = `/nextcloud/files?nip=${nip}&path=${encodeURIComponent(currentPath)}`;
+      const url = `/nextcloud/files?path=${encodeURIComponent(currentPath)}`;
       const response = await apiFetch(url);
       if (!response.ok) {
         const errorData = await response.json();
@@ -226,27 +244,51 @@ export default function PenyimpananCloud() {
     } finally {
       setLoadingFiles(false);
     }
-  }, [isAdmin, selectedNip, user, apiFetch, currentPath]);
+  }, [user, apiFetch, currentPath]);
+
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
-
-  useEffect(() => {
-    if (!isAdmin && user?.nip) {
-      fetchFiles();
-    } else if (isAdmin && selectedNip) {
+    if (user?.nip) {
       fetchFiles();
     }
-  }, [isAdmin, user, selectedNip, fetchFiles]);
+  }, [user, fetchFiles]);
+
+  // Recursive search within current folder
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+        const url = `/nextcloud/search?path=${encodeURIComponent(currentPath)}&query=${encodeURIComponent(searchQuery.trim())}`;
+        const response = await apiFetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(data.files || []);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, currentPath, apiFetch]);
 
   useEffect(() => {
     setSelectedRowKeys([]);
-  }, [currentPath, selectedNip]);
+  }, [currentPath]);
 
   // Folder Navigation Helper
   const handleFolderOpen = (folder) => {
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
     const basePrefix = `/SIPTU Drive/${nip}`;
     let relative = folder.path;
     if (relative.startsWith(basePrefix)) {
@@ -360,6 +402,37 @@ export default function PenyimpananCloud() {
     xhr.send();
   };
 
+  const [previewImage, setPreviewImage] = useState(null);
+
+  const handlePreviewImage = async (file) => {
+    const key = `preview-img-${file.name}`;
+    try {
+      andMessage.loading({ content: `Memuat foto ${file.name}...`, key });
+      const response = await apiFetch(`/nextcloud/download?path=${encodeURIComponent(file.path)}&inline=1`);
+      if (!response.ok) throw new Error("Gagal memuat foto dari SIPTU Drive.");
+
+      const blob = await response.blob();
+      const ext = file.name.split(".").pop().toLowerCase();
+      const mimeMap = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        webp: "image/webp",
+        gif: "image/gif",
+        svg: "image/svg+xml",
+        bmp: "image/bmp",
+        ico: "image/x-icon",
+      };
+      const mimeType = mimeMap[ext] || blob.type || "image/png";
+      const imageBlob = new Blob([blob], { type: mimeType });
+      const imgUrl = window.URL.createObjectURL(imageBlob);
+      setPreviewImage({ src: imgUrl, title: file.name });
+      andMessage.success({ content: "Foto siap.", key });
+    } catch (err) {
+      andMessage.error({ content: err.message, key });
+    }
+  };
+
   const handlePreviewPdf = async (file) => {
     const key = `preview-${file.name}`;
     try {
@@ -406,9 +479,9 @@ export default function PenyimpananCloud() {
     e.stopPropagation();
     setIsDraggingOverPage(false);
 
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
     if (!nip) {
-      andMessage.warning("Pilih pegawai terlebih dahulu.");
+      andMessage.warning("NIP pengguna tidak ditemukan.");
       return;
     }
 
@@ -590,7 +663,7 @@ export default function PenyimpananCloud() {
   };
 
   const fetchSelectorFolders = useCallback(async () => {
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
     if (!nip) return;
     try {
       setLoadingSelectorFolders(true);
@@ -609,7 +682,7 @@ export default function PenyimpananCloud() {
     } finally {
       setLoadingSelectorFolders(false);
     }
-  }, [isAdmin, selectedNip, user, apiFetch, selectorPath, selectorSourceFile]);
+  }, [user, apiFetch, selectorPath, selectorSourceFile]);
 
   useEffect(() => {
     if (isSelectorModalOpen) {
@@ -641,7 +714,8 @@ export default function PenyimpananCloud() {
 
   const handleExecuteSelectorAction = async () => {
     if (!selectorSourceFile) return;
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
+    if (!nip) return;
     const basePrefix = `/SIPTU Drive/${nip}`;
     const destFolder = selectorPath ? `${basePrefix}/${selectorPath.replace(/^\/+/, "")}` : basePrefix;
     const destPath = `${destFolder}/${selectorSourceFile.name}`;
@@ -688,12 +762,12 @@ export default function PenyimpananCloud() {
 
   // Create Folder handler
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) {
-      andMessage.warning("Nama folder tidak boleh kosong.");
+    if (!newFolderName.trim()) return;
+    const nip = user?.nip;
+    if (!nip) {
+      andMessage.warning("NIP pengguna tidak ditemukan.");
       return;
     }
-    const nip = isAdmin ? selectedNip : user?.nip;
-    if (!nip) return;
 
     try {
       setCreatingFolder(true);
@@ -727,9 +801,9 @@ export default function PenyimpananCloud() {
 
   // Upload handler with real-time XHR progress supporting multiple files
   const handleCustomUpload = async ({ file }) => {
-    const nip = isAdmin ? selectedNip : user?.nip;
+    const nip = user?.nip;
     if (!nip) {
-      andMessage.warning("Pilih pegawai terlebih dahulu.");
+      andMessage.warning("NIP pengguna tidak ditemukan.");
       return;
     }
 
@@ -754,9 +828,7 @@ export default function PenyimpananCloud() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("path", currentPath);
-    if (isAdmin) {
-      formData.append("nip", nip);
-    }
+    formData.append("nip", nip);
 
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
@@ -784,7 +856,6 @@ export default function PenyimpananCloud() {
             status: "success",
           },
         }));
-        andMessage.success(`Berkas "${file.name}" berhasil diunggah.`);
         fetchFiles();
       } else {
         let errorMsg = "Gagal mengunggah berkas.";
@@ -801,7 +872,6 @@ export default function PenyimpananCloud() {
             errorMessage: errorMsg,
           },
         }));
-        andMessage.error(`Gagal mengunggah "${file.name}": ${errorMsg}`);
       }
     });
 
@@ -832,10 +902,11 @@ export default function PenyimpananCloud() {
 
   // Filter files
   const filteredFiles = useMemo(() => {
-    if (!searchQuery) return files;
-    const query = searchQuery.toLowerCase();
-    return files.filter((f) => f.name.toLowerCase().includes(query));
-  }, [files, searchQuery]);
+    if (searchQuery.trim()) {
+      return searchResults;
+    }
+    return files;
+  }, [files, searchQuery, searchResults]);
 
   // Separate Folders and Files
   const folderItems = useMemo(() => filteredFiles.filter((f) => f.is_dir), [filteredFiles]);
@@ -858,21 +929,19 @@ export default function PenyimpananCloud() {
   const newButtonItems = useMemo(() => {
     return [
       {
-        key: "new-folder",
-        label: "Folder Baru",
-        icon: <PlusOutlined />,
-        onClick: () => setIsFolderModalOpen(true),
-        disabled: isAdmin && !selectedNip,
-      },
-      {
         key: "upload-file",
         label: "Upload Berkas",
         icon: <UploadOutlined />,
         onClick: () => setIsUploadModalOpen(true),
-        disabled: isAdmin && !selectedNip,
+      },
+      {
+        key: "create_folder",
+        label: "Folder Baru",
+        icon: <FolderAddOutlined />,
+        onClick: () => setIsFolderModalOpen(true),
       },
     ];
-  }, [isAdmin, selectedNip]);
+  }, []);
 
   // List View columns
   const columns = [
@@ -890,24 +959,40 @@ export default function PenyimpananCloud() {
               </div>
             )}
           </div>
-          {record.is_dir ? (
-            <Button
-              type="link"
-              onClick={() => handleFolderOpen(record)}
-              className="list-folder-link"
-            >
-              {text}
-            </Button>
-          ) : (
-            <Text 
-              strong 
-              className="list-file-text"
-              style={{ cursor: record.name.toLowerCase().endsWith(".pdf") ? "pointer" : "default" }}
-              onClick={() => record.name.toLowerCase().endsWith(".pdf") && handlePreviewPdf(record)}
-            >
-              {text}
-            </Text>
-          )}
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            {record.is_dir ? (
+              <Button
+                type="link"
+                onClick={() => handleFolderOpen(record)}
+                className="list-folder-link"
+                style={{ padding: 0, height: "auto", textAlign: "left" }}
+              >
+                {text}
+              </Button>
+            ) : (
+              <Text 
+                strong 
+                className="list-file-text"
+                style={{ cursor: (isImageFile(record.name) || isDocViewable(record.name) || record.name.toLowerCase().endsWith(".pdf")) ? "pointer" : "default" }}
+                onClick={() => {
+                  if (isImageFile(record.name)) {
+                    handlePreviewImage(record);
+                  } else if (isDocViewable(record.name)) {
+                    setDocViewFile(record);
+                  } else if (record.name.toLowerCase().endsWith(".pdf")) {
+                    handlePreviewPdf(record);
+                  }
+                }}
+              >
+                {text}
+              </Text>
+            )}
+            {searchQuery && record.display_path && (
+              <Text type="secondary" style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                📂 {record.display_path}
+              </Text>
+            )}
+          </div>
         </Space>
       ),
     },
@@ -932,10 +1017,10 @@ export default function PenyimpananCloud() {
     {
       title: "Aksi",
       key: "actions",
-      width: 160,
+      width: 180,
       align: "center",
       render: (_, file) => (
-        <Space>
+        <Space size="small">
           <Tooltip title="Pengaturan Bagikan">
             <Button
               type="text"
@@ -944,13 +1029,23 @@ export default function PenyimpananCloud() {
               onClick={() => openShareModal(file)}
             />
           </Tooltip>
-          {getEditableType(file.name) && (
-            <Tooltip title="Edit Berkas">
+          {isImageFile(file.name) && (
+            <Tooltip title="Pratinjau Foto">
               <Button
                 type="text"
                 shape="circle"
-                icon={<EditOutlined style={{ color: "#fa8c16" }} />}
-                onClick={() => navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${getEditableType(file.name)}`)}
+                icon={<PictureOutlined style={{ color: "#52c41a" }} />}
+                onClick={() => handlePreviewImage(file)}
+              />
+            </Tooltip>
+          )}
+          {isDocViewable(file.name) && (
+            <Tooltip title="Pratinjau Dokumen (apps doc view)">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<EyeOutlined style={{ color: "#1890ff" }} />}
+                onClick={() => setDocViewFile(file)}
               />
             </Tooltip>
           )}
@@ -1030,7 +1125,6 @@ export default function PenyimpananCloud() {
           <Dropdown
             menu={{ items: newButtonItems }}
             trigger={["click"]}
-            disabled={isAdmin && !selectedNip}
           >
             <Button
               type="primary"
@@ -1042,30 +1136,6 @@ export default function PenyimpananCloud() {
             </Button>
           </Dropdown>
         </div>
-
-        {/* Employee Switcher (Visible to Admin only) */}
-        {isAdmin && (
-          <div className="drive-admin-picker-wrap">
-            <span className="drive-sidebar-label">Kelola Folder Pegawai</span>
-            <Select
-              showSearch
-              placeholder="Pilih pegawai..."
-              optionFilterProp="children"
-              style={{ width: "100%" }}
-              loading={loadingEmployees}
-              value={selectedNip}
-              onChange={setSelectedNip}
-              filterOption={(input, option) =>
-                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-              }
-              options={employees.map((emp) => ({
-                value: emp.nip,
-                label: `${emp.name} (${emp.nip})`,
-              }))}
-              className="drive-admin-select"
-            />
-          </div>
-        )}
 
         {/* Main Drive Sidebar Menu */}
         <div className="drive-sidebar-menu">
@@ -1080,7 +1150,7 @@ export default function PenyimpananCloud() {
         </div>
 
         {/* Dynamic storage indicator at the bottom */}
-        {(!isAdmin || selectedNip) && (
+        {true && (
           <div className="drive-storage-widget">
             <div className="storage-widget-header">
               <CloudServerOutlined />
@@ -1119,17 +1189,83 @@ export default function PenyimpananCloud() {
               prefix={<SearchOutlined style={{ color: "#5f6368" }} />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={loadingFiles || (isAdmin && !selectedNip)}
+              disabled={loadingFiles}
               className="drive-search-input"
             />
           </div>
           <div className="drive-header-right">
+            <Popover
+              content={
+                <div style={{ width: 320, maxHeight: 380, overflowY: "auto" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    <Text strong>Rekapan Aktivitas Upload</Text>
+                    {Object.keys(uploadingFiles).length > 0 && (
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setUploadingFiles({})}
+                        style={{ padding: 0 }}
+                      >
+                        Bersihkan
+                      </Button>
+                    )}
+                  </div>
+                  {Object.keys(uploadingFiles).length === 0 ? (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Belum ada rekapan upload" />
+                  ) : (
+                    <List
+                      size="small"
+                      dataSource={Object.values(uploadingFiles)}
+                      renderItem={(item) => (
+                        <List.Item key={item.uid} style={{ padding: "8px 0" }}>
+                          <List.Item.Meta
+                            avatar={getFileIcon(item)}
+                            title={
+                              <Text style={{ fontSize: 13 }} ellipsis title={item.name}>
+                                {item.name}
+                              </Text>
+                            }
+                            description={
+                              <div style={{ fontSize: 11 }}>
+                                {item.status === "uploading" && (
+                                  <Progress percent={item.progress} size="small" status="active" />
+                                )}
+                                {item.status === "success" && (
+                                  <Text type="success">✓ Berhasil diunggah ({formatBytes(item.size)})</Text>
+                                )}
+                                {item.status === "error" && (
+                                  <Text type="danger">✕ Gagal: {item.errorMessage}</Text>
+                                )}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </div>
+              }
+              title={null}
+              trigger="click"
+              placement="bottomRight"
+            >
+              <Tooltip title="Rekapan Notifikasi Upload">
+                <Badge count={Object.keys(uploadingFiles).length} overflowCount={99} offset={[-4, 4]}>
+                  <Button
+                    type="text"
+                    shape="circle"
+                    icon={<BellOutlined style={{ fontSize: 18, color: Object.keys(uploadingFiles).length > 0 ? "#1a73e8" : "#5f6368" }} />}
+                    className="drive-header-icon-btn"
+                  />
+                </Badge>
+              </Tooltip>
+            </Popover>
             <Button
               type="text"
               shape="circle"
               icon={<ReloadOutlined />}
               onClick={fetchFiles}
-              disabled={loadingFiles || (isAdmin && !selectedNip)}
+              disabled={loadingFiles}
               className="drive-header-icon-btn"
             />
             <div className="drive-user-profile">
@@ -1224,13 +1360,9 @@ export default function PenyimpananCloud() {
 
           {/* Quick status display */}
           <div className="drive-path-status-bar">
-            {(isAdmin && !selectedNip) ? (
-              <Tag color="warning" className="status-tag">Silakan pilih pegawai terlebih dahulu di sidebar</Tag>
-            ) : (
-              <Tag color="processing" className="status-tag">
-                Path: {isAdmin ? `SIPTU Drive/${selectedNip}${currentPath}` : `SIPTU Drive/${user?.nip}${currentPath}`}
-              </Tag>
-            )}
+            <Tag color="processing" className="status-tag">
+              Path: SIPTU Drive/{user?.nip}{currentPath}
+            </Tag>
           </div>
 
           {/* Explorer Content */}
@@ -1242,11 +1374,7 @@ export default function PenyimpananCloud() {
           ) : filteredFiles.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={
-                isAdmin && !selectedNip
-                  ? "Pilih pegawai di dropdown sidebar kiri untuk melihat berkas."
-                  : "Folder ini masih kosong."
-              }
+              description="Folder ini masih kosong."
               className="drive-empty-view"
             />
           ) : viewMode === "list" ? (
@@ -1265,15 +1393,14 @@ export default function PenyimpananCloud() {
                   onDoubleClick: () => {
                     if (record.is_dir) {
                       handleFolderOpen(record);
+                    } else if (isImageFile(record.name)) {
+                      handlePreviewImage(record);
+                    } else if (record.name.toLowerCase().endsWith(".pdf")) {
+                      handlePreviewPdf(record);
+                    } else if (isDocViewable(record.name)) {
+                      setDocViewFile(record);
                     } else {
-                      const editableType = getEditableType(record.name);
-                      if (editableType) {
-                        navigate(`/app/drive/editor?path=${encodeURIComponent(record.path)}&type=${editableType}`);
-                      } else if (record.name.toLowerCase().endsWith(".pdf")) {
-                        handlePreviewPdf(record);
-                      } else {
-                        handleDownload(record);
-                      }
+                      handleDownload(record);
                     }
                   },
                 })}
@@ -1394,19 +1521,20 @@ export default function PenyimpananCloud() {
                               onChange={handleToggleSelect}
                             />
                           </div>
-                          <div
+                          <div 
                             className="drive-file-card-preview"
                             onDoubleClick={() => {
-                              const editableType = getEditableType(file.name);
-                              if (editableType) {
-                              navigate(`/app/drive/editor?path=${encodeURIComponent(file.path)}&type=${editableType}`);
-                            } else if (file.name.toLowerCase().endsWith(".pdf")) {
-                              handlePreviewPdf(file);
-                            } else {
-                              handleDownload(file);
-                            }
-                          }}
-                        >
+                              if (isImageFile(file.name)) {
+                                handlePreviewImage(file);
+                              } else if (file.name.toLowerCase().endsWith(".pdf")) {
+                                handlePreviewPdf(file);
+                              } else if (isDocViewable(file.name)) {
+                                setDocViewFile(file);
+                              } else {
+                                handleDownload(file);
+                              }
+                            }}
+                          >
                           <div className="preview-icon-wrapper" style={{ position: "relative" }}>
                             {getFileIcon(file)}
                             {file.is_shared && (
@@ -1424,16 +1552,53 @@ export default function PenyimpananCloud() {
                             <span 
                               className="drive-file-title" 
                               title={file.name}
-                              onClick={() => file.name.toLowerCase().endsWith(".pdf") && handlePreviewPdf(file)}
-                              style={{ cursor: file.name.toLowerCase().endsWith(".pdf") ? "pointer" : "default" }}
+                              onClick={() => {
+                                if (isImageFile(file.name)) {
+                                  handlePreviewImage(file);
+                                } else if (file.name.toLowerCase().endsWith(".pdf")) {
+                                  handlePreviewPdf(file);
+                                } else if (isDocViewable(file.name)) {
+                                  setDocViewFile(file);
+                                } else {
+                                  handleDownload(file);
+                                }
+                              }}
+                              style={{ cursor: "pointer" }}
                             >
                               {file.name}
                             </span>
+                            {searchQuery && file.display_path && (
+                              <span style={{ fontSize: "11px", color: "#64748b", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={`Jalur: ${file.display_path}`}>
+                                📂 {file.display_path}
+                              </span>
+                            )}
                             <span className="drive-file-size">
                               {formatBytes(file.size)}
                             </span>
                           </div>
                           <div className="drive-file-card-actions" onClick={(e) => e.stopPropagation()}>
+                            {isImageFile(file.name) && (
+                              <Tooltip title="Pratinjau Foto">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  shape="circle"
+                                  icon={<PictureOutlined style={{ color: "#52c41a" }} />}
+                                  onClick={() => handlePreviewImage(file)}
+                                />
+                              </Tooltip>
+                            )}
+                            {isDocViewable(file.name) && (
+                              <Tooltip title="Pratinjau Dokumen (apps doc view)">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  shape="circle"
+                                  icon={<EyeOutlined style={{ color: "#1890ff" }} />}
+                                  onClick={() => setDocViewFile(file)}
+                                />
+                              </Tooltip>
+                            )}
                             {file.name.toLowerCase().endsWith(".pdf") && (
                               <Tooltip title="Pratinjau PDF">
                                 <Button
@@ -1927,7 +2092,7 @@ export default function PenyimpananCloud() {
 
       {/* Full screen Drag & Drop Overlay */}
       <div 
-        className={`drive-drag-overlay ${isDraggingOverPage && (!isAdmin || selectedNip) ? "active" : ""}`}
+        className={`drive-drag-overlay ${isDraggingOverPage ? "active" : ""}`}
         onDragLeave={() => setIsDraggingOverPage(false)}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
@@ -1938,6 +2103,29 @@ export default function PenyimpananCloud() {
           <p style={{ pointerEvents: "none" }}>SIPTU Drive terintegrasi Nextcloud</p>
         </div>
       </div>
+
+      {/* Apps Doc View Modal */}
+      <DocViewerModal
+        open={!!docViewFile}
+        file={docViewFile}
+        onClose={() => setDocViewFile(null)}
+        apiFetch={apiFetch}
+        onOpenEditor={(f) => navigate(`/app/drive/editor?path=${encodeURIComponent(f.path)}&type=${getEditableType(f.name)}`)}
+        onDownload={handleDownload}
+      />
+
+      {/* Photo Previewer */}
+      {previewImage && (
+        <Image
+          style={{ display: "none" }}
+          src={previewImage.src}
+          preview={{
+            visible: !!previewImage,
+            onVisibleChange: (visible) => !visible && setPreviewImage(null),
+            src: previewImage.src,
+          }}
+        />
+      )}
     </div>
   );
 }

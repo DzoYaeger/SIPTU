@@ -1,0 +1,290 @@
+/* ── DocViewerModal.css ── */
+
+.docview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  animation: docviewFadeIn 0.25s ease-out;
+}
+
+@keyframes docviewFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Top Navigation Bar */
+.docview-header {
+  height: 60px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 16px;
+}
+
+.docview-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.docview-back-btn {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  transition: color 0.2s ease;
+}
+.docview-back-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.docview-file-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.docview-file-badge.xlsx {
+  background: #107c41;
+  color: #ffffff;
+}
+
+.docview-file-badge.docx {
+  background: #185abd;
+  color: #ffffff;
+}
+
+.docview-file-badge.ppt {
+  background: #d24726;
+  color: #ffffff;
+}
+
+.docview-file-badge.default {
+  background: #64748b;
+  color: #ffffff;
+}
+
+.docview-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 360px;
+}
+
+.docview-app-tag {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+
+/* Engine Toggle Segmented */
+.docview-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.docview-engine-segmented .ant-segmented-group {
+  background: #0f172a;
+}
+.docview-engine-segmented .ant-segmented-item {
+  color: #94a3b8;
+}
+.docview-engine-segmented .ant-segmented-item-selected {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+/* Header Right Actions */
+.docview-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.docview-close-btn {
+  color: #94a3b8 !important;
+  font-size: 20px !important;
+}
+.docview-close-btn:hover {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Body Container */
+.docview-body {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 60px);
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+}
+
+.docview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+/* Loading & Error Overlays */
+.docview-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  gap: 16px;
+  color: #94a3b8;
+}
+
+.docview-loading-text {
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.docview-footer-info {
+  background: #1e293b;
+  border-top: 1px solid #334155;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.docview-footer-info a {
+  color: #3b82f6;
+}
+.docview-footer-info a:hover {
+  text-decoration: underline;
+}
+
+/* Local Preview Container */
+.docview-local-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #0f172a;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.docview-local-paper {
+  background: #ffffff;
+  color: #0f172a;
+  width: 100%;
+  max-width: 1000px;
+  min-height: 100%;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.docview-local-paper h1,
+.docview-local-paper h2,
+.docview-local-paper h3 {
+  color: #1e293b;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.docview-local-paper p {
+  line-height: 1.6;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.docview-local-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  background: #ffffff;
+}
+
+.docview-local-paper table,
+.docview-local-paper th,
+.docview-local-paper td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.docview-local-paper th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.docview-sheet-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1000px;
+}
+
+@media (max-width: 768px) {
+  .docview-header {
+    padding: 0 12px;
+    height: auto;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .docview-title {
+    max-width: 180px;
+    font-size: 13px;
+  }
+  .docview-header-center {
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
