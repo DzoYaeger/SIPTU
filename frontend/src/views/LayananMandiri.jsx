@@ -1060,25 +1060,33 @@ const LayananMandiri = () => {
         open={exitModalVisible}
         onCancel={() => setExitModalVisible(false)}
         footer={null}
-        width={640}
+        width={580}
         centered
         className="feed-detail-modal feed-modal--exit"
-        styles={{ body: { padding: 0 }, mask: { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" } }}
+        styles={{ body: { padding: 0 }, mask: { backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" } }}
       >
         {loadingExit ? (
-          <div className="feed-modal__loader"><Spin size="large" /><span>Memuat data izin keluar...</span></div>
+          <div className="feed-modal__loader">
+            <Spin size="large" />
+            <span>Memuat data izin keluar...</span>
+          </div>
         ) : selectedExit ? (
           <div className="feed-modal__wrap">
             {/* Header */}
             <div className="feed-modal__header feed-modal__header--exit">
               <div className="feed-modal__header-icon"><LogoutOutlined /></div>
               <div className="feed-modal__header-info">
-                <div className="feed-modal__badge">IZIN KELUAR KANTOR</div>
+                <div className="feed-modal__badge">IZIN KELUAR KANTOR (RISPEG)</div>
                 <h2 className="feed-modal__title">{selectedExit.employee_name}</h2>
               </div>
               <Tag
                 className="feed-modal__status"
                 color={selectedExit.status === 'returned' ? 'success' : 'warning'}
+                style={{
+                  background: selectedExit.status === 'returned' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(245, 158, 11, 0.18)',
+                  color: selectedExit.status === 'returned' ? '#34d399' : '#fbbf24',
+                  border: selectedExit.status === 'returned' ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
+                }}
               >
                 {selectedExit.status === 'returned' ? <><CheckCircleFilled /> Kembali</> : <><ClockCircleFilled /> Di Luar</>}
               </Tag>
@@ -1088,18 +1096,22 @@ const LayananMandiri = () => {
             <div className="feed-modal__body">
               {/* Employee info */}
               <div className="feed-modal__section">
-                <div className="feed-modal__section-label"><UserOutlined /> Data Pegawai</div>
+                <div className="feed-modal__section-label"><UserOutlined /> Data Pegawai & Permohonan</div>
                 <div className="feed-modal__data-card">
                   <div className="feed-modal__data-row">
-                    <span className="feed-modal__data-key">NIP</span>
-                    <span className="feed-modal__data-val" style={{ fontFamily: 'monospace' }}>{selectedExit.nip}</span>
+                    <span className="feed-modal__data-key">NIP Pegawai</span>
+                    <span className="feed-modal__data-val" style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}>{selectedExit.nip}</span>
                   </div>
                   <div className="feed-modal__data-row">
                     <span className="feed-modal__data-key">Jenis Izin</span>
-                    <span className="feed-modal__data-val">{selectedExit.permit_type}</span>
+                    <span className="feed-modal__data-val">
+                      <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700, margin: 0, padding: '2px 8px' }}>
+                        {selectedExit.permit_type}
+                      </Tag>
+                    </span>
                   </div>
                   <div className="feed-modal__data-row">
-                    <span className="feed-modal__data-key">Tanggal</span>
+                    <span className="feed-modal__data-key">Tanggal Izin</span>
                     <span className="feed-modal__data-val">{dayjs(selectedExit.date).format('DD MMMM YYYY')}</span>
                   </div>
                 </div>
@@ -1108,20 +1120,22 @@ const LayananMandiri = () => {
               {/* Time boxes */}
               <div className="feed-modal__time-pair">
                 <div className="feed-modal__time-box feed-modal__time-box--out">
-                  <div className="feed-modal__time-label">JAM KELUAR</div>
+                  <div className="feed-modal__time-label">🛫 JAM KELUAR</div>
                   <div className="feed-modal__time-value">{selectedExit.exit_time || '--:--'}</div>
                 </div>
-                <div className="feed-modal__time-arrow">→</div>
+                <div className="feed-modal__time-arrow">
+                  <RightOutlined />
+                </div>
                 <div className={`feed-modal__time-box ${selectedExit.return_time ? 'feed-modal__time-box--in' : 'feed-modal__time-box--pending'}`}>
-                  <div className="feed-modal__time-label">JAM KEMBALI</div>
+                  <div className="feed-modal__time-label">🛬 JAM KEMBALI</div>
                   <div className="feed-modal__time-value">{selectedExit.return_time || '--:--'}</div>
                 </div>
               </div>
 
               {/* Reason */}
               <div className="feed-modal__section">
-                <div className="feed-modal__section-label"><InfoCircleOutlined /> Keperluan / Alasan</div>
-                <div className="feed-modal__issue-box feed-modal__issue-box--neutral">
+                <div className="feed-modal__section-label"><InfoCircleOutlined /> Maksud & Keperluan Izin</div>
+                <div className="feed-modal__issue-box feed-modal__issue-box--exit">
                   <p className="feed-modal__issue-desc">{selectedExit.reason || 'Tidak ada keterangan alasan.'}</p>
                 </div>
               </div>
@@ -1129,7 +1143,7 @@ const LayananMandiri = () => {
 
             {/* Footer */}
             <div className="feed-modal__footer">
-              <Button size="large" block className="feed-modal__close-btn" onClick={() => setExitModalVisible(false)}>Tutup</Button>
+              <Button size="large" className="feed-modal__close-btn" onClick={() => setExitModalVisible(false)}>Tutup Detail</Button>
             </div>
           </div>
         ) : (

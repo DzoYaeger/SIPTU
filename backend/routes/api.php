@@ -133,6 +133,9 @@ Route::middleware('throttle:public-api')->group(function () {
 
     // Inventory Requests — SPB (public)
     Route::post('/public/inventory-requests', [InventoryRequestController::class, 'storePublic']);
+
+    // Public Procurement PBJ listing
+    Route::get('/procurement-pbjs', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'index']);
     Route::get('/public/inventory-requests/{token}', [InventoryRequestController::class, 'showPublic']);
     Route::put('/public/inventory-requests/{token}/approve', [InventoryRequestController::class, 'approvePublic']);
     Route::put('/public/inventory-requests/{token}/reject', [InventoryRequestController::class, 'rejectPublic']);
@@ -394,8 +397,10 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::delete('/admin/procurement-requests/{id}', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'destroyAdmin']);
     Route::post('/admin/procurement-requests/cross-tab-report', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'crossTabReport']);
 
-    // Proses Pengadaan PBJ
-    Route::apiResource('procurement-pbjs', \App\Http\Controllers\Api\ProcurementPbjController::class)->except(['create', 'edit', 'show']);
+    // Proses Pengadaan PBJ (Protected mutation routes)
+    Route::post('/procurement-pbjs', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'store']);
+    Route::put('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'update']);
+    Route::delete('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'destroy']);
 
     // Inventory routes
     Route::apiResource('inventories', InventoryController::class);

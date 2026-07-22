@@ -37,13 +37,24 @@ import {
   SearchOutlined,
   SyncOutlined,
   DownloadOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  UserOutlined,
+  InfoCircleOutlined,
+  CheckCircleFilled,
+  ClockCircleFilled,
+  CloseCircleFilled,
+  CalendarOutlined,
+  PrinterOutlined,
+  SafetyCertificateOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
-import SignatureCanvas from "../components/SignatureCanvas.jsx";
+import "./ItHelpdeskDaftarLaporan.css";
 
-// const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 const { RangePicker } = DatePicker;
+const { Title, Text, Paragraph } = Typography;
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Semua Status" },
@@ -60,15 +71,15 @@ const getStatusMeta = (status) => {
   switch (status) {
     case "new":
     case "open":
-      return { color: "orange", label: "Menunggu Tindak Lanjut IT" };
+      return { color: "orange", label: "Menunggu Tindak Lanjut IT", className: "it-status-tag--new" };
     case "in_progress":
-      return { color: "blue", label: "Sedang Diproses" };
+      return { color: "blue", label: "Sedang Diproses", className: "it-status-tag--in_progress" };
     case "waiting_user_approval":
-      return { color: "purple", label: "Menunggu Konfirmasi Pelapor" };
+      return { color: "purple", label: "Menunggu Konfirmasi Pelapor", className: "it-status-tag--waiting" };
     case "completed":
-      return { color: "green", label: "Selesai" };
+      return { color: "green", label: "Selesai", className: "it-status-tag--completed" };
     default:
-      return { color: "default", label: status ?? "Tidak diketahui" };
+      return { color: "default", label: status ?? "Tidak diketahui", className: "" };
   }
 };
 
@@ -77,18 +88,18 @@ const buildTimelineItems = (ticket) => {
 
   const items = [
     {
-      color: "blue",
+      color: "#2563eb",
       children: (
         <Space direction="vertical" size={2}>
-          <Typography.Text strong>Pelaporan dibuat</Typography.Text>
-          <Typography.Text type="secondary">
+          <Text strong style={{ color: "#0f172a" }}>Pelaporan Dibuat</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
             {formatDate(ticket.report_date)}
-          </Typography.Text>
-          <Typography.Paragraph style={{ marginBottom: 0 }}>
+          </Text>
+          <Paragraph style={{ marginBottom: 0, fontSize: 12.5, color: "#475569" }}>
             {ticket.reporter_signature_token || ticket.reporter_signature 
-              ? "Tanda tangan pelapor terekam saat pengajuan awal." 
-              : "Laporan telah masuk ke sistem."}
-          </Typography.Paragraph>
+              ? "Tanda tangan digital pelapor terekam saat pengajuan awal." 
+              : "Laporan keluhan IT telah masuk ke sistem SIPTU."}
+          </Paragraph>
         </Space>
       ),
     },
@@ -96,16 +107,16 @@ const buildTimelineItems = (ticket) => {
 
   if (ticket.status === "rejected") {
     items.push({
-      color: "red",
+      color: "#ef4444",
       children: (
         <Space direction="vertical" size={2}>
-          <Typography.Text strong>Laporan ditolak</Typography.Text>
-          <Typography.Text type="secondary">
+          <Text strong style={{ color: "#ef4444" }}>Laporan Ditolak</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
             {formatDate(ticket.updated_at)}
-          </Typography.Text>
-          <Typography.Paragraph style={{ marginBottom: 0 }}>
-            Alasan: {ticket.followup_details}
-          </Typography.Paragraph>
+          </Text>
+          <Paragraph style={{ marginBottom: 0, fontSize: 12.5, color: "#475569" }}>
+            Alasan: {ticket.followup_details || "Laporan tidak memenuhi kriteria."}
+          </Paragraph>
         </Space>
       ),
     });
@@ -118,35 +129,34 @@ const buildTimelineItems = (ticket) => {
     ticket.it_staff_signature_token
   ) {
     items.push({
-      color: "cyan",
+      color: "#0284c7",
       children: (
         <Space direction="vertical" size={2}>
-          <Typography.Text strong>Tindak lanjut IT Staff</Typography.Text>
-          <Typography.Text type="secondary">
+          <Text strong style={{ color: "#0f172a" }}>Tindak Lanjut IT Staff (TTE)</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
             {formatDate(ticket.it_staff_signed_at || ticket.completion_date)}
-          </Typography.Text>
-          <Typography.Paragraph style={{ marginBottom: 0 }}>
+          </Text>
+          <Paragraph style={{ marginBottom: 0, fontSize: 12.5, color: "#475569" }}>
             {ticket.followup_details ?? "Detail tindak lanjut belum diisi."}
-          </Typography.Paragraph>
+          </Paragraph>
         </Space>
       ),
     });
   }
 
   if (ticket.reporter_signature || ticket.reporter_signature_token) {
-    // Only show confirmation if it happened AFTER the completion (or if it's the final completed state)
     if (ticket.status === "completed") {
       items.push({
-        color: "green",
+        color: "#16a34a",
         children: (
           <Space direction="vertical" size={2}>
-            <Typography.Text strong>Konfirmasi pelapor</Typography.Text>
-            <Typography.Text type="secondary">
+            <Text strong style={{ color: "#16a34a" }}>Konfirmasi Pelapor & Tiket Selesai</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               {formatDate(ticket.reporter_signed_at || ticket.updated_at || ticket.completion_date)}
-            </Typography.Text>
-            <Typography.Paragraph style={{ marginBottom: 0 }}>
-              Pelapor telah mengonfirmasi tindak lanjut dan tiket dinyatakan selesai.
-            </Typography.Paragraph>
+            </Text>
+            <Paragraph style={{ marginBottom: 0, fontSize: 12.5, color: "#475569" }}>
+              Pelapor telah mengonfirmasi hasil tindak lanjut dan tiket dinyatakan **Selesai 100%**.
+            </Paragraph>
           </Space>
         ),
       });
@@ -175,7 +185,6 @@ const ItHelpdeskDaftarLaporan = () => {
     pdf: false,
     excel: false,
   });
-  const followupSignatureRef = useRef();
   const [followupForm] = Form.useForm();
   const navigate = useNavigate();
 
@@ -184,7 +193,7 @@ const ItHelpdeskDaftarLaporan = () => {
     try {
       const response = await apiFetch("/it-helpdesk-tickets?pageSize=1000");
       if (!response.ok) {
-        throw new Error("Gagal memuat data laporan.");
+        throw new Error("Gagal memuat data laporan IT.");
       }
       const data = await response.json();
       const items = Array.isArray(data) ? data : data.data || [];
@@ -202,16 +211,17 @@ const ItHelpdeskDaftarLaporan = () => {
   const handleDelete = useCallback(
     async (ticketId) => {
       modal.confirm({
-        title: "Anda yakin ingin menghapus tiket ini?",
-        content: "Tindakan ini tidak dapat dibatalkan.",
-        okText: "Hapus",
+        title: "Konfirmasi Hapus Tiket",
+        content: "Apakah Anda yakin ingin menghapus tiket laporan ini? Tindakan ini tidak dapat dibatalkan.",
+        okText: "Ya, Hapus",
         okType: "danger",
         cancelText: "Batal",
+        centered: true,
         onOk: async () => {
           try {
             const response = await apiFetch(
               `/it-helpdesk-tickets/${ticketId}`,
-              { method: "DELETE" },
+              { method: "DELETE" }
             );
             if (!response.ok) {
               const data = await response.json();
@@ -228,7 +238,7 @@ const ItHelpdeskDaftarLaporan = () => {
         },
       });
     },
-    [apiFetch, modal, notification, fetchTickets],
+    [apiFetch, modal, notification, fetchTickets]
   );
 
   const buildQueryParams = useCallback(() => {
@@ -324,12 +334,8 @@ const ItHelpdeskDaftarLaporan = () => {
         setDownloadLoading((prev) => ({ ...prev, [key]: false }));
       }
     },
-    [buildQueryParams, token, notification],
+    [buildQueryParams, apiFetch, notification]
   );
-
-  const handleReporterSignature = (record) => {
-    navigate(`/it-helpdesk/tickets/${record.id}/sign`);
-  };
 
   const handleViewHistory = (record) => {
     setHistoryTicket(record);
@@ -357,15 +363,15 @@ const ItHelpdeskDaftarLaporan = () => {
       const response = await apiFetch(
         `/it-helpdesk-tickets/${record.id}`,
         {
-          method: "PUT", // Assuming PUT update handles status change
+          method: "PUT",
           body: JSON.stringify({ status: "in_progress" }),
-        },
+        }
       );
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || "Gagal memproses tiket.");
       }
-      notification.success({ message: "Tiket sedang diproses." });
+      notification.success({ message: "Tiket sedang diproses oleh Tim IT." });
       fetchTickets();
     } catch (error) {
       notification.error({
@@ -388,13 +394,13 @@ const ItHelpdeskDaftarLaporan = () => {
         {
           method: "PUT",
           body: JSON.stringify(payload),
-        },
+        }
       );
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || "Gagal menyimpan tindak lanjut.");
       }
-      notification.success({ message: "Tindak lanjut berhasil disimpan." });
+      notification.success({ message: "Tindak lanjut berhasil disimpan & TTE terverifikasi." });
       setFollowupModalOpen(false);
       fetchTickets();
     } catch (error) {
@@ -458,33 +464,64 @@ const ItHelpdeskDaftarLaporan = () => {
     setStatusFilter("all");
     setDateRangeFilter(null);
   };
+
   const columns = [
-    { title: "Nama Pegawai", dataIndex: "employee_name" },
-    { 
-      title: "Fungsi/Bidang", 
-      dataIndex: "function_area",
-      render: (text, record) => text || record.employee?.fungsi_bidang || record.employee_work_unit || "-"
-    },
-    { title: "Jenis Pelaporan", dataIndex: "report_type" },
     {
-      title: "Status",
+      title: "No. Tiket / Pelapor",
+      key: "ticket_reporter",
+      render: (_, record) => (
+        <div>
+          <Text strong style={{ display: "block", color: "#0f172a", fontSize: 13.5 }}>
+            {record.employee_name}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 11.5 }}>
+            ID Tiket: <code style={{ color: "#2563eb", background: "#eff6ff", padding: "1px 5px", borderRadius: 4 }}>
+              #{record.id?.toString().padStart(4, "0")}
+            </code>
+          </Text>
+        </div>
+      ),
+    },
+    { 
+      title: "Fungsi / Bidang", 
+      dataIndex: "function_area",
+      render: (text, record) => (
+        <Text style={{ fontSize: 13, color: "#334155" }}>
+          {text || record.employee?.fungsi_bidang || record.employee_work_unit || "-"}
+        </Text>
+      ),
+    },
+    {
+      title: "Jenis Pelaporan",
+      dataIndex: "report_type",
+      render: (type) => (
+        <Tag color="geekblue" style={{ borderRadius: 6, fontWeight: 600, fontSize: 11 }}>
+          {type || "Umum"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Status Tiket",
       dataIndex: "status",
       render: (status, record) => {
         const meta = getStatusMeta(status);
         return (
           <Space direction="vertical" size={2}>
-            <Tag color={meta.color} style={{ margin: 0 }}>{meta.label}</Tag>
+            <Tag className={`it-status-tag ${meta.className}`}>
+              {status === "completed" ? <CheckCircleFilled /> : <ClockCircleFilled />}
+              {meta.label}
+            </Tag>
             {record.is_auto_resolved && (
-              <Tag color="volcano" style={{ fontSize: 10, margin: 0 }}>Auto-Resolved</Tag>
+              <Tag color="volcano" style={{ fontSize: 10, borderRadius: 10, margin: 0 }}>Auto-Resolved</Tag>
             )}
           </Space>
         );
       },
     },
     {
-      title: "TTE",
+      title: "Verifikasi TTE",
       key: "tte_status",
-      width: 100,
+      width: 130,
       align: "center",
       render: (_, record) => {
         const hasReporter = !!(record.reporter_signature_token || record.reporter_signature);
@@ -492,11 +529,15 @@ const ItHelpdeskDaftarLaporan = () => {
         
         return (
           <Space size="small">
-            <Tooltip title={hasReporter ? "Pelapor sudah TTD" : "Pelapor belum TTD"}>
-              <Badge status={hasReporter ? "success" : "default"} text="P" />
+            <Tooltip title={hasReporter ? "Pelapor sudah TTD digital" : "Pelapor belum TTD"}>
+              <Tag color={hasReporter ? "success" : "default"} style={{ borderRadius: 10, fontSize: 11, fontWeight: 700, margin: 0 }}>
+                Pelapor: {hasReporter ? "✓" : "-"}
+              </Tag>
             </Tooltip>
-            <Tooltip title={hasStaff ? "Petugas IT sudah TTD" : "Petugas IT belum TTD"}>
-              <Badge status={hasStaff ? "success" : "default"} text="IT" />
+            <Tooltip title={hasStaff ? "Petugas IT sudah TTD digital" : "Petugas IT belum TTD"}>
+              <Tag color={hasStaff ? "processing" : "default"} style={{ borderRadius: 10, fontSize: 11, fontWeight: 700, margin: 0 }}>
+                IT: {hasStaff ? "✓" : "-"}
+              </Tag>
             </Tooltip>
           </Space>
         );
@@ -513,23 +554,23 @@ const ItHelpdeskDaftarLaporan = () => {
         if (["new", "open"].includes(record.status)) {
           items.push({
             key: "process",
-            label: "Proses",
-            icon: <SyncOutlined style={{ color: "#1890ff" }} />,
+            label: "Proses Tiket",
+            icon: <SyncOutlined style={{ color: "#2563eb" }} />,
             onClick: () => handleProcess(record),
           });
         }
         if (["new", "open", "in_progress"].includes(record.status)) {
           items.push({
             key: "finish",
-            label: "Selesai Tindak Lanjut",
-            icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+            label: "Selesai & Input Tindak Lanjut",
+            icon: <CheckCircleOutlined style={{ color: "#16a34a" }} />,
             onClick: () => handleFollowup(record),
           });
         }
         items.push({
           key: "download",
-          label: "Cetak PDF",
-          icon: <DownloadOutlined />,
+          label: "Cetak Dokumen PDF",
+          icon: <PrinterOutlined style={{ color: "#0284c7" }} />,
           onClick: () => {
             const baseUrlRaw = import.meta.env.VITE_API_URL || "https://siptu.bpompalopo.com/core_api/api";
             const baseUrl = baseUrlRaw.replace(/\/+$/, "");
@@ -539,16 +580,16 @@ const ItHelpdeskDaftarLaporan = () => {
         });
         items.push({
           key: "history",
-          label: "Lihat Riwayat",
-          icon: <FileTextOutlined />,
+          label: "Lihat Detail & Riwayat",
+          icon: <FileTextOutlined style={{ color: "#475569" }} />,
           onClick: () => handleViewHistory(record),
         });
         if (isAdmin) {
           items.push({ type: "divider" });
           items.push({
             key: "delete",
-            label: <span style={{ color: "#ff4d4f" }}>Hapus</span>,
-            icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
+            label: <span style={{ color: "#ef4444" }}>Hapus Tiket</span>,
+            icon: <DeleteOutlined style={{ color: "#ef4444" }} />,
             onClick: () => handleDelete(record.id),
           });
         }
@@ -559,7 +600,7 @@ const ItHelpdeskDaftarLaporan = () => {
             trigger={["click"]}
             placement="bottomRight"
           >
-            <Button type="text" icon={<MoreOutlined />} />
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ fontSize: 18 }} />} />
           </Dropdown>
         );
       },
@@ -572,331 +613,396 @@ const ItHelpdeskDaftarLaporan = () => {
   const historyTimelineItems = buildTimelineItems(historyTicket);
 
   return (
-    <div className="module-section" style={{ minHeight: "100vh", paddingBottom: 24 }}>
-      <div className="module-toolbar">
+    <div className="it-helpdesk-page">
+      {/* Clean Professional Module Banner (No Gradients) */}
+      <div className="it-helpdesk-banner">
         <div>
-          <Typography.Title level={3} className="module-title" style={{ margin: 0 }}>
-            IT Helpdesk - Laporan Keluhan
-          </Typography.Title>
-          <Typography.Text className="module-subtitle" style={{ fontSize: 13 }}>
-            Lacak, tindak lanjuti, dan kelola laporan keluhan IT secara terpusat.
-          </Typography.Text>
+          <h1 className="it-helpdesk-banner-title">
+            <ToolOutlined style={{ color: "#2563eb" }} /> IT Helpdesk - Pelaporan Keluhan
+          </h1>
+          <p className="it-helpdesk-banner-subtitle">
+            Pusat penanganan kendala sistem IT, perbaikan jaringan, dan tindak lanjut TTE terintegrasi.
+          </p>
         </div>
+        <Space wrap size="middle">
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchTickets}
+            loading={loading}
+            style={{ borderRadius: 8, height: 38 }}
+          >
+            Segarkan
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate("/app/layanan-mandiri")}
+            style={{ background: "#2563eb", borderRadius: 8, height: 38, fontWeight: 600 }}
+          >
+            Buat Laporan Baru
+          </Button>
+        </Space>
       </div>
 
+      {/* KPI Cards Row */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={12} sm={12} md={6}>
-          <Card bordered={false} hoverable styles={{ body: { padding: "16px 24px" } }} style={{ borderRadius: 10, height: "100%" }}>
-            <Statistic
-              title={<span style={{ color: "#8c8c8c", fontWeight: 500 }}>Total Keluhan</span>}
-              value={stats.total}
-              prefix={<ToolOutlined style={{ color: "#1890ff", opacity: 0.8 }} />}
-              valueStyle={{ color: "#262626", fontWeight: "bold" }}
-            />
-          </Card>
+          <div className="it-kpi-card">
+            <div className="it-kpi-header">
+              <div className="it-kpi-icon-wrapper it-kpi-icon--total">
+                <ToolOutlined />
+              </div>
+            </div>
+            <div className="it-kpi-value">{stats.total}</div>
+            <div className="it-kpi-label">Total Laporan</div>
+          </div>
         </Col>
         <Col xs={12} sm={12} md={6}>
-          <Card bordered={false} hoverable styles={{ body: { padding: "16px 24px" } }} style={{ borderRadius: 10, height: "100%" }}>
-            <Statistic
-              title={<span style={{ color: "#8c8c8c", fontWeight: 500 }}>Perlu Tindak Lanjut</span>}
-              value={stats.new}
-              prefix={<ClockCircleOutlined style={{ color: "#faad14", opacity: 0.8 }} />}
-              valueStyle={{ color: "#262626", fontWeight: "bold" }}
-            />
-          </Card>
+          <div className="it-kpi-card">
+            <div className="it-kpi-header">
+              <div className="it-kpi-icon-wrapper it-kpi-icon--warning">
+                <ClockCircleOutlined />
+              </div>
+            </div>
+            <div className="it-kpi-value">{stats.new}</div>
+            <div className="it-kpi-label">Menunggu Tindak Lanjut</div>
+          </div>
         </Col>
         <Col xs={12} sm={12} md={6}>
-          <Card bordered={false} hoverable styles={{ body: { padding: "16px 24px" } }} style={{ borderRadius: 10, height: "100%" }}>
-            <Statistic
-              title={<span style={{ color: "#8c8c8c", fontWeight: 500 }}>Sedang Diproses</span>}
-              value={stats.in_progress}
-              prefix={<SyncOutlined spin style={{ color: "#1890ff", opacity: 0.8 }} />}
-              valueStyle={{ color: "#262626", fontWeight: "bold" }}
-            />
-          </Card>
+          <div className="it-kpi-card">
+            <div className="it-kpi-header">
+              <div className="it-kpi-icon-wrapper it-kpi-icon--progress">
+                <SyncOutlined spin />
+              </div>
+            </div>
+            <div className="it-kpi-value">{stats.in_progress}</div>
+            <div className="it-kpi-label">Sedang Diproses</div>
+          </div>
         </Col>
         <Col xs={12} sm={12} md={6}>
-          <Card bordered={false} hoverable styles={{ body: { padding: "16px 24px" } }} style={{ borderRadius: 10, height: "100%" }}>
-            <Statistic
-              title={<span style={{ color: "#8c8c8c", fontWeight: 500 }}>Selesai</span>}
-              value={stats.completed}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a", opacity: 0.8 }} />}
-              valueStyle={{ color: "#262626", fontWeight: "bold" }}
-            />
-          </Card>
+          <div className="it-kpi-card">
+            <div className="it-kpi-header">
+              <div className="it-kpi-icon-wrapper it-kpi-icon--success">
+                <CheckCircleOutlined />
+              </div>
+            </div>
+            <div className="it-kpi-value">{stats.completed}</div>
+            <div className="it-kpi-label">Selesai 100%</div>
+          </div>
         </Col>
       </Row>
 
-      <Card
-        bordered={false}
-        style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-        styles={{ body: { padding: "20px 24px" } }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
+      {/* Control Filter Bar & Table Workspace */}
+      <div className="it-filter-card">
+        <div className="it-filter-row">
           <Space wrap size="middle">
             <Input
               allowClear
-              placeholder="Cari keluhan..."
-              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+              placeholder="Cari pelapor, fungsi, atau kendala..."
+              prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: 240, borderRadius: 6 }}
+              style={{ width: 260, borderRadius: 8, height: 38 }}
             />
             <Select
               value={statusFilter}
               onChange={setStatusFilter}
               options={STATUS_OPTIONS}
-              style={{ width: 180 }}
+              style={{ width: 200, height: 38 }}
             />
             <RangePicker
               value={dateRangeFilter ?? null}
               onChange={(dates) => setDateRangeFilter(dates && dates.length ? dates : null)}
               allowClear
               format="DD MMM YYYY"
-              style={{ borderRadius: 6 }}
+              style={{ borderRadius: 8, height: 38 }}
             />
             <Tooltip title="Reset Filter">
-              <Button icon={<UndoOutlined />} onClick={handleResetFilters} />
+              <Button 
+                icon={<UndoOutlined />} 
+                onClick={handleResetFilters} 
+                style={{ borderRadius: 8, height: 38 }}
+              />
             </Tooltip>
           </Space>
           <Space wrap>
             <Button
-              icon={<FilePdfOutlined />}
+              icon={<FilePdfOutlined style={{ color: "#ef4444" }} />}
               onClick={() => handleDownload("pdf")}
               loading={downloadLoading.pdf}
+              style={{ borderRadius: 8, height: 38, fontWeight: 600 }}
             >
-              PDF
+              Export PDF
             </Button>
             <Button
-              icon={<FileExcelOutlined />}
+              icon={<FileExcelOutlined style={{ color: "#16a34a" }} />}
               onClick={() => handleDownload("excel")}
               loading={downloadLoading.excel}
+              style={{ borderRadius: 8, height: 38, fontWeight: 600 }}
             >
-              Excel
+              Export Excel
             </Button>
           </Space>
         </div>
 
-        <Table
-          dataSource={filteredTickets}
-          columns={columns}
-          loading={loading}
-          rowKey="id"
-          pagination={{ 
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} laporan`,
-          }}
-          scroll={{ x: 'max-content' }}
-          expandable={{
-            expandedRowRender: (record) => (
-              <div style={{ padding: "8px 16px", background: "#fafafa", borderRadius: 8 }}>
-                <p style={{ margin: 0 }}><strong>Tanggal Pelaporan:</strong> {formatDate(record.report_date)}</p>
-                <p style={{ margin: "8px 0 0 0" }}><strong>Rincian Permasalahan:</strong> {record.problem_details || "-"}</p>
-              </div>
-            ),
-          }}
-        />
-      </Card>
+        <div className="it-table-container">
+          <Table
+            dataSource={filteredTickets}
+            columns={columns}
+            loading={loading}
+            rowKey="id"
+            pagination={{ 
+              showSizeChanger: true,
+              pageSize: 15,
+              showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} laporan IT`,
+            }}
+            scroll={{ x: 'max-content' }}
+            expandable={{
+              expandedRowRender: (record) => (
+                <div style={{ padding: "14px 20px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 8 }}>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 700, display: "block" }}>
+                        Tanggal Pelaporan
+                      </Text>
+                      <Text strong style={{ fontSize: 13, color: "#0f172a" }}>
+                        {formatDate(record.report_date)}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 700, display: "block" }}>
+                        Lokasi / Unit Kerja
+                      </Text>
+                      <Text strong style={{ fontSize: 13, color: "#0f172a" }}>
+                        {record.function_area || record.employee_work_unit || "-"}
+                      </Text>
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                      Rincian Permasalahan
+                    </Text>
+                    <Paragraph style={{ margin: 0, fontSize: 13, color: "#334155", background: "#ffffff", padding: "10px 14px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                      {record.problem_details || "Tidak ada detail."}
+                    </Paragraph>
+                  </div>
+                </div>
+              ),
+            }}
+          />
+        </div>
+      </div>
 
+      {/* Modal: Form Tindak Lanjut IT Staff */}
       {selectedTicket && (
         <Modal
-          title="Tindak Lanjut Keluhan IT"
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                <ToolOutlined />
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Input Tindak Lanjut IT Staff</div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>
+                  Tiket #{selectedTicket.id?.toString().padStart(4, "0")} — {selectedTicket.employee_name}
+                </div>
+              </div>
+            </div>
+          }
           open={followupModalOpen}
           onCancel={() => setFollowupModalOpen(false)}
           onOk={followupForm.submit}
           confirmLoading={submittingFollowup}
-          okText="Simpan Tindak Lanjut"
+          okText="Simpan & Verifikasi TTE"
           cancelText="Batal"
+          centered
+          width={540}
+          className="it-modal"
           destroyOnHidden
         >
-          <Form
-            form={followupForm}
-            layout="vertical"
-            requiredMark={false}
-            onFinish={handleSubmitFollowup}
-          >
-            <Form.Item label="Permasalahan">
-              <Input.TextArea
-                value={selectedTicket.problem_details}
-                readOnly
-                rows={4}
-              />
-            </Form.Item>
-            <Form.Item
-              name="followup_details"
-              label="Tindak Lanjut/Rencana Tindak Lanjut"
-              rules={[
-                {
-                  required: true,
-                  message: "Rincian tindak lanjut wajib diisi.",
-                },
-              ]}
+          <div style={{ padding: "16px 0 0 0" }}>
+            <Form
+              form={followupForm}
+              layout="vertical"
+              requiredMark={false}
+              onFinish={handleSubmitFollowup}
             >
-              <Input.TextArea
-                rows={4}
-                placeholder="Jelaskan tindak lanjut atau rencana tindak lanjut."
-              />
-            </Form.Item>
-            <Form.Item
-              name="completion_date"
-              label="Tanggal Penyelesaian"
-              rules={[
-                {
-                  required: true,
-                  message: "Tanggal penyelesaian wajib diisi.",
-                },
-              ]}
-            >
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item
-              name="password"
-              label="Password SIPTU (TTE)"
-              rules={[
-                {
-                  required: true,
-                  message: "Password SIPTU wajib diisi sebagai TTE.",
-                },
-              ]}
-            >
-              <Input.Password placeholder="Masukkan password login SIPTU Anda" />
-            </Form.Item>
-          </Form>
+              <div style={{ background: "#f8fafc", padding: "12px 16px", borderRadius: 12, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+                  Permasalahan Pelapor:
+                </Text>
+                <Text strong style={{ fontSize: 13, color: "#0f172a" }}>
+                  {selectedTicket.problem_details}
+                </Text>
+              </div>
+
+              <Form.Item
+                name="followup_details"
+                label={<Text strong style={{ fontSize: 13 }}>Rincian Tindak Lanjut / Perbaikan IT</Text>}
+                rules={[
+                  {
+                    required: true,
+                    message: "Rincian tindak lanjut wajib diisi.",
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder="Jelaskan tindakan perbaikan atau pemecahan masalah yang telah dilakukan..."
+                  style={{ borderRadius: 8 }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="completion_date"
+                label={<Text strong style={{ fontSize: 13 }}>Tanggal Penyelesaian</Text>}
+                rules={[
+                  {
+                    required: true,
+                    message: "Tanggal penyelesaian wajib diisi.",
+                  },
+                ]}
+              >
+                <DatePicker style={{ width: "100%", borderRadius: 8, height: 38 }} format="DD MMMM YYYY" />
+              </Form.Item>
+
+              <Form.Item
+                name="password"
+                label={<Text strong style={{ fontSize: 13 }}>Password SIPTU (Verifikasi TTE Digital)</Text>}
+                rules={[
+                  {
+                    required: true,
+                    message: "Masukkan password SIPTU Anda untuk menandatangani TTE secara digital.",
+                  },
+                ]}
+              >
+                <Input.Password placeholder="Masukkan password login SIPTU Anda" style={{ borderRadius: 8, height: 38 }} />
+              </Form.Item>
+            </Form>
+          </div>
         </Modal>
       )}
 
+      {/* Modal: Detail & Riwayat Laporan IT */}
       {historyTicket && (
         <Modal
-          title={`Riwayat Tiket #${historyTicket.id?.toString().padStart(4, "0")}`}
+          title={null}
           open={historyModalOpen}
           onCancel={handleCloseHistory}
-          footer={[
-            <Button key="close" onClick={handleCloseHistory}>
-              Tutup
-            </Button>,
-          ]}
-          width={820}
+          footer={null}
+          width={760}
+          centered
+          className="it-modal"
           destroyOnHidden
         >
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Space align="center" size="middle" wrap>
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                Status Saat Ini
-              </Typography.Title>
-              <Tag color={historyStatusMeta.color}>
+          <div className="feed-modal__wrap">
+            {/* Clean Professional Modal Header */}
+            <div className="it-modal-header">
+              <div className="it-modal-header-icon">
+                <ToolOutlined />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.2px", color: "#2563eb", textTransform: "uppercase" }}>
+                  LAPORAN KELUHAN IT HELPDESK
+                </div>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+                  Tiket #{historyTicket.id?.toString().padStart(4, "0")}
+                </h2>
+              </div>
+              <Tag className={`it-status-tag ${historyStatusMeta.className}`}>
+                {historyTicket.status === "completed" ? <CheckCircleFilled /> : <ClockCircleFilled />}
                 {historyStatusMeta.label}
               </Tag>
-            </Space>
+            </div>
 
-            <Descriptions
-              title="Informasi Pelapor"
-              bordered
-              size="small"
-              column={2}
-            >
-              <Descriptions.Item label="Nama Pegawai">
-                {historyTicket.employee_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="NIP">
-                {historyEmployee.nip ?? "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Jabatan">
-                {historyEmployee.jabatan ?? "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Fungsi/Bidang">
-                {historyTicket.function_area ??
-                  historyTicket.employee_work_unit ??
-                  historyEmployee.fungsi_bidang ??
-                  "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tanggal Pelaporan">
-                {formatDate(historyTicket.report_date)}
-              </Descriptions.Item>
-              <Descriptions.Item label="ID Tiket">
-                #{historyTicket.id?.toString().padStart(4, "0")}
-              </Descriptions.Item>
-            </Descriptions>
+            {/* Body */}
+            <div className="it-modal-body">
+              {/* Reporter Info */}
+              <div>
+                <div className="feed-modal__section-label">
+                  <UserOutlined /> Informasi Pelapor & Unit Kerja
+                </div>
+                <div className="it-data-card">
+                  <div className="it-data-row">
+                    <span className="it-data-key">Nama Pelapor</span>
+                    <span className="it-data-val">{historyTicket.employee_name}</span>
+                  </div>
+                  <div className="it-data-row">
+                    <span className="it-data-key">NIP</span>
+                    <span className="it-data-val" style={{ fontFamily: "monospace" }}>
+                      {historyEmployee.nip ?? "-"}
+                    </span>
+                  </div>
+                  <div className="it-data-row">
+                    <span className="it-data-key">Fungsi / Bidang</span>
+                    <span className="it-data-val">
+                      {historyTicket.function_area ?? historyTicket.employee_work_unit ?? historyEmployee.fungsi_bidang ?? "-"}
+                    </span>
+                  </div>
+                  <div className="it-data-row">
+                    <span className="it-data-key">Tanggal Laporan</span>
+                    <span className="it-data-val">{formatDate(historyTicket.report_date)}</span>
+                  </div>
+                </div>
+              </div>
 
-            <Descriptions
-              title="Detail Keluhan"
-              bordered
-              size="small"
-              column={1}
-            >
-              <Descriptions.Item label="Jenis Pelaporan">
-                {historyTicket.report_type}
-              </Descriptions.Item>
-              <Descriptions.Item label="Rincian Permasalahan">
-                {historyTicket.problem_details}
-              </Descriptions.Item>
-              {historyTicket.signature && (
-                <Descriptions.Item label="Tanda Tangan Pelapor (Awal)">
-                  <img
-                    src={historyTicket.signature}
-                    alt="Tanda tangan pelapor"
-                    style={{ height: 100, background: "#fff" }}
-                  />
-                </Descriptions.Item>
-              )}
-            </Descriptions>
+              {/* Problem Details */}
+              <div>
+                <div className="feed-modal__section-label">
+                  <InfoCircleOutlined /> Detail Kendala / Permasalahan
+                </div>
+                <div className="feed-modal__issue-box feed-modal__issue-box--danger">
+                  <div className="feed-modal__issue-type">{historyTicket.report_type?.toUpperCase() || "LAPORAN KELUHAN"}</div>
+                  <p className="feed-modal__issue-desc">{historyTicket.problem_details}</p>
+                </div>
+              </div>
 
-            <Descriptions
-              title="Tindak Lanjut IT"
-              bordered
-              size="small"
-              column={2}
-            >
-              <Descriptions.Item label="Nama IT Staff">
-                {historyItStaff.name ?? "Menunggu penugasan"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tanggal Penyelesaian">
-                {historyTicket.completion_date
-                  ? formatDate(historyTicket.completion_date)
-                  : "Belum diisi"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Rincian Tindak Lanjut" span={2}>
-                {historyTicket.followup_details ??
-                  "Belum ada tindak lanjut yang tercatat."}
-              </Descriptions.Item>
-              {historyTicket.it_staff_signature && (
-                <Descriptions.Item label="Tanda Tangan IT Staff" span={2}>
-                  <img
-                    src={historyTicket.it_staff_signature}
-                    alt="Tanda tangan IT Staff"
-                    style={{ height: 100, background: "#fff" }}
-                  />
-                </Descriptions.Item>
-              )}
-            </Descriptions>
+              {/* IT Follow-up */}
+              <div>
+                <div className="feed-modal__section-label" style={{ color: "#16a34a" }}>
+                  <CheckCircleOutlined /> Tindak Lanjut Tim IT Staff
+                </div>
+                <div className="feed-modal__issue-box feed-modal__issue-box--success">
+                  <p className="feed-modal__issue-desc">
+                    {historyTicket.followup_details || "Belum ada catatan tindak lanjut dari IT Staff."}
+                  </p>
+                </div>
+              </div>
 
-            {historyTicket.reporter_signature && (
-              <Descriptions
-                title="Konfirmasi Pelapor"
-                bordered
-                size="small"
-                column={2}
+              {/* Timeline */}
+              <div>
+                <div className="feed-modal__section-label">
+                  <ClockCircleOutlined /> Jejak Waktu & Log Proses
+                </div>
+                <div style={{ background: "#f8fafc", padding: "16px 20px", borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                  <Timeline items={historyTimelineItems} />
+                </div>
+              </div>
+            </div>
+
+            {/* Corporate Footer */}
+            <div className="it-modal-footer">
+              <Button
+                icon={<PrinterOutlined />}
+                onClick={() => {
+                  const baseUrlRaw = import.meta.env.VITE_API_URL || "https://siptu.bpompalopo.com/core_api/api";
+                  const baseUrl = baseUrlRaw.replace(/\/+$/, "");
+                  const url = `${baseUrl}/public/it-helpdesk-tickets/${historyTicket.id}/pdf`;
+                  window.open(url, "_blank");
+                }}
+                style={{ borderRadius: 10, height: 42, fontWeight: 600 }}
               >
-                <Descriptions.Item label="Tanggal Konfirmasi">
-                  {formatDate(
-                    historyTicket.updated_at ?? historyTicket.completion_date,
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item
-                  label="Tanda Tangan Pelapor (Konfirmasi)"
-                  span={2}
-                >
-                  <img
-                    src={historyTicket.reporter_signature}
-                    alt="Tanda tangan pelapor konfirmasi"
-                    style={{ height: 100, background: "#fff" }}
-                  />
-                </Descriptions.Item>
-              </Descriptions>
-            )}
-
-            <Divider style={{ margin: "12px 0" }}>Jejak Waktu</Divider>
-            <Timeline items={historyTimelineItems} />
-          </Space>
+                Cetak Dokumen PDF
+              </Button>
+              <Button
+                type="primary"
+                onClick={handleCloseHistory}
+                style={{ background: "#0f172a", borderRadius: 10, height: 42, padding: "0 24px", fontWeight: 600 }}
+              >
+                Tutup Detail
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

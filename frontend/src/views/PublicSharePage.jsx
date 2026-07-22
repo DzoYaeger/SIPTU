@@ -53,7 +53,9 @@ import {
   CloseOutlined,
   EyeOutlined,
   PictureOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
+import JSZip from "jszip";
 import DocViewerModal from "../components/DocViewerModal.jsx";
 import dayjs from "dayjs";
 import "./PublicSharePage.css";
@@ -99,30 +101,32 @@ const getFileIcon = (fileName, isDir) => {
     case "docx":
     case "doc":
       return <FileWordFilled className="share-large-icon drive-icon-word" />;
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "webp":
-    case "svg":
-      return <FileImageFilled className="share-large-icon drive-icon-image" />;
+    case "pptx":
+    case "ppt":
+      return <FilePptFilled className="share-large-icon drive-icon-ppt" />;
     case "zip":
     case "rar":
     case "7z":
     case "tar":
     case "gz":
       return <FileZipFilled className="share-large-icon drive-icon-zip" />;
-    case "pptx":
-    case "ppt":
-      return <FilePptFilled className="share-large-icon drive-icon-ppt" />;
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "webp":
+    case "svg":
+    case "bmp":
+      return <FileImageFilled className="share-large-icon drive-icon-image" />;
     case "mp4":
-    case "avi":
     case "mkv":
+    case "avi":
     case "mov":
       return <PlayCircleFilled className="share-large-icon drive-icon-video" />;
     case "mp3":
     case "wav":
-    case "m4a":
+    case "ogg":
+    case "flac":
       return <CustomerServiceFilled className="share-large-icon drive-icon-audio" />;
     default:
       return <FileFilled className="share-large-icon drive-icon-default" />;
@@ -131,47 +135,35 @@ const getFileIcon = (fileName, isDir) => {
 
 const getListFileIcon = (fileName, isDir) => {
   if (isDir) {
-    return <FolderFilled style={{ color: "#ffc107", fontSize: "18px" }} />;
+    return <FolderFilled style={{ color: "#ffb703", fontSize: "20px" }} />;
   }
-  if (!fileName) return <FileFilled style={{ color: "#757575", fontSize: "18px" }} />;
+  if (!fileName) return <FileFilled style={{ color: "#94a3b8", fontSize: "20px" }} />;
   const ext = fileName.split(".").pop().toLowerCase();
   switch (ext) {
     case "pdf":
-      return <FilePdfFilled style={{ color: "#ea4335", fontSize: "18px" }} />;
+      return <FilePdfFilled style={{ color: "#ea4335", fontSize: "20px" }} />;
     case "xlsx":
     case "xls":
     case "csv":
-      return <FileExcelFilled style={{ color: "#0f9d58", fontSize: "18px" }} />;
+      return <FileExcelFilled style={{ color: "#34a853", fontSize: "20px" }} />;
     case "docx":
     case "doc":
-      return <FileWordFilled style={{ color: "#4285f4", fontSize: "18px" }} />;
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "webp":
-    case "svg":
-      return <FileImageFilled style={{ color: "#ff69b4", fontSize: "18px" }} />;
+      return <FileWordFilled style={{ color: "#4285f4", fontSize: "20px" }} />;
+    case "pptx":
+    case "ppt":
+      return <FilePptFilled style={{ color: "#ff6d01", fontSize: "20px" }} />;
     case "zip":
     case "rar":
     case "7z":
-    case "tar":
-    case "gz":
-      return <FileZipFilled style={{ color: "#9c27b0", fontSize: "18px" }} />;
-    case "pptx":
-    case "ppt":
-      return <FilePptFilled style={{ color: "#ff5722", fontSize: "18px" }} />;
-    case "mp4":
-    case "avi":
-    case "mkv":
-    case "mov":
-      return <PlayCircleFilled style={{ color: "#3f51b5", fontSize: "18px" }} />;
-    case "mp3":
-    case "wav":
-    case "m4a":
-      return <CustomerServiceFilled style={{ color: "#ff9800", fontSize: "18px" }} />;
+      return <FileZipFilled style={{ color: "#ab47bc", fontSize: "20px" }} />;
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "webp":
+      return <FileImageFilled style={{ color: "#ea4335", fontSize: "20px" }} />;
     default:
-      return <FileFilled style={{ color: "#757575", fontSize: "18px" }} />;
+      return <FileFilled style={{ color: "#94a3b8", fontSize: "20px" }} />;
   }
 };
 
@@ -183,70 +175,77 @@ export default function PublicSharePage() {
   const [fileInfo, setFileInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState("list"); // grid or list
 
-  // Modals state for public write operations
+  // Checkbox Selection State
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+
+  // Modals & Drawers State
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState({});
-  const [downloads, setDownloads] = useState({});
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [isDownloadWidgetVisible, setIsDownloadWidgetVisible] = useState(false);
-  const [isDownloadWidgetMinimized, setIsDownloadWidgetMinimized] = useState(false);
-  const [isUploadWidgetVisible, setIsUploadWidgetVisible] = useState(false);
-  const [isUploadWidgetMinimized, setIsUploadWidgetMinimized] = useState(false);
   const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
-  const dragCounter = useRef(0);
 
-  // Selector modal states (Move/Copy)
+  // Rename Modal State
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renameTargetFile, setRenameTargetFile] = useState(null);
+  const [newFileName, setNewFileName] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
+  // File & Folder Selector Modal (Move/Copy)
   const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
-  const [selectorAction, setSelectorAction] = useState("move"); // "move" or "copy"
+  const [selectorAction, setSelectorAction] = useState("move"); // "move" | "copy"
   const [selectorSourceFile, setSelectorSourceFile] = useState(null);
   const [selectorPath, setSelectorPath] = useState("");
   const [selectorFolders, setSelectorFolders] = useState([]);
   const [loadingSelectorFolders, setLoadingSelectorFolders] = useState(false);
   const [executingSelector, setExecutingSelector] = useState(false);
 
-  // PDF Preview state
-  const [previewPdfFile, setPreviewPdfFile] = useState(null);
-  // Apps Doc View state
+  // Online Doc / PDF Viewer State
   const [docViewFile, setDocViewFile] = useState(null);
-  // Photo Preview state
+  const [previewPdfFile, setPreviewPdfFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
 
+  // Download Progress Widget State
+  const [downloads, setDownloads] = useState({});
+  const [isDownloadWidgetVisible, setIsDownloadWidgetVisible] = useState(false);
+  const [isDownloadWidgetMinimized, setIsDownloadWidgetMinimized] = useState(false);
+  const [isUploadWidgetVisible, setIsUploadWidgetVisible] = useState(false);
+  const [isUploadWidgetMinimized, setIsUploadWidgetMinimized] = useState(false);
+
+  const dragCounter = useRef(0);
+
   const handleDragEnter = (e) => {
-    if (!fileInfo?.can_edit) return;
     e.preventDefault();
     e.stopPropagation();
-    dragCounter.current++;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+    dragCounter.current += 1;
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
       setIsDraggingOverPage(true);
     }
   };
 
   const handleDragLeave = (e) => {
-    if (!fileInfo?.can_edit) return;
     e.preventDefault();
     e.stopPropagation();
-    dragCounter.current--;
+    dragCounter.current -= 1;
     if (dragCounter.current === 0) {
       setIsDraggingOverPage(false);
     }
   };
 
   const handleDragOver = (e) => {
-    if (!fileInfo?.can_edit) return;
     e.preventDefault();
     e.stopPropagation();
   };
 
   const handleDrop = (e) => {
-    if (!fileInfo?.can_edit) return;
     e.preventDefault();
     e.stopPropagation();
+    dragCounter.current = 0;
     setIsDraggingOverPage(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -349,51 +348,110 @@ export default function PublicSharePage() {
     return url;
   }, [baseUrl, token, getRelativePath]);
 
-  const handleDownload = (file) => {
-    const fileId = `download-${Date.now()}-${file.name}`;
-    
-    setDownloads((prev) => ({
-      ...prev,
-      [fileId]: {
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        progress: 0,
-        status: "downloading",
-      },
-    }));
-    setIsDownloadWidgetVisible(true);
-    setIsDownloadWidgetMinimized(false);
+  // Recursive public folder zipping helper
+  const addFolderToZipPublic = useCallback(
+    async (zip, relativeFolderPath, currentZipFolder) => {
+      try {
+        const url = `${baseUrl}/share/info/${token}?path=${encodeURIComponent(relativeFolderPath)}`;
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const data = await response.json();
+        const items = data.files || [];
 
-    const xhr = new XMLHttpRequest();
-    const url = getDownloadUrl(file);
+        for (const item of items) {
+          const itemRelative = getRelativePath(item.path);
+          if (item.is_dir) {
+            const subFolderZip = currentZipFolder.folder(item.name);
+            await addFolderToZipPublic(zip, itemRelative, subFolderZip);
+          } else {
+            const fileDownloadUrl = getDownloadUrl(item);
+            const fileRes = await fetch(fileDownloadUrl);
+            if (fileRes.ok) {
+              const blob = await fileRes.blob();
+              currentZipFolder.file(item.name, blob);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error adding public folder to ZIP:", err);
+      }
+    },
+    [baseUrl, token, getRelativePath, getDownloadUrl]
+  );
 
-    xhr.open("GET", url, true);
-    xhr.responseType = "blob";
+  // JSZip Download Handler for multiple selected items or recursive folders
+  const handleDownloadZip = useCallback(
+    async (itemsToZip, zipFilename = `SIPTU_Drive_${Date.now()}.zip`) => {
+      const downloadId = `download-zip-${Date.now()}`;
 
-    xhr.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        const percent = Math.round((e.loaded / e.total) * 100);
-        setDownloads((prev) => {
-          if (!prev[fileId] || prev[fileId].progress === percent) return prev;
-          return {
+      setDownloads((prev) => ({
+        ...prev,
+        [downloadId]: {
+          id: downloadId,
+          name: zipFilename,
+          size: 0,
+          progress: 10,
+          status: "downloading",
+        },
+      }));
+      setIsDownloadWidgetVisible(true);
+      setIsDownloadWidgetMinimized(false);
+
+      try {
+        const zip = new JSZip();
+        let processedCount = 0;
+        const totalItems = itemsToZip.length;
+
+        andMessage.loading({ content: `Menyiapkan berkas ZIP (${zipFilename})...`, key: downloadId });
+
+        for (const item of itemsToZip) {
+          const relative = getRelativePath(item.path);
+          if (item.is_dir) {
+            const folderZip = zip.folder(item.name);
+            await addFolderToZipPublic(zip, relative, folderZip);
+          } else {
+            const fileDownloadUrl = getDownloadUrl(item);
+            const fileRes = await fetch(fileDownloadUrl);
+            if (fileRes.ok) {
+              const blob = await fileRes.blob();
+              zip.file(item.name, blob);
+            }
+          }
+
+          processedCount++;
+          const percent = Math.round(10 + (processedCount / totalItems) * 70);
+          setDownloads((prev) => ({
             ...prev,
-            [fileId]: {
-              ...prev[fileId],
+            [downloadId]: {
+              ...prev[downloadId],
               progress: percent,
             },
-          };
-        });
-      }
-    });
+          }));
+        }
 
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const blob = xhr.response;
-        const url = window.URL.createObjectURL(blob);
+        setDownloads((prev) => ({
+          ...prev,
+          [downloadId]: {
+            ...prev[downloadId],
+            progress: 85,
+          },
+        }));
+
+        const zipContent = await zip.generateAsync({ type: "blob" }, (metadata) => {
+          const p = Math.round(85 + metadata.percent * 0.15);
+          setDownloads((prev) => ({
+            ...prev,
+            [downloadId]: {
+              ...prev[downloadId],
+              progress: p,
+            },
+          }));
+        });
+
+        const url = window.URL.createObjectURL(zipContent);
         const a = document.createElement("a");
         a.href = url;
-        a.download = file.name;
+        a.download = zipFilename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -401,37 +459,142 @@ export default function PublicSharePage() {
 
         setDownloads((prev) => ({
           ...prev,
-          [fileId]: {
-            ...prev[fileId],
+          [downloadId]: {
+            ...prev[downloadId],
+            size: zipContent.size,
             progress: 100,
             status: "success",
           },
         }));
-      } else {
+
+        andMessage.success({ content: `Berkas ZIP "${zipFilename}" berhasil diunduh!`, key: downloadId, duration: 3 });
+      } catch (err) {
+        console.error("ZIP Download Error:", err);
+        setDownloads((prev) => ({
+          ...prev,
+          [downloadId]: {
+            ...prev[downloadId],
+            status: "error",
+            errorMessage: "Gagal mengunduh berkas ZIP.",
+          },
+        }));
+        andMessage.error({ content: "Gagal mengompresi dan mengunduh berkas ZIP.", key: downloadId });
+      }
+    },
+    [addFolderToZipPublic, getDownloadUrl, getRelativePath]
+  );
+
+  const handleDownload = useCallback(
+    (file) => {
+      if (file.is_dir) {
+        handleDownloadZip([file], `${file.name}.zip`);
+        return;
+      }
+
+      const fileId = `download-${Date.now()}-${file.name}`;
+      
+      setDownloads((prev) => ({
+        ...prev,
+        [fileId]: {
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          progress: 0,
+          status: "downloading",
+        },
+      }));
+      setIsDownloadWidgetVisible(true);
+      setIsDownloadWidgetMinimized(false);
+
+      const xhr = new XMLHttpRequest();
+      const url = getDownloadUrl(file);
+
+      xhr.open("GET", url, true);
+      xhr.responseType = "blob";
+
+      xhr.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          setDownloads((prev) => {
+            if (!prev[fileId] || prev[fileId].progress === percent) return prev;
+            return {
+              ...prev,
+              [fileId]: {
+                ...prev[fileId],
+                progress: percent,
+              },
+            };
+          });
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const blob = xhr.response;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+
+          setDownloads((prev) => ({
+            ...prev,
+            [fileId]: {
+              ...prev[fileId],
+              progress: 100,
+              status: "success",
+            },
+          }));
+        } else {
+          setDownloads((prev) => ({
+            ...prev,
+            [fileId]: {
+              ...prev[fileId],
+              status: "error",
+              errorMessage: "Gagal mengunduh berkas.",
+            },
+          }));
+        }
+      });
+
+      xhr.addEventListener("error", () => {
         setDownloads((prev) => ({
           ...prev,
           [fileId]: {
             ...prev[fileId],
             status: "error",
-            errorMessage: "Gagal mengunduh berkas.",
+            errorMessage: "Koneksi terputus.",
           },
         }));
-      }
-    });
+      });
 
-    xhr.addEventListener("error", () => {
-      setDownloads((prev) => ({
-        ...prev,
-        [fileId]: {
-          ...prev[fileId],
-          status: "error",
-          errorMessage: "Koneksi terputus.",
-        },
-      }));
-    });
+      xhr.send();
+    },
+    [getDownloadUrl, handleDownloadZip]
+  );
 
-    xhr.send();
-  };
+  // Batch Download handler for selection (ZIP when > 1 item or includes folder)
+  const handleBatchDownload = useCallback(() => {
+    const files = fileInfo?.files || [];
+    const itemsToDownload = files.filter((f) => selectedRowKeys.includes(f.path));
+
+    if (itemsToDownload.length === 0) {
+      andMessage.warning("Tidak ada item yang dipilih untuk diunduh.");
+      return;
+    }
+
+    if (itemsToDownload.length === 1 && !itemsToDownload[0].is_dir) {
+      handleDownload(itemsToDownload[0]);
+    } else {
+      const zipName = `SIPTU_Drive_${dayjs().format("YYYYMMDD_HHmmss")}.zip`;
+      handleDownloadZip(itemsToDownload, zipName);
+    }
+
+    setSelectedRowKeys([]);
+  }, [fileInfo, selectedRowKeys, handleDownload, handleDownloadZip]);
 
   // Public folder creation
   const handleCreateFolder = async () => {
@@ -539,7 +702,7 @@ export default function PublicSharePage() {
   };
 
   // Public deletion
-  const handleDelete = (file) => {
+  const handleDelete = useCallback((file) => {
     Modal.confirm({
       title: "Hapus Item",
       content: `Apakah Anda yakin ingin menghapus "${file.name}"? Tindakan ini tidak dapat dibatalkan.`,
@@ -567,7 +730,7 @@ export default function PublicSharePage() {
         }
       },
     });
-  };
+  }, [baseUrl, token, getRelativePath]);
 
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) return;
@@ -623,35 +786,61 @@ export default function PublicSharePage() {
     });
   };
 
-  const handleBatchDownload = () => {
-    const files = fileInfo?.files || [];
-    const filesToDownload = files.filter(
-      (f) => selectedRowKeys.includes(f.path) && !f.is_dir
-    );
+  // Rename Handlers
+  const openRenameModal = useCallback((file) => {
+    setRenameTargetFile(file);
+    setNewFileName(file.name);
+    setIsRenameModalOpen(true);
+  }, []);
 
-    if (filesToDownload.length === 0) {
-      andMessage.warning("Tidak ada berkas yang dapat diunduh (folder tidak didukung untuk unduhan massal langsung).");
+  const handleRename = async () => {
+    if (!newFileName.trim()) {
+      andMessage.warning("Nama tidak boleh kosong.");
       return;
     }
+    if (newFileName === renameTargetFile?.name) {
+      setIsRenameModalOpen(false);
+      return;
+    }
+    try {
+      setRenaming(true);
+      const sourceRelative = getRelativePath(renameTargetFile.path);
+      const parentDir = sourceRelative.includes("/")
+        ? sourceRelative.substring(0, sourceRelative.lastIndexOf("/"))
+        : "";
+      const destRelative = parentDir ? `${parentDir}/${newFileName}` : newFileName;
 
-    andMessage.success(`Memulai unduhan untuk ${filesToDownload.length} berkas.`);
-    
-    filesToDownload.forEach((file, index) => {
-      setTimeout(() => {
-        handleDownload(file);
-      }, index * 150);
-    });
+      const response = await fetch(`${baseUrl}/share/move/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_path: sourceRelative,
+          dest_path: destRelative,
+        }),
+      });
 
-    setSelectedRowKeys([]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengganti nama.");
+      }
+
+      andMessage.success(`Berhasil mengganti nama menjadi "${newFileName}".`);
+      setIsRenameModalOpen(false);
+      fetchInfo();
+    } catch (err) {
+      andMessage.error(err.message);
+    } finally {
+      setRenaming(false);
+    }
   };
 
   // Selector modal triggers (Move/Copy)
-  const openSelectorModal = (file, action) => {
+  const openSelectorModal = useCallback((file, action) => {
     setSelectorSourceFile(file);
     setSelectorAction(action);
     setSelectorPath("");
     setIsSelectorModalOpen(true);
-  };
+  }, []);
 
   const fetchSelectorFolders = useCallback(async () => {
     try {
@@ -660,7 +849,6 @@ export default function PublicSharePage() {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        // Skip source folder itself
         const filtered = (data.files || []).filter(
           (f) => f.is_dir && f.path !== selectorSourceFile?.path
         );
@@ -748,18 +936,129 @@ export default function PublicSharePage() {
   };
 
   // Helper copy link to sub-item
-  const handleCopySubLink = async (file) => {
-    try {
-      const relative = getRelativePath(file.path);
-      // Wait, in order to share a sub-item, we can generate a share link specifically for it!
-      // But since we are guests inside a shared folder, we can generate a URL pointing to the guest folder explorer with path query!
-      const subShareUrl = `${window.location.origin}/share/${encodeURIComponent(token)}?path=${encodeURIComponent(relative)}`;
-      await navigator.clipboard.writeText(subShareUrl);
-      andMessage.success("Link berhasil disalin ke clipboard!");
-    } catch (err) {
-      andMessage.error("Gagal menyalin link.");
-    }
-  };
+  const handleCopySubLink = useCallback((file) => {
+    const relative = getRelativePath(file.path);
+    const fullUrl = `${window.location.origin}/s/${token}?path=${encodeURIComponent(relative)}`;
+    navigator.clipboard.writeText(fullUrl);
+    andMessage.success(`Tautan "${file.name}" berhasil disalin!`);
+  }, [getRelativePath, token]);
+
+  const handlePreviewPdf = useCallback((file) => {
+    window.open(getDownloadUrl(file, true), "_blank");
+  }, [getDownloadUrl]);
+
+  const handlePreviewImage = useCallback((file) => {
+    setPreviewImage({ src: getDownloadUrl(file, true), title: file.name });
+  }, [getDownloadUrl]);
+
+  // Right-click Context Menu Items Generator
+  const getFileMenuItems = useCallback(
+    (file) => {
+      if (!file) return [];
+
+      const isImage = isImageFile(file.name);
+      const isDoc = isDocViewable(file.name);
+      const isPdf = file.name ? file.name.toLowerCase().endsWith(".pdf") : false;
+      const canEdit = !!fileInfo?.can_edit;
+
+      return [
+        {
+          key: "copy_link",
+          label: "Salin Link Direct",
+          icon: <LinkOutlined style={{ color: "#1a73e8" }} />,
+          onClick: () => handleCopySubLink(file),
+        },
+        ...(!file.is_dir && isImage
+          ? [
+              {
+                key: "preview-image",
+                label: "Pratinjau Foto",
+                icon: <PictureOutlined style={{ color: "#52c41a" }} />,
+                onClick: () => handlePreviewImage(file),
+              },
+            ]
+          : []),
+        ...(!file.is_dir && isDoc
+          ? [
+              {
+                key: "preview-doc",
+                label: "Pratinjau Dokumen",
+                icon: <EyeOutlined style={{ color: "#1890ff" }} />,
+                onClick: () => setDocViewFile(file),
+              },
+            ]
+          : []),
+        ...(!file.is_dir && isPdf
+          ? [
+              {
+                key: "preview-pdf",
+                label: "Pratinjau PDF",
+                icon: <SearchOutlined style={{ color: "#fa8c16" }} />,
+                onClick: () => handlePreviewPdf(file),
+              },
+            ]
+          : []),
+        ...(!file.is_dir
+          ? [
+              {
+                key: "download",
+                label: "Unduh Berkas",
+                icon: <DownloadOutlined style={{ color: "#1a73e8" }} />,
+                onClick: () => handleDownload(file),
+              },
+            ]
+          : [
+              {
+                key: "download-folder",
+                label: "Unduh Folder (ZIP)",
+                icon: <DownloadOutlined style={{ color: "#1a73e8" }} />,
+                onClick: () => handleDownload(file),
+              },
+            ]),
+        ...(canEdit
+          ? [
+              { type: "divider" },
+              {
+                key: "rename",
+                label: "Ganti Nama",
+                icon: <EditOutlined style={{ color: "#fa8c16" }} />,
+                onClick: () => openRenameModal(file),
+              },
+              {
+                key: "move",
+                label: "Pindahkan",
+                icon: <FolderOpenOutlined style={{ color: "#722ed1" }} />,
+                onClick: () => openSelectorModal(file, "move"),
+              },
+              {
+                key: "copy",
+                label: file.is_dir ? "Salin Folder" : "Salin Berkas",
+                icon: <PlusOutlined style={{ color: "#13c2c2" }} />,
+                onClick: () => openSelectorModal(file, "copy"),
+              },
+              { type: "divider" },
+              {
+                key: "delete",
+                label: "Hapus",
+                danger: true,
+                icon: <DeleteOutlined />,
+                onClick: () => handleDelete(file),
+              },
+            ]
+          : []),
+      ];
+    },
+    [
+      fileInfo,
+      handleCopySubLink,
+      handleDownload,
+      handlePreviewImage,
+      handlePreviewPdf,
+      openRenameModal,
+      openSelectorModal,
+      handleDelete,
+    ]
+  );
 
   // Antd table columns definition
   const columns = [
@@ -768,33 +1067,37 @@ export default function PublicSharePage() {
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
-        <Space size="middle">
-          {getListFileIcon(record.name, record.is_dir)}
-          {record.is_dir ? (
-            <Button
-              type="link"
-              onClick={() => handleFolderOpen(record)}
-              className="share-list-folder-link"
-              style={{ padding: 0, height: "auto", fontWeight: 500 }}
-            >
-              {text}
-            </Button>
-          ) : (
-            <Text 
-              strong 
-              style={{ color: "#202124", cursor: (isDocViewable(record.name) || record.name.toLowerCase().endsWith(".pdf")) ? "pointer" : "default" }}
-              onClick={() => {
-                if (isDocViewable(record.name)) {
-                  setDocViewFile(record);
-                } else if (record.name.toLowerCase().endsWith(".pdf")) {
-                  window.open(getDownloadUrl(record, true), "_blank");
-                }
-              }}
-            >
-              {text}
-            </Text>
-          )}
-        </Space>
+        <Dropdown menu={{ items: getFileMenuItems(record) }} trigger={["contextMenu"]}>
+          <Space size="middle">
+            {getListFileIcon(record.name, record.is_dir)}
+            {record.is_dir ? (
+              <Button
+                type="link"
+                onClick={() => handleFolderOpen(record)}
+                className="share-list-folder-link"
+                style={{ padding: 0, height: "auto", fontWeight: 500 }}
+              >
+                {text}
+              </Button>
+            ) : (
+              <Text 
+                strong 
+                style={{ color: "#202124", cursor: (isDocViewable(record.name) || record.name.toLowerCase().endsWith(".pdf")) ? "pointer" : "default" }}
+                onClick={() => {
+                  if (isDocViewable(record.name)) {
+                    setDocViewFile(record);
+                  } else if (record.name.toLowerCase().endsWith(".pdf")) {
+                    window.open(getDownloadUrl(record, true), "_blank");
+                  } else {
+                    handleDownload(record);
+                  }
+                }}
+              >
+                {text}
+              </Text>
+            )}
+          </Space>
+        </Dropdown>
       ),
     },
     {
@@ -852,44 +1155,13 @@ export default function PublicSharePage() {
               />
             </Tooltip>
           )}
-          {fileInfo?.can_edit && (
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "copy_link",
-                    label: "Salin Link",
-                    icon: <LinkOutlined />,
-                    onClick: () => handleCopySubLink(file),
-                  },
-                  {
-                    key: "move",
-                    label: "Pindahkan",
-                    icon: <FolderOpenOutlined />,
-                    onClick: () => openSelectorModal(file, "move"),
-                  },
-                  {
-                    key: "copy",
-                    label: "Salin",
-                    icon: <PlusOutlined />,
-                    onClick: () => openSelectorModal(file, "copy"),
-                  },
-                  { type: "divider" },
-                  {
-                    key: "delete",
-                    label: "Hapus",
-                    danger: true,
-                    icon: <DeleteOutlined />,
-                    onClick: () => handleDelete(file),
-                  }
-                ]
-              }}
-              trigger={["click"]}
-              placement="bottomRight"
-            >
-              <Button type="text" shape="circle" icon={<EllipsisOutlined />} />
-            </Dropdown>
-          )}
+          <Dropdown
+            menu={{ items: getFileMenuItems(file) }}
+            trigger={["click"]}
+            placement="bottomRight"
+          >
+            <Button type="text" shape="circle" icon={<EllipsisOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
@@ -938,14 +1210,12 @@ export default function PublicSharePage() {
   }
 
   // RENDER CASE 1: Single File Share (MediaFire Style)
-  if (!fileInfo?.is_dir) {
-    const isPdf = fileInfo?.name?.toLowerCase().endsWith(".pdf");
-    const isDoc = isDocViewable(fileInfo?.name);
-    const isImg = isImageFile(fileInfo?.name);
-    const fileExt = fileInfo?.name ? fileInfo.name.split(".").pop().toUpperCase() : "FILE";
-    const uploadedDate = fileInfo?.last_modified 
-      ? dayjs(fileInfo.last_modified).format("YYYY-MM-DD HH:mm:ss") 
-      : dayjs().format("YYYY-MM-DD HH:mm:ss");
+  if (!fileInfo.is_dir) {
+    const isImg = isImageFile(fileInfo.name);
+    const isDoc = isDocViewable(fileInfo.name);
+    const isPdf = fileInfo.name ? fileInfo.name.toLowerCase().endsWith(".pdf") : false;
+    const uploadedDate = fileInfo.last_modified ? dayjs(fileInfo.last_modified).format("DD MMMM YYYY, HH:mm") : "-";
+    const fileExt = fileInfo.name ? fileInfo.name.split(".").pop().toUpperCase() : "FILE";
 
     const getFormatFullTitle = (ext) => {
       const e = ext.toLowerCase();
@@ -1306,6 +1576,24 @@ export default function PublicSharePage() {
           </div>
         )}
 
+        {/* Image Preview Modal */}
+        <Modal
+          open={!!previewImage}
+          footer={null}
+          onCancel={() => setPreviewImage(null)}
+          centered
+          width={800}
+          bodyStyle={{ padding: 0, textAlign: "center", background: "#000000" }}
+        >
+          {previewImage && (
+            <img 
+              src={previewImage.src} 
+              alt={previewImage.title} 
+              style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} 
+            />
+          )}
+        </Modal>
+
         {/* Apps Doc View Modal */}
         <DocViewerModal
           open={!!docViewFile}
@@ -1423,9 +1711,8 @@ export default function PublicSharePage() {
                   type="primary" 
                   icon={<DownloadOutlined />} 
                   onClick={handleBatchDownload}
-                  disabled={!filteredFiles.some(f => selectedRowKeys.includes(f.path) && !f.is_dir)}
                 >
-                  Unduh Terpilih
+                  Unduh Terpilih ({selectedRowKeys.length})
                 </Button>
                 {fileInfo.can_edit && (
                   <Button 
@@ -1446,6 +1733,7 @@ export default function PublicSharePage() {
               </Space>
             </div>
           )}
+
           {filteredFiles.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -1468,13 +1756,14 @@ export default function PublicSharePage() {
                   onDoubleClick: () => {
                     if (record.is_dir) {
                       handleFolderOpen(record);
+                    } else if (isImageFile(record.name)) {
+                      handlePreviewImage(record);
+                    } else if (record.name && record.name.toLowerCase().endsWith(".pdf")) {
+                      handlePreviewPdf(record);
+                    } else if (isDocViewable(record.name)) {
+                      setDocViewFile(record);
                     } else {
-                      const isPdf = record.name.toLowerCase().endsWith(".pdf");
-                      if (isPdf) {
-                        window.open(getDownloadUrl(record, true), "_blank");
-                      } else {
-                        handleDownload(record);
-                      }
+                      handleDownload(record);
                     }
                   },
                 })}
@@ -1499,65 +1788,35 @@ export default function PublicSharePage() {
                       };
 
                       return (
-                        <div
-                          key={idx}
-                          className={`share-folder-chip ${isFolderSelected ? "selected" : ""}`}
-                          onDoubleClick={() => handleFolderOpen(folder)}
-                          onClick={handleToggleSelect}
-                        >
-                          <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox 
-                              checked={isFolderSelected} 
-                              onChange={handleToggleSelect}
-                            />
+                        <Dropdown key={idx} menu={{ items: getFileMenuItems(folder) }} trigger={["contextMenu"]}>
+                          <div
+                            className={`share-folder-chip ${isFolderSelected ? "selected" : ""}`}
+                            onDoubleClick={() => handleFolderOpen(folder)}
+                            onClick={handleToggleSelect}
+                          >
+                            <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={isFolderSelected} 
+                                onChange={handleToggleSelect}
+                              />
+                            </div>
+                            <FolderFilled className="share-folder-chip-icon" />
+                            <span className="share-folder-chip-name" title={folder.name}>
+                              {folder.name}
+                            </span>
+                            <div className="share-folder-chip-actions" onClick={(e) => e.stopPropagation()}>
+                              <Dropdown
+                                menu={{ items: getFileMenuItems(folder) }}
+                                trigger={["click"]}
+                                placement="bottomRight"
+                              >
+                                <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
+                              </Dropdown>
+                            </div>
                           </div>
-                          <FolderFilled className="share-folder-chip-icon" />
-                        <span className="share-folder-chip-name" title={folder.name}>
-                          {folder.name}
-                        </span>
-                        {fileInfo.can_edit && (
-                          <div className="share-folder-chip-actions" onClick={(e) => e.stopPropagation()}>
-                            <Dropdown
-                              menu={{
-                                items: [
-                                  {
-                                    key: "copy_link",
-                                    label: "Salin Link",
-                                    icon: <LinkOutlined />,
-                                    onClick: () => handleCopySubLink(folder),
-                                  },
-                                  {
-                                    key: "move",
-                                    label: "Pindahkan",
-                                    icon: <FolderOpenOutlined />,
-                                    onClick: () => openSelectorModal(folder, "move"),
-                                  },
-                                  {
-                                    key: "copy",
-                                    label: "Salin Folder",
-                                    icon: <PlusOutlined />,
-                                    onClick: () => openSelectorModal(folder, "copy"),
-                                  },
-                                  { type: "divider" },
-                                  {
-                                    key: "delete",
-                                    label: "Hapus",
-                                    danger: true,
-                                    icon: <DeleteOutlined />,
-                                    onClick: () => handleDelete(folder),
-                                  }
-                                ]
-                              }}
-                              trigger={["click"]}
-                              placement="bottomRight"
-                            >
-                              <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
-                            </Dropdown>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </Dropdown>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1577,119 +1836,57 @@ export default function PublicSharePage() {
                           setSelectedRowKeys(prev => [...prev, file.path]);
                         }
                       };
-                      const isPdf = file.name.toLowerCase().endsWith(".pdf");
                       
                       return (
-                        <div 
-                          key={idx} 
-                          className={`share-file-card ${isFileSelected ? "selected" : ""}`}
-                          onClick={handleToggleSelect}
-                        >
-                          <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox 
-                              checked={isFileSelected} 
-                              onChange={handleToggleSelect}
-                            />
-                          </div>
+                        <Dropdown key={idx} menu={{ items: getFileMenuItems(file) }} trigger={["contextMenu"]}>
                           <div 
-                            className="share-file-card-preview" 
-                            onDoubleClick={() => isPdf ? window.open(getDownloadUrl(file, true), "_blank") : handleDownload(file)}
-                            style={{ cursor: "pointer" }}
+                            className={`share-file-card ${isFileSelected ? "selected" : ""}`}
+                            onClick={handleToggleSelect}
                           >
-                            <div className="share-preview-icon-wrapper">
-                              {getFileIcon(file.name, false)}
+                            <div className="grid-item-checkbox" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={isFileSelected} 
+                                onChange={handleToggleSelect}
+                              />
                             </div>
-                            <div className="share-preview-extension-tag">
-                              {file.name.split(".").pop().toUpperCase()}
+                            <div 
+                              className="share-file-card-preview" 
+                              onDoubleClick={() => {
+                                if (isImageFile(file.name)) {
+                                  handlePreviewImage(file);
+                                } else if (file.name && file.name.toLowerCase().endsWith(".pdf")) {
+                                  handlePreviewPdf(file);
+                                } else if (isDocViewable(file.name)) {
+                                  setDocViewFile(file);
+                                } else {
+                                  handleDownload(file);
+                                }
+                              }}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <div className="share-preview-icon-wrapper">
+                                {getFileIcon(file.name, false)}
+                              </div>
                             </div>
-                          </div>
-                          <div className="share-file-card-info">
                             <div className="share-file-card-meta">
-                              <span 
-                                className="share-file-title" 
-                                title={file.name}
-                                onClick={() => isPdf ? window.open(getDownloadUrl(file, true), "_blank") : handleDownload(file)}
-                                style={{ cursor: "pointer" }}
-                              >
+                              <div className="share-file-card-title" title={file.name}>
                                 {file.name}
-                              </span>
-                              <span className="share-file-size">
-                                {formatBytes(file.size)}
-                              </span>
-                            </div>
-                            <div className="share-file-card-actions" onClick={(e) => e.stopPropagation()}>
-                              {isDocViewable(file.name) && (
-                                <Tooltip title="Pratinjau Dokumen (apps doc view)">
-                                  <Button
-                                    type="text"
-                                    size="small"
-                                    shape="circle"
-                                    icon={<EyeOutlined style={{ color: "#1890ff" }} />}
-                                    onClick={() => setDocViewFile(file)}
-                                  />
-                                </Tooltip>
-                              )}
-                              {isPdf && (
-                                <Tooltip title="Pratinjau PDF">
-                                  <Button
-                                    type="text"
-                                    size="small"
-                                    shape="circle"
-                                    icon={<SearchOutlined style={{ color: "#fa8c16" }} />}
-                                    onClick={() => window.open(getDownloadUrl(file, true), "_blank")}
-                                  />
-                                </Tooltip>
-                              )}
-                              <Tooltip title="Unduh Berkas">
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  shape="circle"
-                                  icon={<DownloadOutlined style={{ color: "#1a73e8" }} />}
-                                  onClick={() => handleDownload(file)}
-                                />
-                              </Tooltip>
-                              {fileInfo.can_edit && (
-                                <Dropdown
-                                  menu={{
-                                    items: [
-                                      {
-                                        key: "copy_link",
-                                        label: "Salin Link",
-                                        icon: <LinkOutlined />,
-                                        onClick: () => handleCopySubLink(file),
-                                      },
-                                      {
-                                        key: "move",
-                                        label: "Pindahkan",
-                                        icon: <FolderOpenOutlined />,
-                                        onClick: () => openSelectorModal(file, "move"),
-                                      },
-                                      {
-                                        key: "copy",
-                                        label: "Salin Berkas",
-                                        icon: <PlusOutlined />,
-                                        onClick: () => openSelectorModal(file, "copy"),
-                                      },
-                                      { type: "divider" },
-                                      {
-                                        key: "delete",
-                                        label: "Hapus",
-                                        danger: true,
-                                        icon: <DeleteOutlined />,
-                                        onClick: () => handleDelete(file),
-                                      }
-                                    ]
-                                  }}
-                                  trigger={["click"]}
-                                  placement="bottomRight"
-                                >
-                                  <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
-                                </Dropdown>
-                              )}
+                              </div>
+                              <div className="share-file-card-sub">
+                                <span>{formatBytes(file.size)}</span>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown
+                                    menu={{ items: getFileMenuItems(file) }}
+                                    trigger={["click"]}
+                                    placement="bottomRight"
+                                  >
+                                    <Button type="text" size="small" shape="circle" icon={<EllipsisOutlined />} />
+                                  </Dropdown>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </Dropdown>
                       );
                     })}
                   </div>
@@ -1700,213 +1897,133 @@ export default function PublicSharePage() {
         </div>
       </main>
 
-      {/* PDF Preview Overlay inside Explorer */}
-      {previewPdfFile && (
-        <div className="share-pdf-preview-overlay">
-          <div className="share-pdf-preview-header">
-            <span className="share-pdf-title">{previewPdfFile.name}</span>
-            <div className="share-pdf-actions">
-              <Button 
-                type="primary" 
-                ghost 
-                style={{ color: "#ffffff", borderColor: "#ffffff", marginRight: "8px" }}
-                href={getDownloadUrl(previewPdfFile, true)} 
-                target="_blank"
-              >
-                Buka Penuh (1 Tab Baru)
-              </Button>
-              <Button 
-                icon={<DownloadOutlined />} 
-                href={getDownloadUrl(previewPdfFile)}
-                style={{ marginRight: "8px" }}
-              >
-                Unduh
-              </Button>
-              <Button 
-                type="text" 
-                style={{ color: "#ffffff", fontSize: "20px" }}
-                onClick={() => setPreviewPdfFile(null)}
-              >
-                ✕
-              </Button>
-            </div>
-          </div>
-          <div className="share-pdf-preview-body">
-            <iframe
-              src={getDownloadUrl(previewPdfFile, true)}
-              title="PDF Preview"
-              className="share-pdf-iframe"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Folder Baru Publik */}
+      {/* New Folder Modal */}
       <Modal
         title="Buat Folder Baru"
         open={isFolderModalOpen}
         onOk={handleCreateFolder}
-        onCancel={() => {
-          setIsFolderModalOpen(false);
-          setNewFolderName("");
-        }}
+        onCancel={() => setIsFolderModalOpen(false)}
         confirmLoading={creatingFolder}
         okText="Buat"
         cancelText="Batal"
         centered
       >
-        <div style={{ padding: "12px 0" }}>
-          <Text type="secondary" style={{ display: "block", marginBottom: "8px" }}>Nama Folder Baru:</Text>
-          <Input
-            placeholder="Folder tanpa nama"
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            onPressEnter={handleCreateFolder}
-            autoFocus
-          />
-        </div>
+        <Input
+          placeholder="Nama folder"
+          value={newFolderName}
+          onChange={(e) => setNewFolderName(e.target.value)}
+          onPressEnter={handleCreateFolder}
+          autoFocus
+        />
       </Modal>
 
-      {/* Modal: Upload Berkas Publik */}
+      {/* Upload File Modal */}
       <Modal
-        title="Upload Berkas ke Folder Ini"
+        title="Upload Berkas ke Shared Folder"
         open={isUploadModalOpen}
         footer={null}
-        onCancel={() => {
-          if (!hasActiveUploads) {
-            setIsUploadModalOpen(false);
-            setUploadingFiles({});
-          } else {
-            andMessage.warning("Harap tunggu hingga semua berkas selesai diunggah.");
-          }
-        }}
+        onCancel={() => setIsUploadModalOpen(false)}
         centered
-        destroyOnClose
+        width={500}
       >
-        <div style={{ padding: "20px 0" }}>
-          <Dragger customRequest={handleCustomUpload} showUploadList={false} multiple={true}>
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined style={{ color: "#1a73e8", fontSize: "48px" }} />
-            </p>
-            <p className="ant-upload-text">Klik atau seret satu atau beberapa berkas ke area ini</p>
-            <p className="ant-upload-hint">Maksimal 250 MB per berkas.</p>
-          </Dragger>
-
-          {Object.keys(uploadingFiles).length > 0 && (
-            <div className="upload-queue-container" style={{ marginTop: "24px" }}>
-              <div className="upload-queue-header">
-                <Text strong>Antrean Upload ({Object.values(uploadingFiles).filter(f => f.status === 'uploading').length} aktif)</Text>
-              </div>
-              <div className="upload-queue-list">
-                {Object.values(uploadingFiles).map((item) => {
-                  const isUploading = item.status === 'uploading';
-                  const isSuccess = item.status === 'success';
-                  const isError = item.status === 'error';
-                  
-                  return (
-                    <div key={item.uid} className={`upload-queue-item ${item.status}`}>
-                      <div className="upload-item-main">
-                        <div className="upload-item-icon">
-                          {getListFileIcon(item.name, false)}
-                        </div>
-                        <div className="upload-item-info">
-                          <Text ellipsis className="upload-item-name" style={{ maxWidth: "230px" }}>
-                            {item.name}
-                          </Text>
-                          <Text type="secondary" className="upload-item-size">
-                            {formatBytes(item.size)}
-                          </Text>
-                        </div>
-                        <div className="upload-item-status">
-                          {isUploading && <LoadingOutlined style={{ color: "#1a73e8" }} />}
-                          {isSuccess && <span style={{ color: "#52c41a", fontWeight: "600" }}>✓ Berhasil</span>}
-                          {isError && <span style={{ color: "#ff4d4f", fontWeight: "600" }}>⚠ Gagal</span>}
-                        </div>
-                      </div>
-                      {isUploading && (
-                        <div className="upload-item-progress">
-                          <Progress percent={item.progress} size="small" status="active" strokeColor="#1a73e8" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        <Dragger
+          customRequest={handleCustomUpload}
+          showUploadList={false}
+          multiple
+          style={{ padding: "24px", background: "#f8fafc" }}
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined style={{ color: "#1a73e8" }} />
+          </p>
+          <p className="ant-upload-text">Klik atau tarik berkas ke area ini untuk mengunggah</p>
+          <p className="ant-upload-hint">Dukungan unggah berkas langsung ke Nextcloud Storage</p>
+        </Dragger>
       </Modal>
 
-      {/* Modal: Folder Selector Publik (Move/Copy) */}
+      {/* Rename Item Modal */}
       <Modal
-        title={`${selectorAction === "move" ? "Pindahkan" : "Salin"} "${selectorSourceFile?.name}"`}
+        title="Ganti Nama Item"
+        open={isRenameModalOpen}
+        onOk={handleRename}
+        onCancel={() => setIsRenameModalOpen(false)}
+        confirmLoading={renaming}
+        okText="Simpan"
+        cancelText="Batal"
+        centered
+      >
+        <Input
+          placeholder="Nama baru"
+          value={newFileName}
+          onChange={(e) => setNewFileName(e.target.value)}
+          onPressEnter={handleRename}
+          autoFocus
+        />
+      </Modal>
+
+      {/* Move / Copy Selector Modal */}
+      <Modal
+        title={selectorAction === "move" ? "Pindahkan Item ke Folder" : "Salin Item ke Folder"}
         open={isSelectorModalOpen}
         onOk={handleExecuteSelectorAction}
         onCancel={() => setIsSelectorModalOpen(false)}
         confirmLoading={executingSelector}
-        okText={selectorAction === "move" ? "Pindahkan ke Sini" : "Salin ke Sini"}
+        okText={selectorAction === "move" ? "Pindahkan Ke Sini" : "Salin Ke Sini"}
         cancelText="Batal"
         centered
-        width={500}
+        width={520}
       >
-        <div style={{ padding: "8px 0" }}>
-          {/* Breadcrumbs for Selector */}
-          <div style={{ marginBottom: "12px", padding: "8px", backgroundColor: "#f8f9fa", borderRadius: "6px" }}>
+        <div style={{ marginBottom: "12px" }}>
+          <Text type="secondary" style={{ fontSize: "12px" }}>Lokasi Tujuan:</Text>
+          <div style={{ background: "#f1f3f4", padding: "8px 12px", borderRadius: "6px", marginTop: "4px", fontSize: "13px" }}>
             <Breadcrumb separator=">">
-              <Breadcrumb.Item onClick={() => navigateSelectorToSegment(-1)} style={{ cursor: "pointer" }}>
-                <HomeOutlined /> <span>Shared Root</span>
+              <Breadcrumb.Item onClick={() => navigateSelectorToSegment(-1)} style={{ cursor: "pointer", color: "#1a73e8" }}>
+                Shared Root
               </Breadcrumb.Item>
-              {selectorPathSegments.map((segment, idx) => (
-                <Breadcrumb.Item key={idx} onClick={() => navigateSelectorToSegment(idx)} style={{ cursor: "pointer" }}>
-                  {segment}
+              {selectorPathSegments.map((seg, idx) => (
+                <Breadcrumb.Item key={idx} onClick={() => navigateSelectorToSegment(idx)} style={{ cursor: "pointer", color: "#1a73e8" }}>
+                  {seg}
                 </Breadcrumb.Item>
               ))}
             </Breadcrumb>
           </div>
+        </div>
 
-          <Text strong>Pilih Folder Tujuan:</Text>
-          <div className="selector-folder-list">
-            <Spin spinning={loadingSelectorFolders}>
-              {selectorFolders.length === 0 ? (
-                <div style={{ padding: "30px", textAlign: "center" }}>
-                  <Text type="secondary">Tidak ada subfolder di folder ini.</Text>
-                </div>
-              ) : (
-                selectorFolders.map((folder, idx) => (
-                  <div
-                    key={idx}
-                    className="selector-folder-item"
-                    onDoubleClick={() => {
-                      const basePath = selectorPath ? `${selectorPath}/${folder.name}` : folder.name;
-                      setSelectorPath(basePath);
-                    }}
-                  >
-                    <FolderFilled className="selector-folder-icon" />
-                    <span className="selector-folder-name">{folder.name}</span>
-                  </div>
-                ))
-              )}
-            </Spin>
-          </div>
-          <Text type="secondary" style={{ fontSize: "12px", display: "block", marginTop: "8px" }}>
-            *Double-click folder untuk masuk. Lokasi saat ini: <Text code>{selectorPath ? `/${selectorPath}` : "/"}</Text>
-          </Text>
+        <div style={{ border: "1px solid #dadce0", borderRadius: "8px", maxHeight: "250px", overflowY: "auto", padding: "8px" }}>
+          {loadingSelectorFolders ? (
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              <Spin size="small" />
+            </div>
+          ) : selectorFolders.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Tidak ada subfolder di lokasi ini." />
+          ) : (
+            selectorFolders.map((sub, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  const relativeSub = getRelativePath(sub.path);
+                  setSelectorPath(relativeSub);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                }}
+                className="selector-folder-item"
+              >
+                <FolderFilled style={{ color: "#ffb703", fontSize: "18px", marginRight: "10px" }} />
+                <span style={{ fontSize: "13px", color: "#202124", fontWeight: 500 }}>{sub.name}</span>
+              </div>
+            ))
+          )}
         </div>
       </Modal>
 
-      {/* Footer copyright section */}
-      <footer className="share-explorer-footer">
-        <Text type="secondary" style={{ fontSize: "12px" }}>
-          Di-host dengan aman melalui SIPTU Drive terintegrasi Nextcloud Loka POM di Kota Palopo.
-        </Text>
-      </footer>
-
-      {/* Google Drive-like Download Status Widget */}
+      {/* Google Drive-like Download Progress Widget */}
       {isDownloadWidgetVisible && (
-        <div 
-          className={`drive-download-widget ${isDownloadWidgetMinimized ? "minimized" : ""}`} 
-          style={{ position: "fixed", bottom: "24px", right: isUploadWidgetVisible ? "400px" : "24px", width: "360px", background: "#ffffff", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)", zIndex: 1000, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #dadce0" }}
-        >
+        <div className={`drive-download-widget ${isDownloadWidgetMinimized ? "minimized" : ""}`} style={{ position: "fixed", bottom: "24px", right: "24px", width: "360px", background: "#ffffff", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)", zIndex: 1000, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #dadce0" }}>
           <div className="download-widget-header" style={{ height: "48px", background: "#323232", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
             <span className="download-widget-title" style={{ fontSize: "14px", fontWeight: 500 }}>
               {Object.values(downloads).some((d) => d.status === "downloading")
@@ -1951,7 +2068,7 @@ export default function PublicSharePage() {
                         {item.name}
                       </span>
                       <span className="download-item-meta" style={{ fontSize: "11px", color: "#5f6368", marginTop: "2px" }}>
-                        {isDownloading && `${item.progress}% dari ${formatBytes(item.size)}`}
+                        {isDownloading && `${item.progress}% ${item.size ? `dari ${formatBytes(item.size)}` : ""}`}
                         {isSuccess && `Selesai • ${formatBytes(item.size)}`}
                         {isError && `Gagal • ${item.errorMessage}`}
                       </span>
@@ -1967,7 +2084,6 @@ export default function PublicSharePage() {
                           strokeColor="#1a73e8"
                         />
                       )}
-                      {isSuccess && <CheckCircleFilled style={{ color: "#52c41a", fontSize: "18px" }} />}
                       {isError && (
                         <Tooltip title={item.errorMessage}>
                           <CloseCircleFilled style={{ color: "#ff4d4f", fontSize: "18px" }} />
@@ -1982,16 +2098,16 @@ export default function PublicSharePage() {
         </div>
       )}
 
-      {/* Google Drive-like Upload Status Widget */}
+      {/* Floating Upload Progress Widget */}
       {isUploadWidgetVisible && (
-        <div className={`drive-upload-widget ${isUploadWidgetMinimized ? "minimized" : ""}`} style={{ position: "fixed", bottom: "24px", right: "24px", width: "360px", background: "#ffffff", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)", zIndex: 1000, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #dadce0" }}>
-          <div className="upload-widget-header" style={{ height: "48px", background: "#323232", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
-            <span className="upload-widget-title" style={{ fontSize: "14px", fontWeight: 500 }}>
-              {Object.values(uploadingFiles).some((f) => f.status === "uploading")
-                ? `Mengunduh ${Object.values(uploadingFiles).filter((f) => f.status === "uploading").length} item`
-                : `${Object.values(uploadingFiles).filter((f) => f.status === "success").length} upload selesai`}
+        <div className={`drive-download-widget ${isUploadWidgetMinimized ? "minimized" : ""}`} style={{ position: "fixed", bottom: "24px", right: "400px", width: "360px", background: "#ffffff", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)", zIndex: 1000, display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #dadce0" }}>
+          <div className="download-widget-header" style={{ height: "48px", background: "#1a73e8", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
+            <span className="download-widget-title" style={{ fontSize: "14px", fontWeight: 500 }}>
+              {hasActiveUploads
+                ? `Mengunggah ${Object.values(uploadingFiles).filter((f) => f.status === "uploading").length} berkas`
+                : `${Object.values(uploadingFiles).filter((f) => f.status === "success").length} unggahan selesai`}
             </span>
-            <div className="upload-widget-controls">
+            <div className="download-widget-controls">
               <Button
                 type="text"
                 size="small"
@@ -2011,30 +2127,30 @@ export default function PublicSharePage() {
               />
             </div>
           </div>
-          
+
           {!isUploadWidgetMinimized && (
-            <div className="upload-widget-body" style={{ maxHeight: "250px", overflowY: "auto", padding: "8px 0" }}>
+            <div className="download-widget-body" style={{ maxHeight: "250px", overflowY: "auto", padding: "8px 0" }}>
               {Object.values(uploadingFiles).map((item) => {
                 const isUploading = item.status === "uploading";
                 const isSuccess = item.status === "success";
                 const isError = item.status === "error";
-                
+
                 return (
-                  <div key={item.uid} className="upload-item-row" style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f1f3f4" }}>
-                    <div className="upload-item-icon" style={{ marginRight: "12px", display: "flex", alignItems: "center" }}>
+                  <div key={item.uid} className="download-item-row" style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f1f3f4" }}>
+                    <div className="download-item-icon" style={{ marginRight: "12px", display: "flex", alignItems: "center" }}>
                       {getFileIcon(item.name, false)}
                     </div>
-                    <div className="upload-item-details" style={{ flexGrow: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginRight: "8px" }}>
-                      <span className="upload-item-name" style={{ fontSize: "13px", color: "#202124", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <div className="download-item-details" style={{ flexGrow: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginRight: "8px" }}>
+                      <span className="download-item-name" style={{ fontSize: "13px", color: "#202124", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {item.name}
                       </span>
-                      <span className="upload-item-meta" style={{ fontSize: "11px", color: "#5f6368", marginTop: "2px" }}>
+                      <span className="download-item-meta" style={{ fontSize: "11px", color: "#5f6368", marginTop: "2px" }}>
                         {isUploading && `${item.progress}% dari ${formatBytes(item.size)}`}
                         {isSuccess && `Selesai • ${formatBytes(item.size)}`}
                         {isError && `Gagal • ${item.errorMessage}`}
                       </span>
                     </div>
-                    <div className="upload-item-status" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px" }}>
+                    <div className="download-item-status" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px" }}>
                       {isUploading && (
                         <Progress
                           type="circle"
@@ -2045,7 +2161,6 @@ export default function PublicSharePage() {
                           strokeColor="#1a73e8"
                         />
                       )}
-                      {isSuccess && <CheckCircleFilled style={{ color: "#52c41a", fontSize: "18px" }} />}
                       {isError && (
                         <Tooltip title={item.errorMessage}>
                           <CloseCircleFilled style={{ color: "#ff4d4f", fontSize: "18px" }} />
@@ -2060,18 +2175,23 @@ export default function PublicSharePage() {
         </div>
       )}
 
-      <div 
-        className={`drive-drag-overlay ${isDraggingOverPage && fileInfo?.can_edit ? "active" : ""}`}
-        onDragLeave={() => setIsDraggingOverPage(false)}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
+      {/* Image Preview Modal */}
+      <Modal
+        open={!!previewImage}
+        footer={null}
+        onCancel={() => setPreviewImage(null)}
+        centered
+        width={800}
+        bodyStyle={{ padding: 0, textAlign: "center", background: "#000000" }}
       >
-        <div className="drive-drag-overlay-content" style={{ pointerEvents: "none" }}>
-          <CloudUploadOutlined className="drive-drag-overlay-icon" style={{ pointerEvents: "none" }} />
-          <h3 style={{ pointerEvents: "none" }}>Lepaskan berkas untuk mengunggah ke folder ini</h3>
-          <p style={{ pointerEvents: "none" }}>SIPTU Drive terintegrasi Nextcloud</p>
-        </div>
-      </div>
+        {previewImage && (
+          <img 
+            src={previewImage.src} 
+            alt={previewImage.title} 
+            style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} 
+          />
+        )}
+      </Modal>
 
       {/* Apps Doc View Modal */}
       <DocViewerModal
@@ -2081,19 +2201,6 @@ export default function PublicSharePage() {
         publicToken={token}
         onDownload={handleDownload}
       />
-
-      {/* Photo Previewer */}
-      {previewImage && (
-        <Image
-          style={{ display: "none" }}
-          src={previewImage.src}
-          preview={{
-            visible: !!previewImage,
-            onVisibleChange: (visible) => !visible && setPreviewImage(null),
-            src: previewImage.src,
-          }}
-        />
-      )}
     </div>
   );
 }
