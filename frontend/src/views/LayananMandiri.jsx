@@ -231,10 +231,10 @@ const LayananMandiri = () => {
     { id: "persediaan", title: "Permintaan Persediaan", description: "Ajukan permintaan barang persediaan operasional kantor.", icon: <ShoppingOutlined />, link: "/permintaan-persediaan/new", accent: "#10b981", emoji: "📋", category: "logistik" },
     { id: "rispeg", title: "Izin Keluar (RISPEG)", description: "Ajukan izin keluar kantor dengan pencatatan waktu otomatis.", icon: <ClockCircleOutlined />, link: "/izin-keluar", accent: "#8b5cf6", emoji: "🚶", category: "kepegawaian" },
     { id: "pengumuman-rispeg", title: "Pengumuman RISPEG", description: "Lihat hasil rekapitulasi pelanggaran dan leaderboard poin disiplin RISPEG.", icon: <NotificationOutlined />, link: "/app/pengumuman-rispeg", accent: "#ef4444", emoji: "📢", category: "kepegawaian" },
-    { id: "it-helpdesk", title: "Laporan IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <ToolOutlined />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
+    { id: "it-helpdesk", title: "IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <ToolOutlined />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
     { id: "bmn-pemeliharaan-keluhan", title: "Pemeliharaan BMN", description: "Ajukan pemeliharaan aset atau sampaikan keluhan fasilitas.", icon: <ToolOutlined />, link: "/bmn-pemeliharaan-keluhan/new", accent: "#0d9488", emoji: "🛠️", category: "logistik" },
-    { id: "surat-tugas", title: "Input Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/surat-tugas/new", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
-    { id: "zoom-generator", title: "Zoom Generator", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <VideoCameraOutlined />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
+    { id: "surat-tugas", title: "Pengajuan Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/surat-tugas/new", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
+    { id: "zoom-generator", title: "Pengajuan Zoom", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <VideoCameraOutlined />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
     { id: "sakip-2026", title: "DATA SAKIP 2026", description: "Sistem Akuntabilitas Kinerja Instansi Pemerintah Balai POM di Palopo.", icon: <GlobalOutlined />, link: "https://s.id/sakippalopo26", accent: "#10b981", emoji: "📊", category: "kepegawaian", isExternal: true },
   ];
 
@@ -242,7 +242,7 @@ const LayananMandiri = () => {
     const list = [...rawServices];
     if (showProcurementProposalService) list.push({ id: "pengusulan-pengadaan", title: "Pengusulan PBJ", description: "Usulkan layanan pengadaan barang baru diluar master data.", icon: <ShoppingOutlined />, link: "/pengusulan-pengadaan/new", accent: "#0284c7", emoji: "🛒", category: "logistik" });
     if (showPdtt) list.push({ id: "pengajuan-pdtt", title: "Pengadaan PDTT", description: "Ajukan pengadaan untuk daftar barang sesuai periode aktif.", icon: <ShoppingOutlined />, link: "/pengajuan-pdtt/new", accent: "#f59e0b", emoji: "📦", category: "logistik" });
-    return list;
+    return list.sort((a, b) => a.title.localeCompare(b.title));
   }, [showProcurementProposalService, showPdtt]);
 
   const filteredServices = services.filter((s) => {
