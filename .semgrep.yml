@@ -1,0 +1,76 @@
+# Semgrep Security Configuration for SIPTU ULTRA
+# Cover Backend (PHP/Laravel), Frontend (React/JS), and Mobile (React Native)
+
+rules:
+  # ----------------------------------------------------
+  # 1. HARDCODED SECRETS & CREDENTIALS
+  # ----------------------------------------------------
+  - id: hardcoded-secret-key
+    pattern-regex: '(?i)(api_key|secret_key|private_key|auth_token|bearer_token|app_secret|db_password)\s*[:=]\s*["''][A-Za-z0-9_\-+=/]{24,}["'']'
+    message: "Terdeteksi potensi hardcoded secret key atau token sensitif. Gunakan variabel lingkungan (.env) sebagai gantinya."
+    languages: [javascript, typescript, php]
+    severity: ERROR
+
+  # ----------------------------------------------------
+  # 2. PHP / LARAVEL SECURITY RULES
+  # ----------------------------------------------------
+  - id: php-raw-sql-injection
+    pattern-either:
+      - pattern: DB::raw("...$VAR...")
+      - pattern: DB::select("...$VAR...")
+      - pattern: DB::statement("...$VAR...")
+      - pattern: DB::unprepared("...$VAR...")
+      - pattern: $X->whereRaw("...$VAR...")
+      - pattern: $X->havingRaw("...$VAR...")
+      - pattern: $X->orderByRaw("...$VAR...")
+    message: "Terdeteksi query SQL mentah dengan interpolasi variabel secara langsung. Gunakan parameter binding untuk mencegah SQL Injection."
+    languages: [php]
+    severity: ERROR
+
+  - id: php-insecure-eval-exec
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: shell_exec(...)
+      - pattern: system(...)
+      - pattern: passthru(...)
+      - pattern: proc_open(...)
+    message: "Penggunaan fungsi eksekusi sistem/eval berisiko tinggi terhadap Remote Code Execution (RCE)."
+    languages: [php]
+    severity: WARNING
+
+  - id: php-untrusted-unserialize
+    pattern: unserialize(...)
+    message: "Penggunaan unserialize() pada data yang tidak terpercaya dapat menyebabkan Insecure Deserialization / Code Execution."
+    languages: [php]
+    severity: ERROR
+
+  # ----------------------------------------------------
+  # 3. JAVASCRIPT / REACT / REACT NATIVE SECURITY RULES
+  # ----------------------------------------------------
+  - id: js-insecure-eval
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: window.eval(...)
+      - pattern: new Function(...)
+    message: "Penggunaan eval() di JavaScript membuka celah eksekusi kode acak (Arbitrary Code Execution / XSS)."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: js-insecure-localstorage-sensitive-data
+    patterns:
+      - pattern-either:
+          - pattern: localStorage.setItem($KEY, $VAL)
+          - pattern: sessionStorage.setItem($KEY, $VAL)
+      - pattern-regex: '(?i)(password|pass|secret|private_key|token|auth_token)'
+    message: "Menyimpan data sensitif di localStorage/sessionStorage berisiko diakses via XSS."
+    languages: [javascript, typescript]
+    severity: INFO
+
+  - id: js-insecure-http-url
+    patterns:
+      - pattern-regex: 'http://[a-zA-Z0-9.\-]+'
+      - pattern-not-regex: 'http://(localhost|127\.0\.0\.1|0\.0\.0\.0)'
+    message: "Penggunaan protokol HTTP tidak terenkripsi. Selalu gunakan HTTPS untuk komunikasi data yang aman."
+    languages: [javascript, typescript, php]
+    severity: WARNING

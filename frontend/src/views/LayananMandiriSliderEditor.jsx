@@ -654,6 +654,29 @@ const LayananMandiriSliderEditor = () => {
         <Title level={5}><SettingOutlined /> PENGATURAN POPUP INFORMASI</Title>
         <Divider style={{ margin: "12px 0 24px" }} />
 
+        {/* Status Toggle Card */}
+        <Card style={{ marginBottom: 24, background: popup.active ? "#f0fdf4" : "#fef2f2", borderColor: popup.active ? "#bbf7d0" : "#fecaca" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <Text strong style={{ fontSize: 16, color: popup.active ? "#15803d" : "#991b1b" }}>
+                Status Popup: {popup.active ? "AKTIF" : "NONAKTIF (DISABLED)"}
+              </Text>
+              <Text type="secondary" style={{ display: "block", fontSize: 13, marginTop: 2 }}>
+                {popup.active
+                  ? "Popup akan tampil otomatis saat pengguna baru pertama kali masuk ke aplikasi (per session tab baru)."
+                  : "Popup dinonaktifkan dan tidak akan tampil diseluruh menu pengguna."}
+              </Text>
+            </div>
+            <Switch
+              checked={popup.active}
+              onChange={(v) => setPopup((p) => ({ ...p, active: v }))}
+              checkedChildren="Aktif"
+              unCheckedChildren="Nonaktif"
+              style={{ transform: "scale(1.2)" }}
+            />
+          </div>
+        </Card>
+
         <Row gutter={24}>
           <Col span={24}>
             <Space direction="vertical" style={{ width: "100%" }} size="large">
@@ -688,7 +711,7 @@ const LayananMandiriSliderEditor = () => {
         <div style={{ marginTop: 32 }}>
           <Text strong>Gambar Popup</Text>
           <Text type="secondary" style={{ display: "block", marginTop: 4, marginBottom: 12 }}>
-            Gambar akan ditampilkan di bagian atas popup. Bisa digunakan sebagai banner atau konten utama.
+            Gambar akan ditampilkan di bagian atas popup. Bisa digunakan sebagai banner atau konten utama. Ukuran gambar akan menyesuaikan device secara dinamis.
           </Text>
           <Card style={{ background: "#f8fafc" }} variant="borderless">
             <div className="vse-upload-area">
@@ -727,6 +750,41 @@ const LayananMandiriSliderEditor = () => {
             maxLength={500}
           />
         </div>
+
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col span={12}>
+            <Card size="small" title="Pengaturan Tampilan Permanen">
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <div>
+                  <Switch
+                    checked={popup.show_once}
+                    onChange={(v) => setPopup((p) => ({ ...p, show_once: v }))}
+                  />
+                  <Text style={{ marginLeft: 10 }}>Ingat penutupan selamanya (Tutup 1x per perangkat)</Text>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small" title="Hitung Mundur Penutupan (Kunci Tombol Close)">
+              <Space style={{ width: "100%" }}>
+                <Switch
+                  checked={popup.use_duration}
+                  onChange={(v) => setPopup((p) => ({ ...p, use_duration: v }))}
+                />
+                <Text>Waktu Tunggu:</Text>
+                <InputNumber
+                  min={1}
+                  max={300}
+                  disabled={!popup.use_duration}
+                  value={popup.duration || 5}
+                  onChange={(v) => setPopup((p) => ({ ...p, duration: v }))}
+                  addonAfter="Detik"
+                />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </div>
   );

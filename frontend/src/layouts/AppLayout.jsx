@@ -35,6 +35,8 @@ import {
 } from "@ant-design/icons";
 import { SafetyOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import NavbarMenu from "../components/NavbarMenu.jsx";
+import InfoPopupModal from "../components/InfoPopupModal.jsx";
+import { useInfoPopup } from "../hooks/useInfoPopup.js";
 import DataPegawai from "../views/DataPegawai.jsx";
 import BmnDataAsetTetap from "../views/BmnDataAsetTetap.jsx";
 import BmnDataPersediaan from "../views/BmnDataPersediaan.jsx";
@@ -247,6 +249,7 @@ function resolveInitialAppPath(accessibleModules, isAdminUser, currentRole) {
 }
 
 function AppLayout() {
+  const infoPopup = useInfoPopup();
   const {
     user,
     currentRole,
@@ -934,6 +937,7 @@ function AppLayout() {
           {routesNode}
         </div>
       </Content>
+      <InfoPopupModal {...infoPopup} />
     </Layout>
   );
 }

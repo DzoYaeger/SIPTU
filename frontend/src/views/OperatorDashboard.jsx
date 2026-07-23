@@ -60,8 +60,7 @@ import {
   CustomerServiceOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
-import { useInfoPopup } from "../hooks/useInfoPopup.js";
-import InfoPopupModal from "../components/InfoPopupModal.jsx";
+
 import { MODULE_COLORS, getModuleColor } from "../constants/moduleStyles.js";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
@@ -155,7 +154,7 @@ function OperatorDashboard() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-  const popup = useInfoPopup();
+
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -506,7 +505,6 @@ function OperatorDashboard() {
 
   return (
     <div className="operator-dashboard-page" style={{ padding: "0 24px 24px" }}>
-      <InfoPopupModal {...popup} />
 
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>

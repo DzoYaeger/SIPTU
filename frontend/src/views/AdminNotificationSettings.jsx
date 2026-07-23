@@ -10,6 +10,7 @@ import {
   Collapse,
   Divider,
   Input,
+  InputNumber,
   Select,
   Space,
   Spin,
@@ -123,6 +124,16 @@ const AdminNotificationSettings = () => {
   const [availableSuratTugasTemplates, setAvailableSuratTugasTemplates] = useState([]);
   const [selectedSuratTugasTemplates, setSelectedSuratTugasTemplates] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
+  const [popup, setPopup] = useState({
+    title: '',
+    content: '',
+    image: '',
+    link: '',
+    active: false,
+    show_once: true,
+    use_duration: false,
+    duration: 5,
+  });
 
   const [kgbWindow, setKgbWindow] = useState({
     start: '',
@@ -166,6 +177,19 @@ const AdminNotificationSettings = () => {
       const storedSlides = Array.isArray(stored?.hero_slider) ? stored.hero_slider : [];
       const useDefaults = stored?.hero_slider_initialized === false;
       setHeroSlides(useDefaults ? DEFAULT_HERO_SLIDES : storedSlides);
+
+      if (stored?.popup && typeof stored.popup === 'object') {
+        setPopup({
+          title: stored.popup.title ?? '',
+          content: stored.popup.content ?? '',
+          image: stored.popup.image ?? '',
+          link: stored.popup.link ?? '',
+          active: Boolean(stored.popup.active),
+          show_once: Boolean(stored.popup.show_once ?? true),
+          use_duration: Boolean(stored.popup.use_duration ?? false),
+          duration: Number(stored.popup.duration) || 5,
+        });
+      }
 
       const employeeResponse = await apiFetch('/employees?pageSize=1000');
       if (employeeResponse.ok) {
@@ -273,6 +297,11 @@ const AdminNotificationSettings = () => {
         kepala_balai_settings: kepalaBalai,
         surat_tugas_templates: selectedSuratTugasTemplates ?? [],
         hero_slider: (heroSlides ?? []).map((s) => ({ ...s, image: normalizeImage(s?.image) })),
+        popup: {
+          ...popup,
+          image: normalizeImage(popup.image),
+          link: (popup.link || '').trim(),
+        },
       };
       if (fonnteTokenTouched) {
         payload.fonnte.token = fonnteConfig.token ?? '';
@@ -348,9 +377,18 @@ const AdminNotificationSettings = () => {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body?.message || 'Upload gagal');
 
-      updateHeroSlide(index, { image: normalizeImage(body?.url || '') });
+      const imageUrl = normalizeImage(body?.url || '');
+      if (index === 'popup') {
+        setPopup((p) => ({ ...p, image: imageUrl }));
+        notification.success({ message: 'Gambar popup berhasil diupload' });
+      } else if (index === 'popup_sound') {
+        setPopup((p) => ({ ...p, sound_url: imageUrl }));
+        notification.success({ message: 'Audio berhasil diupload' });
+      } else {
+        updateHeroSlide(index, { image: imageUrl });
+        notification.success({ message: 'Gambar slide berhasil diupload' });
+      }
       onSuccess?.(body, file);
-      notification.success({ message: 'Gambar berhasil diupload' });
     } catch (err) {
       onError?.(err);
       notification.error({ message: err.message });
@@ -495,71 +533,80 @@ const AdminNotificationSettings = () => {
             items={[
               {
                 key: 'config',
-                label: 'Konfigurasi',
+                label: 'Fonnte (WhatsApp)',
                 children: (
                   <div className="notification-settings__tab">
                     <div className="notification-settings__top-actions">
-                      <Button icon={<SendOutlined />} loading={isSendingReminders} onClick={handleSendBmnReminders}>
-                        Uji Kirim Pengingat BMN
+                      <Button
+                        type="primary"
+                        icon={<SendOutlined />}
+                        loading={isSendingReminders}
+                        onClick={handleSendBmnReminders}
+                      >
+                        Kirim Manual Pengingat BMN
                       </Button>
-                      <Button type="primary" onClick={handleSaveSettings} loading={saving}>
-                        Simpan Pengaturan
+                      <Button
+                        type="primary"
+                        icon={<SaveOutlined />}
+                        loading={saving}
+                        onClick={handleSaveSettings}
+                      >
+                        Simpan Pengaturan Fonnte
                       </Button>
                     </div>
+
+                    <Divider />
+
+                    <div className="notification-settings__grid">
+                      <div>
+                        <Typography.Text strong>Token API Fonnte</Typography.Text>
+                        <Input.Password
+                          placeholder={fonnteConfig.has_token ? 'Token tersimpan (isi jika ingin mengganti)' : 'Masukkan Token API Fonnte'}
+                          value={fonnteConfig.token}
+                          onChange={(event) => handleFonnteChange('token', event.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Typography.Text strong>Endpoint Fonnte</Typography.Text>
+                        <Input
+                          placeholder="https://api.fonnte.com/send"
+                          value={fonnteConfig.endpoint}
+                          onChange={(event) => handleFonnteChange('endpoint', event.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                      <Typography.Text strong>Nomor Default Admin (Satu nomor per baris atau pisahkan dengan koma)</Typography.Text>
+                      <Input.TextArea
+                        rows={3}
+                        placeholder="Contoh: 08123456789, 08987654321"
+                        value={(fonnteConfig.default_admin_numbers ?? []).join('\n')}
+                        onChange={(event) => {
+                          const raw = event.target.value;
+                          const list = raw.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+                          handleFonnteChange('default_admin_numbers', list);
+                        }}
+                      />
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'kgb',
+                label: 'Jadwal Otomatis KGB',
+                children: (
+                  <div className="notification-settings__tab">
                     <Card size="small" variant="outlined">
                       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                         <div>
-                          <Typography.Text strong>Konfigurasi API Fonnte</Typography.Text>
-                          <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-                            Simpan token, endpoint, dan nomor admin default. Nomor bisa ditulis dengan 08xxx.
+                          <Typography.Text strong>Rentang Waktu Notifikasi KGB Harian</Typography.Text>
+                          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                            Tentukan jam dimulainya dan berakhirnya rentang waktu sistem akan mengirimkan pesan WhatsApp otomatis secara bertahap kepada Admin/Pegawai terkait KGB.
                           </Typography.Paragraph>
                         </div>
-
-                        <div className="notification-settings__grid">
-                          <div>
-                            <Typography.Text>Token API</Typography.Text>
-                            <Input
-                              id="sipto-fonnte-api-token"
-                              name="sipto_fonnte_api_token"
-                              type="text"
-                              value={fonnteConfig.token}
-                              onChange={(event) => handleFonnteChange('token', event.target.value)}
-                              placeholder={fonnteConfig.has_token ? 'Token sudah tersimpan. Isi hanya jika ingin mengganti.' : 'Masukkan token API Fonnte'}
-                              autoComplete="off"
-                              autoCorrect="off"
-                              autoCapitalize="off"
-                              spellCheck={false}
-                            />
-                          </div>
-                          <div>
-                            <Typography.Text>Endpoint API</Typography.Text>
-                            <Input
-                              value={fonnteConfig.endpoint}
-                              onChange={(event) => handleFonnteChange('endpoint', event.target.value)}
-                              placeholder="https://api.fonnte.com/send"
-                            />
-                          </div>
-                        </div>
-
                         <div>
-                          <Typography.Text>Nomor Admin Default</Typography.Text>
-                          <Select
-                            mode="tags"
-                            style={{ width: '100%' }}
-                            placeholder="Tambahkan nomor admin, contoh: 0812xxxx"
-                            value={fonnteDefaults}
-                            onChange={(values) => handleFonnteChange('default_admin_numbers', values)}
-                          />
-                        </div>
-
-                        <Divider style={{ margin: '12px 0' }} />
-
-                        <div>
-                          <Typography.Text>Jadwal Pengiriman Notifikasi KGB</Typography.Text>
-                          <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-                            Notifikasi KGB hanya dikirim pada rentang waktu ini.
-                          </Typography.Paragraph>
-                          <Space size="middle" wrap>
+                          <Space wrap>
                             <TimePicker
                               allowClear
                               format={timeFormat}
@@ -578,6 +625,10 @@ const AdminNotificationSettings = () => {
                             />
                           </Space>
                         </div>
+                        <Divider style={{ margin: '12px 0' }} />
+                        <Button type="primary" onClick={handleSaveSettings} loading={saving}>
+                          Simpan Pengaturan KGB
+                        </Button>
                       </Space>
                     </Card>
                   </div>
@@ -732,9 +783,163 @@ const AdminNotificationSettings = () => {
               },
               {
                 key: 'hero-slider',
-                label: 'Slider Beranda',
+                label: 'Slider & Popup Image',
                 children: (
                   <div className="notification-settings__tab">
+                    <Card
+                      size="small"
+                      variant="outlined"
+                      style={{
+                        marginBottom: 16,
+                        borderColor: popup.active ? '#bbf7d0' : '#fecaca',
+                        background: popup.active ? '#f0fdf4' : '#fff',
+                      }}
+                      title={
+                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                          <Typography.Text strong style={{ fontSize: 15, color: popup.active ? '#15803d' : '#991b1b' }}>
+                            📢 Pengaturan Popup Image (SIPTU) - Status: {popup.active ? 'AKTIF' : 'NONAKTIF (DISABLED)'}
+                          </Typography.Text>
+                          <Switch
+                            checked={popup.active}
+                            onChange={(v) => setPopup((p) => ({ ...p, active: v }))}
+                            checkedChildren="Aktif"
+                            unCheckedChildren="Nonaktif"
+                          />
+                        </Space>
+                      }
+                    >
+                      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                        <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                          Popup akan tampil secara dinamis menyesuaikan device (mobile/desktop) ketika pengguna baru pertama kali membuka aplikasi.
+                        </Typography.Paragraph>
+
+                        <div className="notification-settings__grid">
+                          <div>
+                            <Typography.Text strong>Judul Popup</Typography.Text>
+                            <Input
+                              placeholder="Contoh: Informasi Penting SIPTU"
+                              value={popup.title}
+                              onChange={(e) => setPopup((p) => ({ ...p, title: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <Typography.Text strong>Link Gambar (Opsional)</Typography.Text>
+                            <Input
+                              placeholder="https://contoh.com/informasi"
+                              value={popup.link}
+                              onChange={(e) => setPopup((p) => ({ ...p, link: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Typography.Text strong>Isi / Konten Popup</Typography.Text>
+                          <Input.TextArea
+                            rows={3}
+                            placeholder="Deskripsi singkat informasi popup..."
+                            value={popup.content}
+                            onChange={(e) => setPopup((p) => ({ ...p, content: e.target.value }))}
+                          />
+                        </div>
+
+                        <div>
+                          <Typography.Text strong>Gambar Banner Popup</Typography.Text>
+                          <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+                            <Input
+                              placeholder="URL Gambar Banner (contoh: https://domain.com/banner.png)"
+                              value={popup.image}
+                              onChange={(e) => setPopup((p) => ({ ...p, image: e.target.value }))}
+                            />
+                            <Upload
+                              showUploadList={false}
+                              customRequest={({ file, onSuccess, onError }) =>
+                                handleHeroUpload(file, 'popup', onSuccess, onError)
+                              }
+                            >
+                              <Button icon={<UploadOutlined />}>Upload Gambar</Button>
+                            </Upload>
+                          </Space.Compact>
+                          {popup.image && (
+                            <div style={{ marginTop: 8 }}>
+                              <img
+                                src={popup.image}
+                                alt="preview-popup"
+                                style={{ maxHeight: 140, maxWidth: '100%', borderRadius: 8, objectFit: 'contain', background: '#0f172a' }}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <Divider style={{ margin: '8px 0' }} />
+                        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <Space>
+                            <Switch
+                              checked={popup.show_once}
+                              onChange={(v) => setPopup((p) => ({ ...p, show_once: v }))}
+                            />
+                            <Typography.Text>Tutup Permanen (1x per browser device)</Typography.Text>
+                          </Space>
+                          <Space>
+                            <Switch
+                              checked={popup.use_duration}
+                              onChange={(v) => setPopup((p) => ({ ...p, use_duration: v }))}
+                            />
+                            <Typography.Text>Hitung Mundur Tombol Close:</Typography.Text>
+                            <InputNumber
+                              min={1}
+                              max={300}
+                              disabled={!popup.use_duration}
+                              value={popup.duration || 5}
+                              onChange={(v) => setPopup((p) => ({ ...p, duration: v }))}
+                              addonAfter="Detik"
+                              size="small"
+                            />
+                          </Space>
+                          <Space>
+                            <Switch
+                              checked={popup.use_fireworks || false}
+                              onChange={(v) => setPopup((p) => ({ ...p, use_fireworks: v }))}
+                            />
+                            <Typography.Text>🎆 Efek Perayaan (Kembang Api)</Typography.Text>
+                          </Space>
+                          <Space>
+                            <Switch
+                              checked={popup.use_sound || false}
+                              onChange={(v) => setPopup((p) => ({ ...p, use_sound: v }))}
+                            />
+                            <Typography.Text>🎵 Efek Suara (Sound Effect)</Typography.Text>
+                          </Space>
+                        </div>
+
+                        {popup.use_sound && (
+                          <div style={{ marginTop: 8 }}>
+                            <Typography.Text strong>URL Audio / Sound Effect (.mp3, .wav, .ogg)</Typography.Text>
+                            <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+                              <Input
+                                placeholder="URL File Audio (contoh: https://domain.com/sound.mp3)"
+                                value={popup.sound_url || ''}
+                                onChange={(e) => setPopup((p) => ({ ...p, sound_url: e.target.value }))}
+                              />
+                              <Upload
+                                showUploadList={false}
+                                accept="audio/*"
+                                customRequest={({ file, onSuccess, onError }) =>
+                                  handleHeroUpload(file, 'popup_sound', onSuccess, onError)
+                                }
+                              >
+                                <Button icon={<UploadOutlined />}>Upload Audio</Button>
+                              </Upload>
+                            </Space.Compact>
+                            {popup.sound_url && (
+                              <div style={{ marginTop: 6 }}>
+                                <audio controls src={popup.sound_url} style={{ height: 32, maxWidth: '100%' }} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Space>
+                    </Card>
+
                     <Card size="small" variant="outlined">
                       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                         <div className="notification-settings__toolbar">

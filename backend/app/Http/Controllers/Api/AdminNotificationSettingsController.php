@@ -16,6 +16,23 @@ class AdminNotificationSettingsController extends Controller
         $setting = NotificationSetting::first();
         $rawHeroSlider = $setting?->getAttribute('hero_slider');
 
+        $popup = $setting?->popup_config;
+        if (!is_array($popup)) {
+            $popup = [
+                'title' => '',
+                'content' => '',
+                'image' => '',
+                'link' => '',
+                'active' => false,
+                'show_once' => true,
+                'use_duration' => false,
+                'duration' => 5,
+                'use_fireworks' => false,
+                'use_sound' => false,
+                'sound_url' => '',
+            ];
+        }
+
         return response()->json([
             'fonnte' => [
                 'token' => '',
@@ -35,6 +52,7 @@ class AdminNotificationSettingsController extends Controller
             ],
             'hero_slider' => $setting?->hero_slider ?? [],
             'hero_slider_initialized' => $rawHeroSlider !== null,
+            'popup' => $popup,
         ]);
     }
 
@@ -63,6 +81,18 @@ class AdminNotificationSettingsController extends Controller
             'kepala_balai_settings' => ['nullable', 'array'],
             'kepala_balai_settings.id' => ['nullable', 'integer'],
             'kepala_balai_settings.status' => ['nullable', 'string', 'in:tetap,plh'],
+            'popup' => ['nullable', 'array'],
+            'popup.title' => ['nullable', 'string', 'max:120'],
+            'popup.content' => ['nullable', 'string', 'max:2000'],
+            'popup.image' => ['nullable', 'string', 'max:500'],
+            'popup.link' => ['nullable', 'string', 'max:500'],
+            'popup.active' => ['nullable', 'boolean'],
+            'popup.show_once' => ['nullable', 'boolean'],
+            'popup.use_duration' => ['nullable', 'boolean'],
+            'popup.duration' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'popup.use_fireworks' => ['nullable', 'boolean'],
+            'popup.use_sound' => ['nullable', 'boolean'],
+            'popup.sound_url' => ['nullable', 'string', 'max:500'],
         ]);
 
         $defaultNumbers = $this->normalizeNumbers(data_get($payload, 'fonnte.default_admin_numbers', []));
@@ -78,6 +108,7 @@ class AdminNotificationSettingsController extends Controller
                 'kgb_window' => [],
                 'surat_tugas_templates' => [],
                 'hero_slider' => [],
+                'popup_config' => [],
             ]);
         }
 
@@ -99,7 +130,7 @@ class AdminNotificationSettingsController extends Controller
             fn ($slide) => is_array($slide)
         ));
 
-        $setting->update([
+        $updateData = [
             'fonnte_token' => $hasIncomingToken
                 ? ($incomingToken !== '' ? $incomingToken : $currentToken)
                 : $currentToken,
@@ -113,7 +144,13 @@ class AdminNotificationSettingsController extends Controller
             ))),
             'hero_slider' => $heroSlides,
             'kepala_balai_settings' => data_get($payload, 'kepala_balai_settings'),
-        ]);
+        ];
+
+        if ($request->has('popup')) {
+            $updateData['popup_config'] = data_get($payload, 'popup', []);
+        }
+
+        $setting->update($updateData);
 
         return response()->json([
             'fonnte' => [
@@ -131,6 +168,7 @@ class AdminNotificationSettingsController extends Controller
             'kepala_balai_settings' => $setting->kepala_balai_settings ?? [],
             'hero_slider' => $setting->hero_slider ?? [],
             'hero_slider_initialized' => true,
+            'popup' => $setting->popup_config ?? [],
         ]);
     }
 
@@ -156,9 +194,12 @@ class AdminNotificationSettingsController extends Controller
         if (!is_array($popup) || empty($popup['active'])) {
             $popup = null;
         } else {
-            // Normalize popup image
+            // Normalize popup image & sound_url
             if (!empty($popup['image'])) {
                 $popup['image'] = $this->normalizeHeroImagePath($popup['image']);
+            }
+            if (!empty($popup['sound_url'])) {
+                $popup['sound_url'] = $this->normalizeHeroImagePath($popup['sound_url']);
             }
         }
 
@@ -197,6 +238,9 @@ class AdminNotificationSettingsController extends Controller
                 'show_once' => true,
                 'use_duration' => false,
                 'duration' => 5,
+                'use_fireworks' => false,
+                'use_sound' => false,
+                'sound_url' => '',
             ];
         }
 
@@ -231,6 +275,9 @@ class AdminNotificationSettingsController extends Controller
             'popup.show_once' => ['nullable', 'boolean'],
             'popup.use_duration' => ['nullable', 'boolean'],
             'popup.duration' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'popup.use_fireworks' => ['nullable', 'boolean'],
+            'popup.use_sound' => ['nullable', 'boolean'],
+            'popup.sound_url' => ['nullable', 'string', 'max:500'],
             'slider_duration' => ['nullable', 'integer', 'min:2', 'max:60'],
         ]);
 
@@ -269,6 +316,9 @@ class AdminNotificationSettingsController extends Controller
                 'show_once' => (bool) ($popupInput['show_once'] ?? true),
                 'use_duration' => (bool) ($popupInput['use_duration'] ?? false),
                 'duration' => (int) ($popupInput['duration'] ?? 5),
+                'use_fireworks' => (bool) ($popupInput['use_fireworks'] ?? false),
+                'use_sound' => (bool) ($popupInput['use_sound'] ?? false),
+                'sound_url' => $this->normalizeHeroImagePath(trim($popupInput['sound_url'] ?? '')),
             ];
         }
 
@@ -302,7 +352,7 @@ class AdminNotificationSettingsController extends Controller
 
         try {
             $request->validate([
-                'file' => ['required', 'file', 'max:2048'],
+                'file' => ['required', 'file', 'max:10240'],
             ]);
 
             $file = $request->file('file');
@@ -310,22 +360,37 @@ class AdminNotificationSettingsController extends Controller
                 return response()->json(['message' => 'File tidak ditemukan.'], 422);
             }
 
-            // Validasi mime type manual
-            $allowedMimes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'];
-            if (!in_array($file->getMimeType(), $allowedMimes)) {
+            $allowedImageMimes = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+            $allowedAudioMimes = [
+                'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave',
+                'audio/ogg', 'audio/vorbis', 'audio/aac', 'audio/x-aac', 'audio/m4a',
+                'audio/x-m4a', 'audio/mp4', 'application/ogg'
+            ];
+            $allowedExts = ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+
+            $mime = strtolower($file->getMimeType() ?? '');
+            $extension = strtolower($file->getClientOriginalExtension() ?: '');
+
+            $isImage = in_array($mime, $allowedImageMimes) || in_array($extension, ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif']);
+            $isAudio = in_array($mime, $allowedAudioMimes) || in_array($extension, ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac']);
+
+            if (!$isImage && !$isAudio) {
                 return response()->json([
-                    'message' => 'Format file tidak didukung. Gunakan: SVG, PNG, JPG, WEBP',
+                    'message' => 'Format file tidak didukung. Gunakan: Gambar (SVG, PNG, JPG, WEBP) atau Audio (MP3, WAV, OGG, M4A)',
                     'mime_type' => $file->getMimeType(),
                     'extension' => $file->getClientOriginalExtension()
                 ], 422);
             }
 
-            $extension = strtolower($file->getClientOriginalExtension() ?: 'png');
-            // Fix extension for jpeg
             if ($extension === 'jpeg') {
                 $extension = 'jpg';
             }
-            $filename = 'hero-' . Str::random(12) . '.' . $extension;
+            if (!$extension) {
+                $extension = $isAudio ? 'mp3' : 'png';
+            }
+
+            $prefix = $isAudio ? 'sound-' : 'hero-';
+            $filename = $prefix . Str::random(12) . '.' . $extension;
 
             // Simpan ke core_api/public/storage/hero-slider/
             $publicDir = public_path('storage/hero-slider');
@@ -339,10 +404,6 @@ class AdminNotificationSettingsController extends Controller
             $path = 'storage/hero-slider/' . $filename;
 
             // Copy file ke public_html/storage/hero-slider/ agar bisa diakses dari frontend
-            // Struktur hosting:
-            //   /domain/siptu.bpompalopo.com/core_api/      ← base_path()
-            //   /domain/siptu.bpompalopo.com/public_html/    ← frontend root
-            // dirname(base_path()) = /domain/siptu.bpompalopo.com/
             $copiedToRoot = false;
             try {
                 $rootStorageDir = dirname(base_path()) . '/public_html/storage/hero-slider';

@@ -238,9 +238,13 @@ class AdminCommandCenterController extends Controller
 
     private function dailyCounts(string $modelClass, string $dateColumn, string $fromDate, string $toDate): array
     {
+        $allowedColumns = ['created_at', 'updated_at', 'date_out', 'loan_date', 'return_date', 'date', 'submission_date'];
+        $cleanColumn = in_array($dateColumn, $allowedColumns, true) ? $dateColumn : 'created_at';
+
         return $modelClass::query()
-            ->selectRaw("DATE({$dateColumn}) as day, COUNT(*) as total")
-            ->whereBetween(DB::raw("DATE({$dateColumn})"), [$fromDate, $toDate])
+            ->selectRaw("DATE(" . $cleanColumn . ") as day, COUNT(*) as total")
+            ->whereDate($cleanColumn, '>=', $fromDate)
+            ->whereDate($cleanColumn, '<=', $toDate)
             ->groupBy('day')
             ->orderBy('day')
             ->pluck('total', 'day')

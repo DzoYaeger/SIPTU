@@ -44,8 +44,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
-import { useInfoPopup } from "../hooks/useInfoPopup.js";
-import InfoPopupModal from "../components/InfoPopupModal.jsx";
+
 import { buildMessageAdapter } from "../utils/notify.js";
 import {
   BarChart,
@@ -113,7 +112,7 @@ export default function ValidatorDashboard() {
   const { message } = AntdApp.useApp();
   const notify = buildMessageAdapter(message);
   const navigate = useNavigate();
-  const popup = useInfoPopup();
+
 
   const [loading, setLoading] = useState(true);
   const [extraLoading, setExtraLoading] = useState(true);
@@ -196,7 +195,6 @@ export default function ValidatorDashboard() {
 
   return (
     <div className="validator-dashboard-page">
-      <InfoPopupModal {...popup} />
 
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>

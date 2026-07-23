@@ -1,0 +1,34 @@
+name: Semgrep Security Scan
+
+on:
+  push:
+    branches: [ main, master, dev, develop ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run weekly security scan every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+jobs:
+  semgrep:
+    name: Security Scan (SAST)
+    runs-on: ubuntu-latest
+
+    container:
+      image: returntocorp/semgrep
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Run Semgrep Security Scan
+        run: |
+          semgrep scan --config=.semgrep.yml --config=p/default --config=p/security-audit --json --output=semgrep-results.json || true
+          semgrep scan --config=.semgrep.yml --config=p/default --config=p/security-audit
+
+      - name: Upload Scan Artifacts
+        uses: actions/upload-artifact@5076a4d3476973b91e7953696e54e0c69788f259 # v4.0.0
+        if: always()
+        with:
+          name: semgrep-security-report
+          path: semgrep-results.json

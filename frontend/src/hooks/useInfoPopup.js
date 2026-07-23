@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./useAuth.js";
 
 /**
@@ -21,12 +21,29 @@ export function useInfoPopup() {
         const data = await res.json().catch(() => ({}));
 
         if (data?.popup && data.popup.active) {
-          const popupKey = `siptu_popup_dismissed_${btoa(data.popup.title || "default").substring(0, 16)}`;
-          if (data.popup.show_once && localStorage.getItem(popupKey)) {
-            return; // Already dismissed
+          const rawId = data.popup.title || data.popup.image || "default_popup";
+          const hashedId = btoa(encodeURIComponent(rawId)).substring(0, 16);
+          const localKey = `siptu_popup_dismissed_${hashedId}`;
+
+          // If show_once is OFF (false), ensure legacy localStorage restriction is cleared
+          if (!data.popup.show_once) {
+            try { localStorage.removeItem(localKey); } catch (err) {}
+          } else {
+            // If show_once is ON (true) and user already dismissed it permanently
+            if (localStorage.getItem(localKey)) {
+              return;
+            }
           }
+
+          // In-memory SPA session check (prevents popup from re-appearing when switching menus in SPA, but allows re-appear on page refresh if show_once is false)
+          if (window.__siptu_popup_shown_in_spa) {
+            return;
+          }
+
           setPopupData(data.popup);
           setShowPopup(true);
+          window.__siptu_popup_shown_in_spa = true;
+
           if (data.popup.use_duration && data.popup.duration > 0) {
             setPopupTimeLeft(data.popup.duration);
           }
@@ -59,21 +76,28 @@ export function useInfoPopup() {
     }
   }, [popupTimeLeft, showPopup, popupData]);
 
-  const dismissPopup = (force = false) => {
+  const dismissPopup = useCallback((force = false) => {
     if (force !== true && popupData?.use_duration && popupTimeLeft > 0) return;
     setShowPopup(false);
-    if (popupData?.show_once) {
-      const popupKey = `siptu_popup_dismissed_${btoa(popupData.title || "default").substring(0, 16)}`;
-      localStorage.setItem(popupKey, "1");
-    }
-  };
+    
+    if (popupData) {
+      const rawId = popupData.title || popupData.image || "default_popup";
+      const hashedId = btoa(encodeURIComponent(rawId)).substring(0, 16);
+      window.__siptu_popup_shown_in_spa = true;
 
-  const ensureAbsoluteUrl = (url) => {
+      if (popupData.show_once) {
+        const localKey = `siptu_popup_dismissed_${hashedId}`;
+        try { localStorage.setItem(localKey, "1"); } catch (err) {}
+      }
+    }
+  }, [popupData, popupTimeLeft]);
+
+  const ensureAbsoluteUrl = useCallback((url) => {
     if (!url) return "";
     const trimmed = url.trim();
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("mailto:")) return trimmed;
     return `https://${trimmed}`;
-  };
+  }, []);
 
   return {
     popupData,

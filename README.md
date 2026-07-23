@@ -103,4 +103,17 @@ npx expo start
 
 ---
 
-*Terakhir diperbarui: 30 Maret 2026. Dokumentasi ini disusun untuk membantu pengembang memahami ekosistem SIPTU ULTRA secara utuh.*
+## 🔒 Audit Keamanan Kode (Semgrep SAST)
+
+Proyek ini dilengkapi dengan alat pemindai keamanan otomatis **Semgrep** untuk mendeteksi celah keamanan (OWASP Top 10, SQL Injection, XSS, Hardcoded Secrets, dll.) di seluruh codebase (Laravel, React, dan React Native).
+
+### Jalankan Scan Keamanan Lokal:
+- **Windows**: `run-semgrep.bat` atau `pip install semgrep && semgrep scan --config=.semgrep.yml`
+- **Linux/macOS**: `./run-semgrep.sh`
+- **Docker**: `docker run --rm -v "%cd%:/src" returntocorp/semgrep semgrep scan --config=.semgrep.yml`
+
+*Hasil pemindaian otomatis akan disimpan dalam file `semgrep-report.txt` atau dijalankan secara otomatis di CI/CD via GitHub Actions (`.github/workflows/semgrep.yml`).*
+
+---
+
+*Terakhir diperbarui: 23 Juli 2026. Dokumentasi ini disusun untuk membantu pengembang memahami ekosistem SIPTU ULTRA secara utuh.*

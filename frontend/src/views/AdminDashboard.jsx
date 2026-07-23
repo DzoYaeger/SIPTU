@@ -45,8 +45,7 @@ import {
 import dayjs from "dayjs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useAuth } from "../hooks/useAuth.js";
-import { useInfoPopup } from "../hooks/useInfoPopup.js";
-import InfoPopupModal from "../components/InfoPopupModal.jsx";
+
 import "./AdminDashboard.css";
 
 const { Title, Text } = Typography;
@@ -117,7 +116,7 @@ function AdminDashboard() {
   const [reportDateRange, setReportDateRange] = useState([dayjs().startOf("month"), dayjs().endOf("month")]);
   const [reportLoading, setReportLoading] = useState(false);
   const { message } = AntdApp.useApp();
-  const popup = useInfoPopup();
+
 
   // AI Audit states
   const [auditLoading, setAuditLoading] = useState(false);
@@ -261,7 +260,6 @@ function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
-      <InfoPopupModal {...popup} />
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>
         <div>

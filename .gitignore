@@ -125,3 +125,7 @@ Thumbs.db
 
 # Laravel Sail
 .docker/
+
+# Semgrep local scan reports
+semgrep-report.txt
+semgrep-full-report.txt
