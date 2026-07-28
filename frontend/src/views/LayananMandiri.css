@@ -5,11 +5,11 @@
 
 :root {
   /* Color Palette */
-  --lm-primary: #0f172a;       /* Deep Slate Blue */
-  --lm-primary-light: #1e293b; /* Dark Navy Slate */
-  --lm-accent: #2563eb;        /* Vibrant Royal Blue */
-  --lm-accent-light: #3b82f6;  /* Bright Sky Blue */
-  --lm-accent-hover: #1d4ed8;  /* Deep Accent Blue */
+  --lm-primary: #0F5B99;       /* BPOM Royal Blue */
+  --lm-primary-light: #1e3a8a; /* Dark Royal Slate */
+  --lm-accent: #0F5B99;        /* BPOM Royal Blue */
+  --lm-accent-light: #2563eb;  /* Sky Blue Accent */
+  --lm-accent-hover: #0b4575;  /* Deep Royal Blue */
   
   --lm-bg: #f8fafc;            /* Clean Slate Gray */
   --lm-card-bg: #ffffff;       /* Pure White Cards */
@@ -349,9 +349,9 @@
 }
 .lm-banner-slider {
   position: relative;
-  border-radius: 24px;
+  border-radius: 16px;
   overflow: hidden;
-  height: 220px;
+  height: 180px;
   background: var(--lm-card-bg);
   border: 1px solid var(--lm-border);
   box-shadow: var(--lm-shadow-sm);
