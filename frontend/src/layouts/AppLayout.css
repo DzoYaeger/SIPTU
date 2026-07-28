@@ -569,19 +569,16 @@
   background-color: #f8fafc;
 }
 
-.app-sider,
-.app-sider .ant-layout-sider-children {
+.app-sider {
   background: #ffffff !important;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
   z-index: 100;
-  position: sticky;
-  top: 0;
-  height: 100vh;
   overflow: visible !important;
 }
 
-.app-sider {
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+.app-sider .ant-layout-sider-children {
+  overflow: visible !important;
 }
 
 .app-sider.ant-layout-sider-collapsed {
@@ -636,18 +633,48 @@
 .app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item,
 .app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-title {
   padding: 0 !important;
-  margin: 4px auto !important;
+  margin: 2px auto !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 44px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  position: relative !important;
+  border-radius: 8px !important;
 }
 
-.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item .ant-menu-item-icon,
-.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-title .ant-menu-item-icon {
+/* Force icons to be visible and centered when sidebar is collapsed */
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item-icon,
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .anticon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
   margin: 0 !important;
-  font-size: 16px !important;
-  min-width: 0 !important;
+  padding: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  min-width: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: #475569 !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item-selected .ant-menu-item-icon,
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item-selected .anticon {
+  color: #0F5B99 !important;
+}
+
+/* Hide text labels when collapsed */
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-title-content {
+  display: none !important;
+  width: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Compact Menu & Submenu Items */
