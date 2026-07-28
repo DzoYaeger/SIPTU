@@ -47,18 +47,17 @@ dayjs.locale('id');
 const DATE_API = 'YYYY-MM-DD';
 const DATE_UI = 'DD/MM/YYYY';
 
-// "Sapphire ash morning" Palette Configuration:
-// #35627A (Sapphire Blue), #E5AEA9 (Soft Rose), #B46258 (Terracotta Rust), #A6A9D0 (Lavender Ash), #F5F5F5 (Off-White), #8E9A98 (Slate Sage)
+// Corporate BPOM Palette Configuration:
 const STATUS_CONFIG = {
-    'Proses Negosiasi': { step: 1, percent: 20, color: '#B46258', bg: '#FCF3F2', tagColor: 'volcano' },
-    'Proses PPK': { step: 2, percent: 40, color: '#A6A9D0', bg: '#F1F2F8', tagColor: 'geekblue' },
-    'Proses pengiriman': { step: 3, percent: 60, color: '#E5AEA9', bg: '#FCF5F5', tagColor: 'magenta' },
-    'Proses Pembayaran': { step: 4, percent: 80, color: '#8E9A98', bg: '#F1F4F4', tagColor: 'cyan' },
-    'Selesai': { step: 5, percent: 100, color: '#35627A', bg: '#EBF1F4', tagColor: 'processing' },
+    'Proses Negosiasi': { step: 1, percent: 20, color: '#d97706', bg: '#fffbebfb', tagColor: 'warning' },
+    'Proses PPK': { step: 2, percent: 40, color: '#0F5B99', bg: '#eff6ff', tagColor: 'processing' },
+    'Proses pengiriman': { step: 3, percent: 60, color: '#4f46e5', bg: '#eef2ff', tagColor: 'geekblue' },
+    'Proses Pembayaran': { step: 4, percent: 80, color: '#7c3aed', bg: '#f5f3ff', tagColor: 'purple' },
+    'Selesai': { step: 5, percent: 100, color: '#059669', bg: '#ecfdf5', tagColor: 'success' },
 };
 
 function StatusProgress({ status }) {
-    const config = STATUS_CONFIG[status] || { step: 1, percent: 20, color: '#8E9A98', tagColor: 'default' };
+    const config = STATUS_CONFIG[status] || { step: 1, percent: 20, color: '#64748b', tagColor: 'default' };
     return (
         <div className="pbj-progress-mini">
             <div className="pbj-progress-mini__label">
@@ -102,10 +101,10 @@ function StatusStepper({ currentStatus }) {
 }
 
 function DateBadge({ value }) {
-    if (!value) return <span style={{ color: '#8E9A98' }}>—</span>;
+    if (!value) return <span style={{ color: '#94a3b8' }}>—</span>;
     return (
-        <span className="pbj-code-badge" style={{ background: '#FFFFFF', borderColor: '#8E9A98' }}>
-            <CalendarOutlined style={{ fontSize: 11, color: '#35627A' }} />{' '}
+        <span className="pbj-code-badge" style={{ background: '#FFFFFF', borderColor: '#e2e8f0' }}>
+            <CalendarOutlined style={{ fontSize: 11, color: '#0F5B99' }} />{' '}
             {dayjs(value).format('DD MMM YYYY')}
         </span>
     );
