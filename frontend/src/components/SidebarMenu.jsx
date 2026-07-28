@@ -1,5 +1,5 @@
 import { Layout, Menu, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AppstoreOutlined,
   BarChartOutlined,
