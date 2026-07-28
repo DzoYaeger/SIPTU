@@ -580,6 +580,13 @@
   overflow: visible !important;
 }
 
+.app-sider.ant-layout-sider-collapsed {
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  flex: 0 0 60px !important;
+}
+
 .sidebar-border-toggle-btn:hover {
   background: #f8fafc !important;
   border-color: #2563eb !important;
@@ -600,6 +607,23 @@
   font-size: 12px !important;
   max-height: calc(100vh - 52px);
   overflow-y: auto;
+}
+
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item,
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-title {
+  padding: 0 !important;
+  margin: 4px auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 44px !important;
+}
+
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item .ant-menu-item-icon,
+.app-sider.ant-layout-sider-collapsed .sidebar-menu .ant-menu-submenu-title .ant-menu-item-icon {
+  margin: 0 !important;
+  font-size: 16px !important;
+  min-width: 0 !important;
 }
 
 /* Compact Menu & Submenu Items */

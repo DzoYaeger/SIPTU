@@ -220,7 +220,7 @@ const SidebarMenu = ({
       width={210}
       collapsedWidth={60}
       className="app-sider"
-      style={{ position: 'relative' }}
+      style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 100 }}
     >
       {/* Floating Toggle Button on Sidebar-Navbar Border */}
       {onToggleCollapse && (
