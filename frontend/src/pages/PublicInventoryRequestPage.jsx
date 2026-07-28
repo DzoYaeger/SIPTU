@@ -57,7 +57,7 @@ const toTitleCase = (str) =>
     (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
   );
 
-const PublicInventoryRequestPage = () => {
+const PublicInventoryRequestPage = ({ isEmbedded = false }) => {
   const { message, modal } = AntdApp.useApp();
   const [form] = Form.useForm();
   const signatureRef = useRef();
@@ -348,9 +348,11 @@ const PublicInventoryRequestPage = () => {
       {/* ── Top Header Bar ── */}
       <header className="fluid-ws__header">
         <div className="fluid-ws__brand">
-          <a href="/app/layanan-mandiri" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 14, fontWeight: 500, textDecoration: 'none', marginRight: 16 }}>
-            <ArrowLeftOutlined /> Kembali
-          </a>
+          {!isEmbedded && (
+            <a href="/app/layanan-mandiri" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 14, fontWeight: 500, textDecoration: 'none', marginRight: 16 }}>
+              <ArrowLeftOutlined /> Kembali
+            </a>
+          )}
           <div
             className="fluid-ws__brand-icon"
             style={{

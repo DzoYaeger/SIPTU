@@ -54,6 +54,44 @@ class BmnLoanController extends Controller
         return response()->json($loans);
     }
 
+    public function myLoans(Request $request)
+    {
+        $user = $request->user();
+        $nipParam = $request->query('nip');
+        
+        $nip = $user ? ($user->nip ?? $user->username) : $nipParam;
+        $userName = $user ? $user->name : null;
+
+        if (!$nip && !$userName) {
+            return response()->json([]);
+        }
+
+        $employee = null;
+        if ($user) {
+            $employee = Employee::where('user_id', $user->id)
+                ->orWhere('nip', $nip)
+                ->first();
+        } else if ($nip) {
+            $employee = Employee::where('nip', $nip)->first();
+        }
+
+        $query = BmnLoan::query();
+        $query->where(function($q) use ($nip, $userName, $employee) {
+            if ($nip) {
+                $q->where('borrower_nip', $nip);
+            }
+            if ($userName) {
+                $q->orWhere('borrower_name', $userName);
+            }
+            if ($employee) {
+                $q->orWhere('borrower_id', $employee->id);
+            }
+        });
+
+        $loans = $query->orderBy('created_at', 'desc')->get();
+        return response()->json($loans);
+    }
+
     public function showPublic($token)
     {
         $loan = BmnLoan::where('token', $token)->firstOrFail();

@@ -11,7 +11,11 @@ import {
     UserOutlined,
     BarcodeOutlined,
     InfoCircleOutlined,
-    RollbackOutlined
+    RollbackOutlined,
+    FilePdfOutlined,
+    EnvironmentOutlined,
+    PhoneOutlined,
+    FileTextOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PublicFormLayout from '../layouts/PublicFormLayout.jsx';
@@ -71,16 +75,28 @@ const PublicAssetLoanTrackingPage = () => {
         });
     };
 
-    if (loading) return <div className="palt-loading"><Spin size="large" /></div>;
+    if (loading) return (
+        <div className="palt-loading">
+            <Spin size="large" tip="Memuat data peminjaman..." />
+        </div>
+    );
 
     if (error || !loan) return (
         <PublicFormLayout>
-            <div className="palt-error">
-                <div style={{ textAlign: 'center' }}>
-                    <CloseCircleFilled style={{ fontSize: 48, color: '#ff4d4f' }} />
-                    <h2 style={{ marginTop: 16 }}>Data Tidak Ditemukan</h2>
-                    <p>{error || 'Token tidak valid atau kadaluarsa.'}</p>
-                    <Button onClick={() => navigate('/peminjaman-aset/new')}>Buat Pengajuan Baru</Button>
+            <div className="palt-page">
+                <div className="palt-container">
+                    <div className="palt-card palt-error-card">
+                        <CloseCircleFilled style={{ fontSize: 44, color: '#ef4444' }} />
+                        <h2>Data Tidak Ditemukan</h2>
+                        <p>{error || 'Token peminjaman tidak valid atau telah kadaluarsa.'}</p>
+                        <Button 
+                            type="primary" 
+                            onClick={() => navigate('/peminjaman-aset/new')}
+                            style={{ borderRadius: 8 }}
+                        >
+                            Buat Pengajuan Baru
+                        </Button>
+                    </div>
                 </div>
             </div>
         </PublicFormLayout>
@@ -93,7 +109,7 @@ const PublicAssetLoanTrackingPage = () => {
             'dipinjam': 2,
             'pengajuan-pengembalian': 2,
             'dikembalikan': 3,
-            'ditolak': -1 // Special case
+            'ditolak': -1
         };
         return map[currentStatus] ?? 0;
     };
@@ -105,123 +121,181 @@ const PublicAssetLoanTrackingPage = () => {
     const steps = [
         { title: 'Diajukan', description: dayjs(loan.created_at).format('DD MMM HH:mm') },
         { title: 'Disetujui', description: loan.approved_at ? dayjs(loan.approved_at).format('DD MMM') : '-' },
-        { title: 'Dipinjam', description: loan.status === 'dipinjam' ? 'Sedang berlangsung' : (isReturnRequested ? 'Pengajuan Pengembalian' : '-') },
-        { title: 'Dikembalikan', description: loan.return_date ? dayjs(loan.return_date).format('DD MMM') : '-' },
+        { title: 'Dipinjam', description: loan.status === 'dipinjam' ? 'Sedang dipinjam' : (isReturnRequested ? 'Proses Pengembalian' : '-') },
+        { title: 'Dikembalikan', description: loan.status === 'dikembalikan' ? (loan.return_date ? dayjs(loan.return_date).format('DD MMM YYYY') : 'Selesai') : '-' },
     ];
+
+    const statusBadgeMap = {
+        'pengajuan': { color: 'processing', text: 'Menunggu Persetujuan' },
+        'disetujui': { color: 'cyan', text: 'Disetujui' },
+        'dipinjam': { color: 'warning', text: 'Sedang Dipinjam' },
+        'pengajuan-pengembalian': { color: 'purple', text: 'Pengajuan Pengembalian' },
+        'dikembalikan': { color: 'success', text: 'Dikembalikan' },
+        'ditolak': { color: 'error', text: 'Ditolak' },
+    };
+
+    const statusConfig = statusBadgeMap[loan.status] || { color: 'default', text: loan.status };
 
     return (
         <PublicFormLayout>
             <div className="palt-page">
                 <div className="palt-container">
                     {/* Header */}
-                    <div className="palt-header-wrap">
-                        <h1 className="palt-header__title">Track & Trace</h1>
-                        <p className="palt-header__sub">Manajemen Aset Balai POM di Palopo</p>
-                    </div>
-
-                    {/* Status Board */}
-                    <div className="palt-status-board">
-                        <div className="palt-status-main">
-                            <div className="palt-status-icon-wrap">
-                                {isRejected ? <CloseCircleFilled style={{ color: '#fca5a5' }} /> :
-                                    currentStep >= 1 ? <CheckCircleFilled style={{ color: '#86efac' }} /> :
-                                        <ClockCircleFilled style={{ color: '#fde047' }} />}
-                            </div>
-                            <div className="palt-status-info">
-                                <h2>Status Peminjaman</h2>
-                                <p className="status-text">{loan.status.toUpperCase().replace('-', ' ')}</p>
-                                <div className="spa-badge">ID: {loan.spa_number}</div>
-                            </div>
+                    <div className="palt-header">
+                        <div className="palt-header__left">
+                            <span className="palt-header__tag">SIMBA BMN</span>
+                            <h1 className="palt-header__title">Pelacakan Status Peminjaman</h1>
+                            <p className="palt-header__sub">Balai Besar / Balai POM di Palopo</p>
                         </div>
-
-                        {/* Action Area */}
-                        <div className="palt-status-actions">
-                             {loan.status === 'dipinjam' && (
-                                <button className="palt-btn-glass palt-btn-primary" onClick={handleReturnRequest}>
-                                    <RollbackOutlined /> Ajukan Pengembalian
-                                </button>
-                            )}
-                            {isReturnRequested && (
-                                <Tag color="gold" style={{ padding: '8px 20px', borderRadius: '12px', fontWeight: 800, border: 'none' }}>
-                                    <SyncOutlined spin /> MENUNGGU KONFIRMASI
-                                </Tag>
-                            )}
+                        <div className="palt-header__right">
+                            <Button
+                                type="primary"
+                                icon={<FilePdfOutlined style={{ color: '#ffffff' }} />}
+                                onClick={() => window.open(`${API}/public/bmn-loans/${token}/pdf`, '_blank')}
+                                style={{ borderRadius: 8, backgroundColor: 'var(--color-primary, #0F5B99)', borderColor: 'var(--color-primary, #0F5B99)', color: '#ffffff' }}
+                            >
+                                Cetak SPA (PDF)
+                            </Button>
                         </div>
                     </div>
 
-                    {/* Horizontal Status Timeline */}
-                    <div className="palt-glass-card" style={{ padding: '30px 40px' }}>
-                        <div className="palt-card-title" style={{ marginBottom: 32 }}>
-                            <ClockCircleFilled /> Riwayat Status Peminjaman
-                        </div>
-                        <Steps
-                            current={currentStep}
-                            direction="horizontal"
-                            size="default"
-                            items={steps}
-                            status={isReturnRequested ? 'process' : undefined}
-                        />
-                    </div>
-
-                    <div className="palt-content-grid">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div className="palt-glass-card">
-                                <div className="palt-card-title">
-                                    <UserOutlined /> Informasi Peminjam
+                    {/* Status Overview Card */}
+                    <div className="palt-card palt-status-card">
+                        <div className="palt-status-card__header">
+                            <div className="palt-status-card__info">
+                                <div className="palt-spa-badge">
+                                    No. SPA: <strong>{loan.spa_number || loan.token?.substring(0, 8)}</strong>
                                 </div>
-                                <div className="palt-borrower-box">
-                                    <div className="palt-label-group">
-                                        <label>Nama Lengkap</label>
-                                        <span>{loan.borrower_name}</span>
-                                        <p>NIP: {loan.borrower_nip}</p>
+                                <div className="palt-status-title-row">
+                                    <Tag color={statusConfig.color} style={{ borderRadius: 6, fontWeight: 600, fontSize: 13, padding: '4px 12px' }}>
+                                        {statusConfig.text}
+                                    </Tag>
+                                </div>
+                            </div>
+
+                            <div className="palt-status-card__actions">
+                                {loan.status === 'dipinjam' && (
+                                    <Button
+                                        type="primary"
+                                        icon={<RollbackOutlined />}
+                                        loading={actionLoading}
+                                        onClick={handleReturnRequest}
+                                        style={{ borderRadius: 8 }}
+                                    >
+                                        Ajukan Pengembalian
+                                    </Button>
+                                )}
+                                {isReturnRequested && (
+                                    <Tag color="purple" style={{ padding: '6px 14px', borderRadius: 8, fontWeight: 600 }}>
+                                        <SyncOutlined spin /> Menunggu Konfirmasi Pengembalian
+                                    </Tag>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Timeline Steps Card */}
+                    <div className="palt-card">
+                        <div className="palt-card-header">
+                            <ClockCircleFilled className="palt-card-icon" />
+                            <h3 className="palt-card-title">Progres Status Peminjaman</h3>
+                        </div>
+                        <div className="palt-steps-wrapper">
+                            <Steps
+                                current={currentStep}
+                                direction="horizontal"
+                                size="small"
+                                items={steps}
+                                status={isRejected ? 'error' : (isReturnRequested ? 'process' : undefined)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Content Grid */}
+                    <div className="palt-grid">
+                        {/* Column 1: Borrower & Period Info */}
+                        <div className="palt-card">
+                            <div className="palt-card-header">
+                                <UserOutlined className="palt-card-icon" />
+                                <h3 className="palt-card-title">Informasi Peminjam</h3>
+                            </div>
+                            <div className="palt-info-grid">
+                                <div className="palt-info-item">
+                                    <span className="palt-info-label">Nama Peminjam</span>
+                                    <span className="palt-info-value">{loan.borrower_name}</span>
+                                </div>
+                                <div className="palt-info-item">
+                                    <span className="palt-info-label">NIP</span>
+                                    <span className="palt-info-value">{loan.borrower_nip || '-'}</span>
+                                </div>
+                                <div className="palt-info-item">
+                                    <span className="palt-info-label">Fungsi / Bidang</span>
+                                    <span className="palt-info-value">{loan.borrower_function || '-'}</span>
+                                </div>
+                                <div className="palt-info-item">
+                                    <span className="palt-info-label">No. Telepon / WA</span>
+                                    <span className="palt-info-value">{loan.borrower_phone || '-'}</span>
+                                </div>
+                                <div className="palt-info-item" style={{ gridColumn: 'span 2' }}>
+                                    <span className="palt-info-label">Periode Pinjam</span>
+                                    <span className="palt-info-value">
+                                        <CalendarOutlined style={{ marginRight: 6, color: '#f59e0b' }} />
+                                        {dayjs(loan.loan_date).format('DD MMMM YYYY')} s/d {dayjs(loan.return_date).format('DD MMMM YYYY')}
+                                    </span>
+                                </div>
+                                {loan.location && (
+                                    <div className="palt-info-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="palt-info-label">Lokasi Penempatan</span>
+                                        <span className="palt-info-value">{loan.location}</span>
                                     </div>
-                                    <div className="palt-label-group">
-                                        <label>Rentang Waktu</label>
-                                        <span>{dayjs(loan.loan_date).format('D MMM')} — {dayjs(loan.return_date).format('D MMM YYYY')}</span>
+                                )}
+                                {loan.notes && (
+                                    <div className="palt-info-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="palt-info-label">Keperluan / Catatan</span>
+                                        <span className="palt-info-value">{loan.notes}</span>
                                     </div>
-                                </div>
+                                )}
+                                {loan.rejection_reason && (
+                                    <div className="palt-info-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="palt-info-label" style={{ color: '#ef4444' }}>Alasan Penolakan</span>
+                                        <span className="palt-info-value" style={{ color: '#dc2626' }}>{loan.rejection_reason}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Column 2: Assets & Notes */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div className="palt-glass-card">
-                                <div className="palt-card-title">
-                                    <BarcodeOutlined /> Daftar Aset Terdaftar
-                                </div>
-                                <div className="palt-assets-visual">
-                                    {(loan.assets || []).map((asset, idx) => (
-                                        <div key={idx} className="palt-asset-item-v2">
-                                            <div className="palt-asset-v-icon">
-                                                <BarcodeOutlined />
-                                            </div>
-                                            <div className="palt-asset-v-body">
-                                                <h4>{asset.nama_barang}</h4>
-                                                <code>{asset.kode_bmn}</code>
+                        {/* Column 2: Assets List */}
+                        <div className="palt-card">
+                            <div className="palt-card-header">
+                                <BarcodeOutlined className="palt-card-icon" />
+                                <h3 className="palt-card-title">Daftar Barang BMN ({loan.assets?.length || 0})</h3>
+                            </div>
+                            <div className="palt-assets-list">
+                                {(loan.assets || []).map((asset, idx) => (
+                                    <div key={idx} className="palt-asset-row">
+                                        <div className="palt-asset-row__num">{idx + 1}</div>
+                                        <div className="palt-asset-row__details">
+                                            <span className="palt-asset-row__title">{asset.nama_barang || asset.name}</span>
+                                            <div className="palt-asset-row__meta">
+                                                <span>Merek: <strong>{asset.merek_barang || asset.brand || '-'}</strong></span>
+                                                <span>Kode / NUP: <code>{asset.kode_bmn || asset.nup || asset.asset_code || '-'}</code></span>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {loan.notes && (
-                                <div className="palt-glass-card">
-                                    <div className="palt-card-title">
-                                        <InfoCircleOutlined /> Keperluan Peminjaman
                                     </div>
-                                    <p style={{ margin: 0, color: '#475569', lineHeight: 1.6, fontSize: '15px' }}>
-                                        {loan.notes}
-                                    </p>
-                                </div>
-                            )}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Final Footer */}
-                    <div className="palt-action-footer">
-                        <button className="palt-btn-glass" onClick={() => navigate('/peminjaman-aset/new')}>
-                            <HomeOutlined /> Kembali ke Beranda
-                        </button>
+                    {/* Footer Action */}
+                    <div className="palt-footer-actions">
+                        <Button
+                            icon={<HomeOutlined />}
+                            onClick={() => navigate('/app/simba')}
+                            style={{ borderRadius: 8 }}
+                        >
+                            Kembali ke SIMBA
+                        </Button>
                     </div>
                 </div>
             </div>

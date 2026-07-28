@@ -44,11 +44,11 @@
 /* ── Top Header Bar ── */
 .fluid-ws__header {
     background: var(--fluid-surface);
-    height: 70px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 32px;
+    padding: 0 20px;
     border-bottom: 1px solid var(--fluid-border);
     position: relative;
     z-index: 20;
@@ -131,14 +131,13 @@
 .fluid-ws__layout {
     display: flex;
     flex: 1;
-    height: calc(100vh - 70px);
-    /* Fill remaining height */
+    height: calc(100vh - 52px);
     overflow: hidden;
 }
 
 /* Left Panel: Form / Requester Info */
 .fluid-ws__panel-left {
-    width: 400px;
+    width: 360px;
     background: var(--fluid-surface);
     border-right: 1px solid var(--fluid-border);
     display: flex;
@@ -146,40 +145,44 @@
     height: 100%;
     position: relative;
     z-index: 10;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.02);
 }
 
 .fluid-ws__panel-left-content {
-    padding: 32px;
+    padding: 20px;
     overflow-y: auto;
     flex: 1;
 }
 
 .fluid-ws__panel-title {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    color: var(--color-text, #1a1f2e);
 }
 
 .fluid-ws__panel-desc {
     color: var(--fluid-text-sub);
-    margin-bottom: 32px;
-    line-height: 1.5;
-    font-size: 0.95rem;
+    margin-bottom: 20px;
+    line-height: 1.45;
+    font-size: 0.825rem;
 }
 
 /* Form Styles Override */
 .fluid-ws .ant-form-item-label>label {
     font-family: var(--ff-body);
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 12px;
     color: var(--fluid-text-sub);
 }
 
 .fluid-ws .ant-input,
-.fluid-ws .ant-select-selector {
+.fluid-ws .ant-select-selector,
+.fluid-ws .ant-picker {
     border-radius: var(--fluid-radius-sm) !important;
     font-family: var(--ff-body);
-    padding: 10px 14px;
+    font-size: 13px !important;
+    padding: 6px 11px !important;
 }
 
 .fluid-ws .ant-input:focus,
@@ -194,13 +197,12 @@
     background: var(--fluid-bg);
     border: 1px solid var(--fluid-border);
     border-radius: var(--fluid-radius-md);
-    padding: 20px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-top: -16px;
-    /* pull up under title */
-    margin-bottom: 32px;
+    gap: 12px;
+    margin-top: 0;
+    margin-bottom: 20px;
     animation: slideDown 0.4s var(--ease-elastic);
 }
 
@@ -217,26 +219,28 @@
 }
 
 .fluid-ws__active-user-avatar {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     background: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 16px;
     color: var(--fluid-accent);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
 }
 
 .fluid-ws__active-user-name {
-    font-weight: 700;
-    font-size: 1.1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text, #1a1f2e);
 }
 
 .fluid-ws__active-user-pos {
     color: var(--fluid-text-sub);
-    font-size: 0.9rem;
+    font-size: 0.775rem;
 }
 
 /* Right Panel: Catalog Matrix */

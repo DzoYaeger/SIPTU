@@ -139,12 +139,13 @@ export default function BmnPemeliharaanKeluhan() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set("only_mine", "1");
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (typeFilter !== "all") params.set("report_type", typeFilter);
       if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
 
       const res = await apiFetch(
-        `/bmn-maintenance-reports${params.toString() ? `?${params}` : ""}`,
+        `/bmn-maintenance-reports?${params.toString()}`,
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message ?? "Gagal memuat laporan");

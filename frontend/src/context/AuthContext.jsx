@@ -232,8 +232,18 @@ export function AuthProvider({ children }) {
       try {
         let response = await fetch(url, config);
 
-        // If unauthorized, clear session
+        // If unauthorized, clear session (except when error is password verification failure)
         if (response.status === 401) {
+          try {
+            const clone = response.clone();
+            const errData = await clone.json();
+            const msg = String(errData?.message || errData?.error || "").toLowerCase();
+            if (msg.includes("password") || msg.includes("salah")) {
+              return response;
+            }
+          } catch {
+            // Ignore JSON parse error on 401
+          }
           clearSession();
         }
 
@@ -421,45 +431,45 @@ export function AuthProvider({ children }) {
 
   const accessibleModules = useMemo(() => {
     if (!user) return [];
-    const canAccessDashboard =
-      user.base_role === "admin" || currentRole === "admin";
-    const isOperator =
-      currentRole === "operator" || user.base_role === "operator";
 
-    if (currentRole === "admin") {
+    if (currentRole === "admin" || user.base_role === "admin") {
       return ["dashboard", ...(roleModules.admin ?? [])];
-    }
-
-    // Operator selalu memiliki akses ke operator-dashboard
-    let baseModules = isOperator ? ["operator-dashboard"] : [];
-
-    const roleList = Array.isArray(roleModules[currentRole])
-      ? roleModules[currentRole]
-      : [];
-    if (roleList.length) {
-      baseModules = [...baseModules, ...roleList];
-      return canAccessDashboard ? ["dashboard", ...baseModules] : baseModules;
     }
 
     const permissions = Array.isArray(user.module_permissions)
       ? user.module_permissions
       : [];
+
+    const isOperator = currentRole === "operator" || user.base_role === "operator";
+    const isValidator = currentRole === "validator" || user.base_role === "validator";
+
+    const baseModules = ["layanan-mandiri", "riwayat-layanan", "simba"];
+    if (isOperator) baseModules.push("operator-dashboard");
+    if (isValidator) baseModules.push("validator-dashboard");
+
     const roleKey =
       currentRole === "operator"
         ? "is_operator"
         : currentRole === "validator"
           ? "is_validator"
           : null;
-    if (!roleKey)
-      return canAccessDashboard ? ["dashboard", ...baseModules] : baseModules;
 
-    const slugs = permissions
-      .filter((perm) => perm?.[roleKey])
-      .map((perm) => perm?.module_slug ?? perm?.module_id ?? perm?.slug)
-      .filter(Boolean);
+    const slugs = [];
+    permissions.forEach((perm) => {
+      if (!perm) return;
+      const slug = perm.module_slug ?? perm.module_id ?? perm.slug;
+      if (!slug) return;
 
-    const resolved = Array.from(new Set([...baseModules, ...slugs]));
-    return canAccessDashboard ? ["dashboard", ...resolved] : resolved;
+      const hasGrant = roleKey
+        ? Boolean(perm[roleKey]) || Boolean(perm.is_operator) || Boolean(perm.is_validator)
+        : Boolean(perm.is_operator) || Boolean(perm.is_validator) || Boolean(perm.is_admin);
+
+      if (hasGrant) {
+        slugs.push(slug);
+      }
+    });
+
+    return Array.from(new Set([...baseModules, ...slugs]));
   }, [user, currentRole, roleModules]);
 
   // Fungsi untuk mengecek apakah user memiliki role tertentu pada modul tertentu

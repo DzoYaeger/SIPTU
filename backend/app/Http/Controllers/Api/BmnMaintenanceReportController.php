@@ -24,8 +24,13 @@ class BmnMaintenanceReportController extends Controller
         $query = BmnMaintenanceReport::with(['asset:id,name,asset_code', 'handler:id,name'])
             ->orderByDesc('created_at');
 
-        if (!$this->isAdminOrValidator($user)) {
-            $query->where('created_by', $user->id);
+        if ($request->boolean('only_mine') || !$this->isAdminOrValidator($user)) {
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+                if (!empty($user->nip)) {
+                    $q->orWhere('reporter_nip', $user->nip);
+                }
+            });
         }
 
         if ($request->filled('report_type')) {

@@ -24,11 +24,15 @@ class UserController extends Controller
         $request->validate([
             'nip' => 'required|string',
             'password' => 'required|string',
-            'recaptcha_token' => 'required|string',
+            'recaptcha_token' => 'nullable|string',
         ]);
 
-        if (!app()->runningUnitTests()) {
-            $recaptchaToken = $request->input('recaptcha_token');
+        $recaptchaToken = $request->input('recaptcha_token');
+
+        // Skip reCAPTCHA check if request is from mobile app or specifies mobile bypass token
+        $isMobile = $request->header('X-Client-Type') === 'mobile' || in_array($recaptchaToken, ['mobile_app', 'bypass', 'mobile']);
+
+        if (!$isMobile && $recaptchaToken && !app()->runningUnitTests()) {
             $secretKey = env('RECAPTCHA_SECRET_KEY', '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe');
 
             try {

@@ -1229,17 +1229,81 @@ function RispegMonitoringIzinKeluar() {
             />
           </div>
           <div>
-            <Text style={{ display: "block", marginBottom: 6 }}>
-              Jam Kembali
+            <Text style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+              Jam Kembali (Jam : Menit : Detik)
             </Text>
-            <TimePicker
-              style={{ width: "100%" }}
-              format="HH:mm:ss"
-              value={manualReturnTime}
-              onChange={(value) => setManualReturnTime(value)}
-              showSecond={true}
-              allowClear={false}
-            />
+            <Row gutter={8} align="middle">
+              <Col span={7}>
+                <InputNumber
+                  min={0}
+                  max={23}
+                  value={manualReturnTime ? manualReturnTime.hour() : 0}
+                  onChange={(val) => {
+                    const current = manualReturnTime || dayjs();
+                    setManualReturnTime(current.hour(val ?? 0));
+                  }}
+                  style={{ width: "100%", borderRadius: 6 }}
+                  addonAfter="Jam"
+                />
+              </Col>
+              <Col span={1} style={{ textAlign: "center", fontWeight: 700, fontSize: 16 }}>:</Col>
+              <Col span={7}>
+                <InputNumber
+                  min={0}
+                  max={59}
+                  value={manualReturnTime ? manualReturnTime.minute() : 0}
+                  onChange={(val) => {
+                    const current = manualReturnTime || dayjs();
+                    setManualReturnTime(current.minute(val ?? 0));
+                  }}
+                  style={{ width: "100%", borderRadius: 6 }}
+                  addonAfter="Min"
+                />
+              </Col>
+              <Col span={1} style={{ textAlign: "center", fontWeight: 700, fontSize: 16 }}>:</Col>
+              <Col span={7}>
+                <InputNumber
+                  min={0}
+                  max={59}
+                  value={manualReturnTime ? manualReturnTime.second() : 0}
+                  onChange={(val) => {
+                    const current = manualReturnTime || dayjs();
+                    setManualReturnTime(current.second(val ?? 0));
+                  }}
+                  style={{ width: "100%", borderRadius: 6 }}
+                  addonAfter="Det"
+                />
+              </Col>
+            </Row>
+
+            <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => setManualReturnTime(dayjs())}
+                style={{ fontSize: 11, borderRadius: 4, backgroundColor: "#0F5B99" }}
+              >
+                🕒 Set Waktu Sekarang ({dayjs().format("HH:mm:ss")})
+              </Button>
+              {["12:00:00", "13:00:00", "14:00:00", "15:00:00", "16:00:00", "17:00:00"].map((t) => (
+                <Button
+                  key={t}
+                  size="small"
+                  onClick={() => {
+                    const [h, m, s] = t.split(":");
+                    setManualReturnTime(
+                      (manualReturnTime || dayjs())
+                        .hour(parseInt(h, 10))
+                        .minute(parseInt(m, 10))
+                        .second(parseInt(s || "0", 10))
+                    );
+                  }}
+                  style={{ fontSize: 11, borderRadius: 4 }}
+                >
+                  {t.substring(0, 5)}
+                </Button>
+              ))}
+            </div>
           </div>
           <div>
             <Text style={{ display: "block", marginBottom: 6 }}>Penanda</Text>

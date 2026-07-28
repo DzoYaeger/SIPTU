@@ -38,6 +38,8 @@ use App\Http\Controllers\Api\ZoomController;
 use App\Http\Controllers\Api\QueueDisplayController;
 use App\Http\Controllers\Api\VisitorQueueController;
 use App\Http\Controllers\Api\NewsPostController;
+use App\Http\Controllers\Api\BudgetController;
+use App\Http\Controllers\Api\RevisionTicketController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -112,6 +114,7 @@ Route::middleware('throttle:public-api')->group(function () {
     Route::get('/public/bmn-assets', [BmnLoanController::class, 'listAssetsPublic']);
     Route::get('/public/bmn-employees', [BmnLoanController::class, 'listEmployeesPublic']);
     Route::get('/public/bmn-loans/schedule', [BmnLoanController::class, 'schedulePublic']);
+    Route::get('/public/bmn-loans/my-loans', [BmnLoanController::class, 'myLoans']);
     Route::post('/public/bmn-loans', [BmnLoanController::class, 'storePublic']);
     Route::get('/public/bmn-loans/{token}', [BmnLoanController::class, 'showPublic']);
     Route::get('/public/bmn-loans/{token}/pdf', [BmnLoanController::class, 'downloadLoanPdf']);
@@ -148,6 +151,9 @@ Route::middleware('throttle:public-api')->group(function () {
     // Public inventory listing — limited fields only (id, name, unit, quantity)
     Route::get('/public/inventories', [InventoryController::class, 'publicIndex']);
 
+    // Public Invoice PDF download
+    Route::get('/public/invoices/{id}/export-pdf', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
+
     // Surat Tugas (public)
     Route::post('/public/surat-tugas', [SuratTugasController::class, 'storePublic']);
     Route::get('/public/siamparan/sarana', [SuratTugasController::class, 'siamparanSarana']);
@@ -178,6 +184,9 @@ Route::middleware('throttle:public-api')->group(function () {
     // BMN asset template download (public, no auth needed)
     Route::get('/bmn/assets/template', [AssetController::class, 'template']);
 
+    // Public Hero slider / Popup config
+    Route::get('/hero-slider', [AdminNotificationSettingsController::class, 'heroSlider']);
+
     // Public Share Links (Nextcloud)
     Route::get('/share/info/{token}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareInfo']);
     Route::get('/share/download/{token}/{filename?}', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'shareDownload']);
@@ -202,6 +211,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // Dashboard stats (requires login)
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/activities', [DashboardController::class, 'recentActivities']);
+    Route::get('/sidebar/badge-counts', [DashboardController::class, 'badgeCounts']);
     Route::get('/news', [NewsPostController::class, 'publicIndex']);
     Route::get('/news/{slug}', [NewsPostController::class, 'publicShow']);
 
@@ -339,6 +349,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // BMN Loans - Route spesifik harus sebelum route dengan parameter {id}
     Route::get('/bmn-loans', [BmnLoanController::class, 'index']);
     Route::get('/bmn-loans/schedule', [BmnLoanController::class, 'schedulePublic']);
+    Route::get('/bmn-loans/my-loans', [BmnLoanController::class, 'myLoans']);
     Route::post('/bmn-loans', [BmnLoanController::class, 'store']);
     Route::get('/bmn-loans/{id}', [BmnLoanController::class, 'show']);
     Route::post('/bmn-loans/{id}/resend-notifications', [BmnLoanController::class, 'resendNotifications']);
@@ -448,6 +459,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/vital-archives/{id}', [VitalArchiveController::class, 'update']);
     Route::delete('/vital-archives/{id}', [VitalArchiveController::class, 'destroy']);
     // ─── Surat Tugas ─────────────
+    Route::get('/surat-tugas/my-assignments', [SuratTugasController::class, 'myAssignments']);
     Route::post('/surat-tugas', [SuratTugasController::class, 'store']);
     Route::get('/surat-tugas/word-parameters', [SuratTugasController::class, 'wordTemplateParameters']);
     Route::get('/surat-tugas/templates', [SuratTugasController::class, 'listTemplates']);
@@ -484,6 +496,23 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // ─── Pejabat Perbendaharaan ─────────────
     Route::get('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'show']);
     Route::post('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'update']);
+
+    // ─── Pembuatan Invoice ─────────────
+    Route::get('/invoices', [\App\Http\Controllers\Api\InvoiceController::class, 'index']);
+    Route::post('/invoices', [\App\Http\Controllers\Api\InvoiceController::class, 'store']);
+    Route::post('/invoices/ai-terbilang', [\App\Http\Controllers\Api\InvoiceController::class, 'aiTerbilang']);
+    Route::get('/invoices/{id}', [\App\Http\Controllers\Api\InvoiceController::class, 'show'])->whereNumber('id');
+    Route::put('/invoices/{id}', [\App\Http\Controllers\Api\InvoiceController::class, 'update'])->whereNumber('id');
+    Route::delete('/invoices/{id}', [\App\Http\Controllers\Api\InvoiceController::class, 'destroy'])->whereNumber('id');
+    Route::put('/invoices/{id}/approve', [\App\Http\Controllers\Api\InvoiceController::class, 'approve'])->whereNumber('id');
+    Route::get('/invoices/{id}/export-pdf', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
+
+    // ─── Anggaran & Revisi Anggaran ─────────────
+    Route::apiResource('budgets', BudgetController::class);
+    Route::get('/realisasi-mak', [BudgetController::class, 'realisasiMak']);
+    Route::get('/realisasi-date', [BudgetController::class, 'realisasiDate']);
+    Route::apiResource('revision-tickets', RevisionTicketController::class);
+    Route::post('/revision-tickets/{id}/approve', [RevisionTicketController::class, 'approve'])->whereNumber('id');
 
     // ─── Notifications & FCM ─────────────
     Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);

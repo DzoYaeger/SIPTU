@@ -44,6 +44,8 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/id";
 import "./LayananMandiri.css";
 import AIAssistantWidget from "../components/AIAssistantWidget";
+import { useInfoPopup } from "../hooks/useInfoPopup.js";
+import InfoPopupModal from "../components/InfoPopupModal.jsx";
 
 dayjs.extend(relativeTime);
 dayjs.locale("id");
@@ -57,6 +59,7 @@ const DEFAULT_SLIDES = [
 const LayananMandiri = () => {
   const navigate = useNavigate();
   const { user, currentRole, logout, apiFetch } = useAuth();
+  const infoPopup = useInfoPopup();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [visibleCards, setVisibleCards] = useState(new Set());
@@ -226,14 +229,12 @@ const LayananMandiri = () => {
   const rawServices = [
     { id: "siptu-drive", title: "SIPTU Drive", description: "Penyimpanan cloud terintegrasi untuk berkas kerja dan kolaborasi dokumen Anda.", icon: <CloudServerOutlined />, link: "/app/penyimpanan-cloud", accent: "#1a73e8", emoji: "☁️", category: "kepegawaian" },
     { id: "kearsipan", title: "Peminjaman Arsip", description: "Ajukan peminjaman arsip fisik atau digital dengan validasi TTE.", icon: <FileProtectOutlined />, link: "/kearsipan-peminjaman/new", accent: "#3b82f6", emoji: "📁", category: "kepegawaian" },
-    { id: "bmn", title: "Peminjaman BMN", description: "Pinjam Barang Milik Negara untuk keperluan dinas operasional.", icon: <FundOutlined />, link: "/peminjaman-aset/new", accent: "#0ea5e9", emoji: "🏗️", category: "logistik" },
+    { id: "simba", title: "SIMBA", description: "Sistem Informasi Manajemen Barang & Aset BMN: Peminjaman Aset, Permintaan Persediaan, dan Keluhan Pemeliharaan.", icon: <BankOutlined />, link: "/app/simba", accent: "#2563eb", emoji: "📦", category: "logistik" },
     { id: "ruangan", title: "Peminjaman Ruangan", description: "Lihat jadwal dan ajukan peminjaman ruangan rapat atau aula.", icon: <FundOutlined />, link: "/peminjaman-ruangan", accent: "#6366f1", emoji: "🏢", category: "logistik" },
-    { id: "persediaan", title: "Permintaan Persediaan", description: "Ajukan permintaan barang persediaan operasional kantor.", icon: <ShoppingOutlined />, link: "/permintaan-persediaan/new", accent: "#10b981", emoji: "📋", category: "logistik" },
     { id: "rispeg", title: "Izin Keluar (RISPEG)", description: "Ajukan izin keluar kantor dengan pencatatan waktu otomatis.", icon: <ClockCircleOutlined />, link: "/izin-keluar", accent: "#8b5cf6", emoji: "🚶", category: "kepegawaian" },
     { id: "pengumuman-rispeg", title: "Pengumuman RISPEG", description: "Lihat hasil rekapitulasi pelanggaran dan leaderboard poin disiplin RISPEG.", icon: <NotificationOutlined />, link: "/app/pengumuman-rispeg", accent: "#ef4444", emoji: "📢", category: "kepegawaian" },
     { id: "it-helpdesk", title: "IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <ToolOutlined />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
-    { id: "bmn-pemeliharaan-keluhan", title: "Pemeliharaan BMN", description: "Ajukan pemeliharaan aset atau sampaikan keluhan fasilitas.", icon: <ToolOutlined />, link: "/bmn-pemeliharaan-keluhan/new", accent: "#0d9488", emoji: "🛠️", category: "logistik" },
-    { id: "surat-tugas", title: "Pengajuan Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/surat-tugas/new", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
+    { id: "surat-tugas", title: "Pengajuan Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/app/surat-tugas", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
     { id: "zoom-generator", title: "Pengajuan Zoom", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <VideoCameraOutlined />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
     { id: "sakip-2026", title: "DATA SAKIP 2026", description: "Sistem Akuntabilitas Kinerja Instansi Pemerintah Balai POM di Palopo.", icon: <GlobalOutlined />, link: "https://s.id/sakippalopo26", accent: "#10b981", emoji: "📊", category: "kepegawaian", isExternal: true },
   ];
@@ -1152,6 +1153,8 @@ const LayananMandiri = () => {
       </Modal>
       {/* ─── AI Assistant Floating Widget ─── */}
       <AIAssistantWidget />
+      {/* ─── Info Popup Modal ─── */}
+      <InfoPopupModal {...infoPopup} />
     </div>
   );
 };

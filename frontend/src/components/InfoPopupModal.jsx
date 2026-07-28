@@ -8,31 +8,88 @@ import { CloseOutlined } from "@ant-design/icons";
  */
 const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ensureAbsoluteUrl }) => {
   const canvasRef = useRef(null);
+  const audioRef = useRef(null);
 
   const soundUrl = popupData?.sound_url;
   const useSound = popupData?.use_sound;
 
-  // Audio Playback Effect
+  const resolveAudioUrl = (url) => {
+    if (!url) return "";
+    if (typeof ensureAbsoluteUrl === "function") {
+      const res = ensureAbsoluteUrl(url);
+      if (res) return res;
+    }
+    const trimmed = String(url).trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    if (trimmed.startsWith("/")) return `${window.location.origin}${trimmed}`;
+    if (trimmed.startsWith("storage/")) return `${window.location.origin}/${trimmed}`;
+    return `${window.location.origin}/${trimmed.replace(/^\/+/, '')}`;
+  };
+
+  // Audio Playback Effect — Automatic play on page enter with seamless un-mute fallback
   useEffect(() => {
     if (!showPopup || !useSound || !soundUrl) return;
 
     let audio;
     try {
-      const audioUrl = ensureAbsoluteUrl(soundUrl);
+      const audioUrl = resolveAudioUrl(soundUrl);
       audio = new Audio(audioUrl);
-      audio.play().catch((err) => {
-        console.warn("Autoplay audio blocked or failed:", err);
-      });
+      audio.loop = true;
+      audioRef.current = audio;
+
+      const playAudio = async () => {
+        try {
+          // 1. Try playing unmuted directly
+          await audio.play();
+        } catch (err) {
+          console.warn("Direct unmuted autoplay blocked by browser policy, starting muted & unmuting on movement:", err);
+          // 2. Play muted first (allowed by all browsers), then un-mute on first user movement/interaction
+          try {
+            audio.muted = true;
+            await audio.play();
+          } catch (mutedErr) {
+            console.warn("Muted autoplay also blocked:", mutedErr);
+          }
+
+          const unMute = () => {
+            if (audioRef.current) {
+              audioRef.current.muted = false;
+              if (audioRef.current.paused) {
+                audioRef.current.play().catch(() => {});
+              }
+            }
+            removeListeners();
+          };
+
+          const removeListeners = () => {
+            window.removeEventListener("pointermove", unMute);
+            window.removeEventListener("mousemove", unMute);
+            window.removeEventListener("touchstart", unMute);
+            window.removeEventListener("click", unMute);
+            window.removeEventListener("scroll", unMute);
+            window.removeEventListener("keydown", unMute);
+          };
+
+          window.addEventListener("pointermove", unMute, { passive: true });
+          window.addEventListener("mousemove", unMute, { passive: true });
+          window.addEventListener("touchstart", unMute, { passive: true });
+          window.addEventListener("click", unMute, { passive: true });
+          window.addEventListener("scroll", unMute, { passive: true });
+          window.addEventListener("keydown", unMute, { passive: true });
+        }
+      };
+
+      playAudio();
+
+      return () => {
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      };
     } catch (e) {
       console.warn("Failed to load popup sound:", e);
     }
-
-    return () => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    };
   }, [showPopup, useSound, soundUrl, ensureAbsoluteUrl]);
 
   // Fireworks Celebration Canvas Effect
@@ -172,7 +229,14 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
 
   if (!showPopup || !popupData) return null;
 
-  const isImageOnly = !popupData.title && !popupData.content && popupData.image;
+  const hasImage1 = Boolean(popupData.image);
+  const hasImage2 = Boolean(popupData.image_2);
+  const isDualImage = hasImage1 && hasImage2;
+  const hasAnyImage = hasImage1 || hasImage2;
+  const isImageOnly = !popupData.title && !popupData.content && hasAnyImage;
+
+  const link1 = popupData.link ? ensureAbsoluteUrl(popupData.link) : null;
+  const link2 = popupData.link_2 ? ensureAbsoluteUrl(popupData.link_2) : link1;
 
   return (
     <div
@@ -210,14 +274,21 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
         .siptu-popup-container {
           background: #fff;
           border-radius: 20px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
           overflow: hidden;
           position: relative;
           animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          max-height: 90vh;
+          max-height: 96vh;
           display: flex;
           flex-direction: column;
           z-index: 10001;
+        }
+
+        .siptu-popup-img-container {
+          width: 100%;
+          position: relative;
+          background: #0f172a;
+          overflow: hidden;
         }
 
         .siptu-popup-img-wrapper {
@@ -230,21 +301,61 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
           overflow: hidden;
         }
 
+        .siptu-popup-dual-grid {
+          display: flex;
+          flex-direction: row;
+          gap: 8px;
+          width: 100%;
+          background: #0f172a;
+          padding: 8px;
+          box-sizing: border-box;
+        }
+
+        .siptu-popup-dual-item {
+          flex: 1;
+          min-width: 0;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #020617;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
         .siptu-popup-img {
           width: 100%;
           height: auto;
-          max-height: ${isImageOnly ? '78vh' : '52vh'};
+          max-height: ${isImageOnly ? '90vh' : '65vh'};
           object-fit: contain;
           display: block;
         }
 
-        @media (max-width: 640px) {
+        .siptu-popup-dual-img {
+          width: 100%;
+          height: auto;
+          max-height: ${isImageOnly ? '90vh' : '65vh'};
+          object-fit: contain;
+          display: block;
+        }
+
+        @media (max-width: 768px) {
           .siptu-popup-container {
             border-radius: 16px;
-            width: 95vw !important;
+            width: 98vw !important;
+            max-height: 94vh !important;
+          }
+          .siptu-popup-dual-grid {
+            flex-direction: column;
+            gap: 8px;
+            max-height: ${isImageOnly ? '82vh' : '60vh'};
+            overflow-y: auto;
           }
           .siptu-popup-img {
-            max-height: ${isImageOnly ? '75vh' : '45vh'};
+            max-height: ${isImageOnly ? '80vh' : '50vh'};
+          }
+          .siptu-popup-dual-img {
+            max-height: ${isImageOnly ? '45vh' : '35vh'};
           }
           .siptu-popup-body {
             padding: 16px 20px 8px !important;
@@ -263,7 +374,9 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
       <div
         className="siptu-popup-container"
         style={{
-          width: isImageOnly ? "min(94vw, 720px)" : "min(92vw, 640px)",
+          width: isDualImage
+            ? (isImageOnly ? "min(98vw, 1750px)" : "min(96vw, 1400px)")
+            : (isImageOnly ? "min(96vw, 950px)" : "min(92vw, 760px)"),
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -303,23 +416,85 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
           </button>
         )}
 
-        {/* Image Section */}
-        {popupData.image && (
+        {/* Dual / Single Image Section */}
+        {isDualImage ? (
+          <div className="siptu-popup-dual-grid">
+            <div
+              className="siptu-popup-dual-item"
+              style={{ cursor: link1 ? "pointer" : "default" }}
+              onClick={() => {
+                if (link1) window.open(link1, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <img
+                src={popupData.image}
+                alt={popupData.title || "Gambar 1 Popup"}
+                className="siptu-popup-dual-img"
+              />
+              {link1 && (
+                <div style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+                  color: "#fff",
+                  textAlign: "center",
+                  padding: "12px 6px 8px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}>
+                  🔗 Klik Gambar 1
+                </div>
+              )}
+            </div>
+            <div
+              className="siptu-popup-dual-item"
+              style={{ cursor: link2 ? "pointer" : "default" }}
+              onClick={() => {
+                if (link2) window.open(link2, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <img
+                src={popupData.image_2}
+                alt={popupData.title || "Gambar 2 Popup"}
+                className="siptu-popup-dual-img"
+              />
+              {link2 && (
+                <div style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+                  color: "#fff",
+                  textAlign: "center",
+                  padding: "12px 6px 8px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}>
+                  🔗 Klik Gambar 2
+                </div>
+              )}
+            </div>
+          </div>
+        ) : hasAnyImage ? (
           <div
             className="siptu-popup-img-wrapper"
             style={{
-              cursor: popupData.link ? "pointer" : "default",
+              cursor: (link1 || link2) ? "pointer" : "default",
             }}
             onClick={() => {
-              if (popupData.link) window.open(ensureAbsoluteUrl(popupData.link), "_blank", "noopener,noreferrer");
+              const targetLink = link1 || link2;
+              if (targetLink) window.open(targetLink, "_blank", "noopener,noreferrer");
             }}
           >
             <img
-              src={popupData.image}
+              src={popupData.image || popupData.image_2}
               alt={popupData.title || "Informasi Popup"}
               className="siptu-popup-img"
             />
-            {popupData.link && (
+            {(link1 || link2) && (
               <div style={{
                 position: "absolute",
                 bottom: 0,
@@ -337,7 +512,7 @@ const InfoPopupModal = ({ popupData, showPopup, popupTimeLeft, dismissPopup, ens
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* Body Section */}
         {(popupData.title || popupData.content) && (

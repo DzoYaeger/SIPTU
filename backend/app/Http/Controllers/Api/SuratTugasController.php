@@ -57,6 +57,79 @@ class SuratTugasController extends Controller
     }
 
     /**
+     * List surat tugas milik user (baik sebagai pengaju maupun yang ditagging/ditugaskan).
+     */
+    public function myAssignments(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $userId = $user->id;
+        $nip = $user->nip ?? $user->username;
+        $employeeId = $user->employee_id ?? optional($user->employee)->id;
+
+        if (!$employeeId) {
+            $emp = \App\Models\Employee::where('user_id', $userId)
+                ->orWhere('nip', $nip)
+                ->first();
+            if ($emp) {
+                $employeeId = $emp->id;
+            }
+        }
+
+        $query = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim', 'creator']);
+
+        $query->where(function ($q) use ($employeeId, $userId, $nip) {
+            if ($userId) {
+                $q->orWhere('created_by', $userId);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('surat_tugas', 'user_id')) {
+                    $q->orWhere('user_id', $userId);
+                }
+            }
+            if ($nip) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('surat_tugas', 'nip_pemohon')) {
+                    $q->orWhere('nip_pemohon', $nip);
+                }
+                $q->orWhereHas('employees', function ($eq) use ($nip) {
+                    $eq->where('employees.nip', $nip);
+                });
+            }
+            if ($employeeId) {
+                $q->orWhere('ketua_tim_id', $employeeId)
+                  ->orWhere('penandatangan_id', $employeeId)
+                  ->orWhereHas('employees', function ($eq) use ($employeeId) {
+                      $eq->where('employees.id', $employeeId);
+                  });
+            }
+        });
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('nomor_st', 'like', "%$s%")
+                  ->orWhere('mak', 'like', "%$s%")
+                  ->orWhere('sarana_nama', 'like', "%$s%")
+                  ->orWhere('lokasi_tugas', 'like', "%$s%")
+                  ->orWhere('deskripsi_tugas', 'like', "%$s%")
+                  ->orWhereHas('employees', function ($eq) use ($s) {
+                      $eq->where('employees.name', 'like', "%$s%");
+                  });
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 100);
+        $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        return response()->json($data);
+    }
+
+    /**
      * Detail surat tugas.
      */
     public function show($id)

@@ -562,3 +562,261 @@
   background: rgba(0,0,0,0.1);
   font-weight: 500;
 }
+
+/* ── Sidebar Layout Styling ── */
+.app-layout-sidebar-root {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.app-sider {
+  background: #ffffff !important;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+  z-index: 100;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: visible !important;
+}
+
+.sidebar-border-toggle-btn:hover {
+  background: #f8fafc !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+}
+
+.app-sider .brand {
+  height: 52px !important;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.app-sider .sidebar-menu {
+  border-right: none !important;
+  background: transparent !important;
+  padding: 4px 0 !important;
+  font-size: 12px !important;
+  max-height: calc(100vh - 52px);
+  overflow-y: auto;
+}
+
+/* Compact Menu & Submenu Items */
+.app-sider .sidebar-menu .ant-menu-item,
+.app-sider .sidebar-menu .ant-menu-submenu-title {
+  margin: 2px 4px !important;
+  width: calc(100% - 8px) !important;
+  border-radius: 6px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  padding-left: 8px !important;
+  padding-right: 6px !important;
+  font-size: 12px !important;
+}
+
+.app-sider .sidebar-menu .ant-menu-item .ant-menu-item-icon,
+.app-sider .sidebar-menu .ant-menu-submenu-title .ant-menu-item-icon {
+  font-size: 14px !important;
+  min-width: 16px !important;
+}
+
+.app-sider .sidebar-menu .ant-menu-sub .ant-menu-item {
+  padding-left: 26px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 11.5px !important;
+}
+
+.app-sider .sidebar-menu .ant-menu-item-selected {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+  font-weight: 600 !important;
+}
+
+.app-top-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 16px !important;
+  height: 48px !important;
+  line-height: normal !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+  z-index: 99;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-toggle-btn {
+  width: 38px !important;
+  height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  color: #475569 !important;
+  font-size: 16px !important;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: #2563eb !important;
+}
+
+.header-page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-title-text {
+  font-size: 15px !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.header-subtitle-text {
+  font-size: 13px !important;
+  color: #64748b !important;
+  border-left: 1px dashed #cbd5e1;
+  padding-left: 10px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon-btn {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748b !important;
+  font-size: 16px !important;
+}
+
+.header-icon-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: #2563eb !important;
+}
+
+/* User Profile Trigger Card (Top Right Corner) */
+.user-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+  height: 44px;
+}
+
+.user-profile-trigger:hover {
+  background: #f8fafc;
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.user-avatar {
+  background-color: #2563eb !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+  flex-shrink: 0;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.user-info-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.user-name-text {
+  font-size: 13px !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  max-width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 !important;
+}
+
+.user-role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 1px 7px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 3px;
+  width: fit-content;
+  line-height: 1.2;
+}
+
+/* Sidebar Menu Label Wrapper & Alignment Fix */
+.sidebar-menu-label-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: calc(100% - 8px);
+}
+
+.sidebar-menu-label-wrapper.has-submenu {
+  margin-right: 16px !important; /* Space reserved so badge sits cleanly BEFORE Ant Design expansion arrow */
+}
+
+.sidebar-menu-text-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+/* Elegant Notification Badge Pills */
+.sidebar-badge-count {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0 5px;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 6px !important;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+/* Submenu Badge: Soft Elegant Rose Crimson Pill */
+.sidebar-badge-count.child-badge {
+  background: #f43f5e;
+  color: #ffffff;
+  box-shadow: 0 2px 5px rgba(244, 63, 94, 0.3);
+}
+
+/* Parent Menu Badge: Elegant SIPTU Royal Blue Gradient Pill */
+.sidebar-badge-count.parent-badge {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}

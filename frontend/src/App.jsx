@@ -21,6 +21,7 @@ import BmnMaintenanceReportForm from "./pages/BmnMaintenanceReportForm.jsx";
 import ProcurementProposalPage from "./pages/ProcurementProposalPage.jsx";
 import PengajuanPdttForm from "./pages/PengajuanPdttForm.jsx";
 import LayananMandiri from "./views/LayananMandiri.jsx";
+import BmnUnifiedModule from "./views/BmnUnifiedModule.jsx";
 import PengumumanRispeg from "./views/PengumumanRispeg.jsx";
 import QueueTvDisplay from "./pages/QueueTvDisplay.jsx";
 import PublicQueueRegistration from "./pages/PublicQueueRegistration.jsx";
@@ -34,6 +35,7 @@ import KearsipanArsipVital from "./views/KearsipanArsipVital.jsx";
 import PengadaanPbj from "./views/PengadaanPbj.jsx";
 import PublicKepegawaianKalender from "./pages/PublicKepegawaianKalender.jsx";
 import SuratTugasForm from "./pages/SuratTugasForm.jsx";
+import SuratTugasUnifiedModule from "./views/SuratTugasUnifiedModule.jsx";
 import SignProtokolPage from "./pages/SignProtokolPage.jsx";
 import VerifyDocumentPage from "./pages/VerifyDocumentPage.jsx";
 import PublicRoomSchedulePage from "./pages/PublicRoomSchedulePage.jsx";
@@ -320,6 +322,8 @@ function App() {
         path="/login"
         element={token ? <Navigate to={loginRedirectTarget} replace /> : <Login />}
       />
+      <Route path="/simba" element={<BmnUnifiedModule />} />
+      <Route path="/app/simba" element={<BmnUnifiedModule />} />
       <Route path="/loan/:token" element={<PublicLoanPage />} />
       <Route
         path="/permintaan-persediaan/new"
@@ -409,6 +413,10 @@ function App() {
       <Route
         path="/app/layanan-mandiri"
         element={token ? <LayananMandiri /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/app/surat-tugas"
+        element={token ? <SuratTugasUnifiedModule /> : <Navigate to="/login?redirect=/app/surat-tugas" replace />}
       />
       <Route
         path="/app/pengumuman-rispeg"

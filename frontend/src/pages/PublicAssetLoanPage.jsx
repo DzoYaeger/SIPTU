@@ -1,53 +1,49 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   App as AntdApp,
   DatePicker,
   Form,
   Input,
   Modal,
-  Drawer,
-  Result,
-  Empty,
   Badge,
   Typography,
   Button,
   Select,
-  Pagination,
+  Tag,
+  Tooltip,
+  Radio,
+  Spin,
+  Empty,
 } from "antd";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import {
   ArrowLeftOutlined,
-  ArrowRightOutlined,
   CalendarOutlined,
   CheckCircleFilled,
-  CheckOutlined,
   EnvironmentOutlined,
-  ExclamationCircleOutlined,
-  FundOutlined,
   InfoCircleOutlined,
   SearchOutlined,
   SendOutlined,
   UserOutlined,
   ShoppingCartOutlined,
-  ShoppingOutlined,
-  BankOutlined,
+  PlusOutlined,
+  CheckOutlined,
+  CarOutlined,
+  DesktopOutlined,
+  ToolOutlined,
+  AppstoreOutlined,
+  LockOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { buildMessageAdapter } from "../utils/notify.js";
 import { useAuth } from "../hooks/useAuth.js";
-import "./PublicInventoryRequestPageModern.css"; // Reusing the identical CSS wrapper!
+import "./PublicInventoryRequestPageModern.css";
 
 dayjs.extend(isBetween);
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-
-// BMN Module Colors (from Layanan Mandiri)
-const BMN_COLORS = {
-  primary: "#10b981",
-  gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-  shadowColor: "rgba(16, 185, 129, 0.4)",
-};
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
@@ -93,63 +89,43 @@ const overlap = (s1, e1, s2, e2) => {
   );
 };
 
-// Helper: Format string to Title Case
-const toTitleCase = (str) => {
-  if (!str) return "";
-  return str.replace(
-    /\w\S*/g,
-    (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
-  );
-};
-
-/* ═══════════════════════════════════════════════ */
-const PublicAssetLoanPage = () => {
+const PublicAssetLoanPage = ({ isEmbedded = false }) => {
   const { user } = useAuth();
-  const { message, modal } = AntdApp.useApp();
+  const { message } = AntdApp.useApp();
   const msg = buildMessageAdapter(message);
   const [form] = Form.useForm();
   const [password, setPassword] = useState("");
 
-  const [employees, setEmployees] = useState([]);
   const [assets, setAssets] = useState([]);
   const [loans, setLoans] = useState([]);
   const [ready, setReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+
+  // Active Date Filter (Defaults to today -> tomorrow)
+  const [dateRange, setDateRange] = useState([dayjs(), dayjs().add(1, "day")]);
+
+  // Selected Assets (IDs array)
   const [picked, setPicked] = useState([]);
+
+  // Search & Category Filter
   const [search, setSearch] = useState("");
+  const [selectedCat, setSelectedCat] = useState("all");
 
-  // UI States (Fluid Drawer + Modals)
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-  const [sigOpen, setSigOpen] = useState(false);
-  const [pageSize, setPageSize] = useState(12); // Default to showing only 12 assets as requested
-  const [currentPage, setCurrentPage] = useState(1);
+  // Modal State for Final Checkout
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
-  const range = Form.useWatch("periode", form);
+  // Watch form fields at top level (Rules of Hooks)
   const lokasi = Form.useWatch("lokasi", form);
-  const lokasiLainnya = Form.useWatch("lokasiLainnya", form);
-  const alasan = Form.useWatch("alasan", form);
 
-  const isPeriodOk = !!(range && range.length === 2);
-  const isNotesOk = !!(alasan && alasan.trim().length > 0);
-  const isLocationOk = !!(lokasi && (lokasi !== "lainnya" || (lokasiLainnya && lokasiLainnya.trim().length > 0)));
-  const isFormComplete = isPeriodOk && isNotesOk && isLocationOk;
-
-  const assetMap = useMemo(
-    () => new Map(assets.map((a) => [a.id, a])),
-    [assets],
-  );
-
-  /* ── fetch ── */
+  /* ── Fetch Data ── */
   useEffect(() => {
     (async () => {
       try {
-        const [e, a, l] = await Promise.all([
-          svc.get("/public/bmn-employees"),
+        const [a, l] = await Promise.all([
           svc.get("/public/bmn-assets"),
           svc.get("/public/bmn-loans/schedule"),
         ]);
-        setEmployees(e);
         setAssets(
           a.map((x) => ({
             id: x.id,
@@ -169,15 +145,14 @@ const PublicAssetLoanPage = () => {
     })();
   }, []);
 
-  /* ── auto fill user ── */
-  // We mirror the exact same robust activeUser logic from the inventory rewrite
+  /* ── Auto Fill User ── */
   useEffect(() => {
     if (user && form) {
       const activeUser = {
         nip: user.nip || user.username || user.email,
         name: user.name,
         position: user?.employee?.position || user.role || "Staf",
-        work_unit: user?.employee?.work_unit || "Default Unit",
+        work_unit: user?.employee?.work_unit || "Balai POM di Palopo",
       };
       form.setFieldsValue({
         nip: activeUser.nip,
@@ -187,121 +162,108 @@ const PublicAssetLoanPage = () => {
     }
   }, [user, form]);
 
-  /* ── filter unavailables out if date changes ── */
-  useEffect(() => {
-    if (range?.length === 2) {
-      setPicked((p) => p.filter((id) => canPick(id)));
-    }
-  }, [range, loans]); // loans added just in case
+  const assetMap = useMemo(
+    () => new Map(assets.map((a) => [a.id, a])),
+    [assets],
+  );
 
-  /* ── helpers ── */
-  const conflict = (id) => {
-    if (!range || range.length !== 2) return null;
+  /* ── Real-Time Conflict Checking ── */
+  const getAssetConflict = (id) => {
+    if (!dateRange || dateRange.length !== 2) return null;
     return loans.find(
       (l) =>
-        (l.assets ?? []).some((a) => a.asset_id === id) &&
-        ["pengajuan", "dipinjam"].includes(l.status) &&
-        overlap(range[0], range[1], l.loan_date, l.return_date),
+        (l.assets ?? []).some((a) => Number(a.asset_id ?? a.id) === Number(id)) &&
+        ["pengajuan", "dipinjam", "pengajuan-pengembalian"].includes(l.status) &&
+        overlap(dateRange[0], dateRange[1], l.loan_date, l.return_date),
     );
   };
-  const canPick = (id) => {
+
+  const isAssetAvailable = (id) => {
     const a = assetMap.get(id);
     if (!a) return false;
-    const isMaintenance = ["rusak", "hilang", "maintenance", "perbaikan"].includes(a.status);
-    return !isMaintenance && !conflict(id);
+    const statusLower = (a.status || "").toLowerCase();
+    const isPermanentlyUnavailable = [
+      "rusak",
+      "hilang",
+      "maintenance",
+      "perbaikan",
+      "rusak berat",
+    ].includes(statusLower);
+    return !isPermanentlyUnavailable && !getAssetConflict(id);
   };
 
-  const assetBorrowCounts = useMemo(() => {
-    const counts = {};
-    try {
-      const oneMonthAgo = dayjs().subtract(1, "month");
-
-      (loans || []).forEach((loan) => {
-        // Ensure loan_date exists and is valid before comparing
-        if (loan && loan.loan_date && dayjs(loan.loan_date).isAfter(oneMonthAgo)) {
-          (loan.assets ?? []).forEach((item) => {
-            const id = item.asset_id;
-            if (id) counts[id] = (counts[id] || 0) + 1;
-          });
-        }
-      });
-    } catch (e) {
-      console.error("Error calculating borrow counts:", e);
+  // Remove invalid items when dates change
+  useEffect(() => {
+    if (dateRange?.length === 2) {
+      setPicked((prev) => prev.filter((id) => isAssetAvailable(id)));
     }
-    return counts;
-  }, [loans]);
+  }, [dateRange, loans]);
 
-  const filtered = useMemo(() => {
+  /* ── Categorization Helper ── */
+  const getCategory = (asset) => {
+    const name = (asset.nama_barang || "").toLowerCase();
+    if (name.includes("mobil") || name.includes("motor") || name.includes("kendaraan") || name.includes("terios")) return "kendaraan";
+    if (name.includes("laptop") || name.includes("komputer") || name.includes("printer") || name.includes("camera") || name.includes("proyektor") || name.includes("infocus") || name.includes("sound") || name.includes("mic") || name.includes("lcd")) return "it";
+    return "kantor";
+  };
+
+  /* ── Filtering Assets ── */
+  const filteredAssets = useMemo(() => {
     const t = search.toLowerCase();
-    const list = assets.filter(
-      (a) =>
+    return assets.filter((a) => {
+      const matchSearch =
         !t ||
         a.nama_barang.toLowerCase().includes(t) ||
         a.kode_bmn?.toLowerCase().includes(t) ||
-        a.nup?.includes(t),
-    );
+        a.nup?.includes(t) ||
+        a.merek_barang?.toLowerCase().includes(t);
 
-    // Sort by borrow frequency (popularity) descending
-    return list.sort((a, b) => {
-      const countA = assetBorrowCounts[a.id] || 0;
-      const countB = assetBorrowCounts[b.id] || 0;
-      if (countB !== countA) return countB - countA;
-      // Fallback to alphabet if counts are same, with safety check
-      const nameA = a.nama_barang || "";
-      const nameB = b.nama_barang || "";
-      return nameA.localeCompare(nameB);
+      const matchCat =
+        selectedCat === "all" || getCategory(a) === selectedCat;
+
+      return matchSearch && matchCat;
     });
-  }, [assets, search, assetBorrowCounts]);
+  }, [assets, search, selectedCat]);
 
-  // Reset page when search or page size changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, pageSize]);
-
-  /* ── handlers ── */
-  const handleCheckoutClick = async () => {
-    try {
-      await form.validateFields();
-      if (picked.length === 0) {
-        message.warning("Troli peminjaman masih kosong.");
-        return;
-      }
-      setCartDrawerOpen(false);
-      setSigOpen(true);
-    } catch (error) {
-      message.error(
-        "Pastikan form Jadwal & Lokasi telah terisi lengkap sebelum lanjut bayar.",
-      );
-      setCartDrawerOpen(false); // Let them fix Left Panel errors
+  /* ── Toggle Asset Selection ── */
+  const togglePick = (id) => {
+    if (!isAssetAvailable(id)) return;
+    if (picked.includes(id)) {
+      setPicked((prev) => prev.filter((x) => x !== id));
+    } else {
+      setPicked((prev) => [...prev, id]);
     }
   };
 
+  /* ── Form Submission ── */
   const submitLoan = async () => {
     try {
       setSubmitting(true);
-      const v = form.getFieldsValue(true);
-      
+      await form.validateFields();
+
       if (!password) {
-        msg.error({
-          message: "Password SIPTU wajib diisi untuk verifikasi TTE.",
-        });
+        msg.error({ message: "Password SIPTU wajib diisi untuk verifikasi." });
         setSubmitting(false);
         return;
       }
 
+      const values = form.getFieldsValue(true);
+      const chosenLocation =
+        values.lokasi === "lainnya" ? values.lokasiLainnya : values.lokasi;
+
       const payload = {
-        nip: v.nip,
-        nama: v.nama,
-        fungsi_bidang: v.fungsiBidang ?? "",
-        loan_date: v.periode[0].format("YYYY-MM-DD"),
-        return_date: v.periode[1].format("YYYY-MM-DD"),
-        location: v.lokasi === "lainnya" ? v.lokasiLainnya : v.lokasi,
-        notes: v.alasan,
+        nip: values.nip || user?.nip || user?.username,
+        nama: values.nama || user?.name,
+        fungsi_bidang: values.fungsiBidang || user?.employee?.work_unit || "Staf",
+        loan_date: dateRange[0].format("YYYY-MM-DD"),
+        return_date: dateRange[1].format("YYYY-MM-DD"),
+        location: chosenLocation,
+        notes: values.alasan,
         password: password,
         assets: picked.map((id) => {
           const a = assetMap.get(id);
           return {
-            asset_id: id,
+            asset_id: a.id,
             nama_barang: a.nama_barang,
             merek_barang: a.merek_barang,
             nup: a.nup,
@@ -311,871 +273,356 @@ const PublicAssetLoanPage = () => {
       };
 
       const res = await svc.post("/public/bmn-loans", payload);
-      setDone({ ...payload, resultInfo: res });
-
-      // Reset Workspace
-      setSigOpen(false);
-      setCartDrawerOpen(false);
-      setPicked([]);
-      form.resetFields();
-    } catch (e) {
-      msg.error({ message: e.message });
+      setDone(res);
+      setConfirmModalOpen(false);
+      msg.success({ message: "Pengajuan peminjaman BMN berhasil dibuat!" });
+    } catch (err) {
+      msg.error({ message: err.message || "Gagal membuat pengajuan." });
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* ── guards ── */
-  if (!user) {
-    return (
-      <div style={{ padding: "100px 20px", textAlign: "center" }}>
-        <Result
-          status="403"
-          title="Akses Ditolak"
-          subTitle="Halaman peminjaman aset ini hanya dapat diakses oleh pegawai yang sudah masuk (Login) ke sistem."
-          extra={
-            <Button type="primary" size="large" href="/login">
-              Menuju Halaman Login
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
+  /* ── Done View ── */
   if (done) {
     return (
-      <div
-        style={{
-          padding: "60px 20px",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
+      <div style={{ padding: 24, maxWidth: 600, margin: "40px auto", textAlign: "center" }}>
         <div
           style={{
-            maxWidth: 600,
-            width: "100%",
-            background: "#fff",
-            padding: 40,
-            borderRadius: 16,
+            background: "#ffffff",
+            padding: 32,
+            borderRadius: 12,
             border: "1px solid #e2e8f0",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-            textAlign: "center",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
           }}
         >
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: "50%",
-              background: BMN_COLORS.gradient,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-              boxShadow: `0 8px 20px ${BMN_COLORS.shadowColor}`,
-            }}
-          >
-            <FundOutlined style={{ fontSize: 40, color: "#fff" }} />
+          <CheckCircleFilled style={{ fontSize: 52, color: "#10b981", marginBottom: 16 }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0", color: "#1a1f2e" }}>
+            Pengajuan Berhasil Dikirim!
+          </h2>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px 0" }}>
+            Nomor SPA Anda: <strong>{done.spa_number}</strong>
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <Button
+              type="primary"
+              onClick={() => window.open(`/peminjaman-aset/track/${done.token}`, "_blank")}
+              style={{ borderRadius: 6 }}
+            >
+              Lacak Status
+            </Button>
+            <Button
+              onClick={() => {
+                setDone(null);
+                setPicked([]);
+                form.resetFields();
+              }}
+              style={{ borderRadius: 6 }}
+            >
+              Buat Pengajuan Baru
+            </Button>
           </div>
-          <Title level={2} style={{ marginBottom: 8, color: "#0f172a" }}>
-            Peminjaman Aset Diajukan
-          </Title>
-          <Text
-            style={{
-              fontSize: 16,
-              color: "#64748b",
-              display: "block",
-              marginBottom: 32,
-            }}
-          >
-            Surat Peminjaman Aset (SPA) Anda dengan referensi{" "}
-            <strong>{done?.resultInfo?.spa_number ?? "-"}</strong> telah kami
-            terima.
-          </Text>
-          <div
-            style={{
-              background: "#f8fafc",
-              padding: "16px 24px",
-              borderRadius: 12,
-              textAlign: "left",
-              marginBottom: 32,
-            }}
-          >
-            <div style={{ marginBottom: 8 }}>
-              <Text strong>Nama Pemohon:</Text> {done.nama}
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <Text strong>Jadwal:</Text> {done.loan_date} s/d{" "}
-              {done.return_date}
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <Text strong>Lokasi Penggunaan:</Text> {done.location}
-            </div>
-            <div>
-              <Text strong>Troli:</Text> {done.assets?.length} aset diajukan.
-            </div>
-          </div>
-          <Button
-            type="primary"
-            size="large"
-            onClick={() => window.location.reload()}
-            style={{
-              background: BMN_COLORS.gradient,
-              borderColor: BMN_COLORS.primary,
-            }}
-          >
-            Ajukan Peminjaman Lainnya
-          </Button>
         </div>
       </div>
     );
   }
 
-  /* ═══════════════  RENDER  ═══════════════ */
+  if (!ready) {
+    return (
+      <div style={{ padding: 60, textAlign: "center" }}>
+        <Spin size="large" tip="Memuat katalog Aset BMN..." />
+      </div>
+    );
+  }
+
   return (
-    <div className="fluid-ws">
-      {/* ── Top Header Bar ── */}
-      <header className="fluid-ws__header">
-        <div className="fluid-ws__brand">
-          <a href="/app/layanan-mandiri" className="fluid-ws__back-btn">
-            <ArrowLeftOutlined /> <span>Kembali</span>
-          </a>
-          <div
-            className="fluid-ws__brand-icon"
-            style={{
-              background: BMN_COLORS.gradient,
-              boxShadow: `0 4px 12px ${BMN_COLORS.shadowColor}`,
-            }}
-          >
-            <FundOutlined style={{ color: "#fff" }} />
-          </div>
-          <span style={{ fontWeight: 700 }}>Peminjaman BMN</span>
-        </div>
-
-        <div className="fluid-ws__header-actions">
-          <button
-            className="fluid-ws__cart-trigger"
-            onClick={() => setCartDrawerOpen(true)}
-          >
-            <ShoppingCartOutlined style={{ fontSize: "1.4rem" }} />
-            <span className="fluid-ws__cart-text">Troli</span>
-            {picked.length > 0 && (
-              <span className="fluid-ws__cart-badge">{picked.length}</span>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* ── Split Workspace ── */}
-      <main className="fluid-ws__layout">
-        {/* Left Panel: Form */}
-        <div className="fluid-ws__panel-left">
-          <div className="fluid-ws__panel-left-content">
-            <h2 className="fluid-ws__panel-title">Data Pengajuan</h2>
-            <p className="fluid-ws__panel-desc">
-              Atur kerangka waktu dan tujuan peminjaman aset BMN. Pilih aset
-              dari panel sisi kanan jika periode sudah valid.
-            </p>
-
-            {user && (
-              <div className="fluid-ws__active-user">
-                <div className="fluid-ws__active-user-avatar">
-                  <UserOutlined />
-                </div>
-                <div>
-                  <div className="fluid-ws__active-user-name">{user.name}</div>
-                  <div className="fluid-ws__active-user-pos">
-                    {user.nip || "-"}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Note: In fluid workspace, required validation triggers naturally when checking out */}
-            <Form form={form} layout="vertical" requiredMark="optional">
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: 16,
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  marginBottom: 20,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    marginBottom: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <CalendarOutlined style={{ color: "#f59e0b" }} /> Periode Sewa
-                  / Pinjam
-                </div>
-                <Form.Item
-                  name="periode"
-                  rules={[
-                    { required: true, message: "Periode wajib dipilih." },
-                  ]}
-                  style={{ marginBottom: 16 }}
-                >
-                  <DatePicker.RangePicker
-                    format="DD MMM YYYY"
-                    size="large"
-                    style={{ width: "100%" }}
-                    placeholder={["Mulai", "Selesai"]}
-                    placement="bottomLeft"
-                    allowClear
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="alasan"
-                  rules={[{ required: true, message: "Wajib diisi." }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <TextArea
-                    rows={3}
-                    placeholder="Instruksi / Agenda kegiatan (Contoh: Rapat Dengar Pendapat)..."
-                  />
-                </Form.Item>
-              </div>
-
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: 16,
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  marginBottom: 20,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    marginBottom: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <EnvironmentOutlined style={{ color: "#10b981" }} /> Lokasi
-                  Penempatan
-                </div>
-                <Form.Item
-                  name="lokasi"
-                  rules={[{ required: true, message: "Lokasi wajib dipilih." }]}
-                  style={{ marginBottom: 0 }}
-                  hidden
-                >
-                  <Input />
-                </Form.Item>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {LOCATIONS.map((loc) => (
-                    <div
-                      key={loc}
-                      onClick={() => form.setFieldsValue({ lokasi: loc })}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 20,
-                        fontSize: 12,
-                        cursor: "pointer",
-                        border: "1px solid",
-                        transition: "all 0.2s",
-                        fontWeight: 500,
-                        borderColor: lokasi === loc ? "#3b82f6" : "#cbd5e1",
-                        background: lokasi === loc ? "#eff6ff" : "#fff",
-                        color: lokasi === loc ? "#2563eb" : "#64748b",
-                      }}
-                    >
-                      {loc}
-                    </div>
-                  ))}
-                  <div
-                    onClick={() => form.setFieldsValue({ lokasi: "lainnya" })}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: 20,
-                      fontSize: 12,
-                      cursor: "pointer",
-                      border: "1px solid",
-                      transition: "all 0.2s",
-                      fontWeight: 500,
-                      borderColor: lokasi === "lainnya" ? "#3b82f6" : "#cbd5e1",
-                      background: lokasi === "lainnya" ? "#eff6ff" : "#fff",
-                      color: lokasi === "lainnya" ? "#2563eb" : "#64748b",
-                    }}
-                  >
-                    Lainnya
-                  </div>
-                </div>
-
-                {lokasi === "lainnya" && (
-                  <Form.Item
-                    name="lokasiLainnya"
-                    style={{ marginTop: 12, marginBottom: 0 }}
-                    rules={[{ required: true, message: "Wajib diisi." }]}
-                  >
-                    <Input
-                      placeholder="Isi detail nama lokasi penempatan..."
-                      size="large"
-                    />
-                  </Form.Item>
-                )}
-              </div>
-
-              {/* Hidden Fields for payload */}
-              <Form.Item name="nip" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="nama" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="fungsiBidang" hidden>
-                <Input />
-              </Form.Item>
-            </Form>
+    <div className="simba-loan-container">
+      {/* ── Top Control Toolbar ── */}
+      <div className="simba-loan-toolbar">
+        <div className="simba-loan-toolbar__left">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <CalendarOutlined style={{ color: "var(--color-primary, #0F5B99)", fontSize: 15 }} />
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "#1a1f2e" }}>Periode Pinjam:</span>
+            <DatePicker.RangePicker
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              format="DD MMM YYYY"
+              size="middle"
+              allowClear={false}
+              style={{ borderRadius: 6 }}
+            />
           </div>
         </div>
 
-        {/* Right Panel: Catalog */}
-        <div className="fluid-ws__panel-right">
-          {!isFormComplete ? (
-            <div 
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-                padding: 40,
-                background: "#f8fafc",
-              }}
-            >
-              <div 
-                style={{
-                  maxWidth: 500,
-                  width: "100%",
-                  background: "#ffffff",
-                  padding: 36,
-                  borderRadius: 20,
-                  boxShadow: "0 10px 30px -10px rgba(15, 23, 42, 0.06)",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <div style={{ textAlign: "center", marginBottom: 28 }}>
-                  <div 
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 16,
-                      background: "rgba(245, 158, 11, 0.1)",
-                      color: "#f59e0b",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 28,
-                      margin: "0 auto 16px",
-                    }}
-                  >
-                    <InfoCircleOutlined />
-                  </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>
-                    Lengkapi Data Pengajuan
-                  </h3>
-                  <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-                    Silakan isi dan lengkapi formulir di panel kiri. Katalog pemilihan aset BMN akan terbuka setelah seluruh langkah di bawah ini terpenuhi.
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Step 1 */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      padding: 14,
-                      borderRadius: 12,
-                      background: isPeriodOk ? "#f0fdf4" : "#f8fafc",
-                      border: "1px solid",
-                      borderColor: isPeriodOk ? "#bbf7d0" : "#e2e8f0",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <div style={{ flexShrink: 0 }}>
-                      {isPeriodOk ? (
-                        <CheckCircleFilled style={{ color: "#10b981", fontSize: 20 }} />
-                      ) : (
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#cbd5e1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>1</div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 650, color: isPeriodOk ? "#166534" : "#475569" }}>
-                        Tentukan Periode Sewa / Pinjam
-                      </div>
-                      <div style={{ fontSize: 11, color: isPeriodOk ? "#15803d" : "#94a3b8" }}>
-                        {isPeriodOk ? "Periode berhasil ditentukan" : "Wajib memilih tanggal mulai & selesai"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Step 2 */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      padding: 14,
-                      borderRadius: 12,
-                      background: isNotesOk ? "#f0fdf4" : "#f8fafc",
-                      border: "1px solid",
-                      borderColor: isNotesOk ? "#bbf7d0" : "#e2e8f0",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <div style={{ flexShrink: 0 }}>
-                      {isNotesOk ? (
-                        <CheckCircleFilled style={{ color: "#10b981", fontSize: 20 }} />
-                      ) : (
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#cbd5e1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>2</div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 650, color: isNotesOk ? "#166534" : "#475569" }}>
-                        Tulis Keterangan / Keperluan
-                      </div>
-                      <div style={{ fontSize: 11, color: isNotesOk ? "#15803d" : "#94a3b8" }}>
-                        {isNotesOk ? "Keperluan kegiatan telah diisi" : "Wajib menuliskan alasan atau keperluan"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Step 3 */}
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      padding: 14,
-                      borderRadius: 12,
-                      background: isLocationOk ? "#f0fdf4" : "#f8fafc",
-                      border: "1px solid",
-                      borderColor: isLocationOk ? "#bbf7d0" : "#e2e8f0",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <div style={{ flexShrink: 0 }}>
-                      {isLocationOk ? (
-                        <CheckCircleFilled style={{ color: "#10b981", fontSize: 20 }} />
-                      ) : (
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#cbd5e1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>3</div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 650, color: isLocationOk ? "#166534" : "#475569" }}>
-                        Pilih Lokasi Penempatan Aset
-                      </div>
-                      <div style={{ fontSize: 11, color: isLocationOk ? "#15803d" : "#94a3b8" }}>
-                        {isLocationOk ? "Lokasi penempatan telah dipilih" : "Wajib memilih lokasi atau mengisi lainnya"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="fluid-ws__catalog-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-                <div
-                  className="fluid-ws__search-wrapper"
-                  style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: '100%', flexWrap: 'wrap' }}
-                >
-                  <Input
-                    prefix={
-                      <SearchOutlined
-                        style={{
-                          color: "#94a3b8",
-                          fontSize: "1.2rem",
-                          marginRight: 8,
-                        }}
-                      />
-                    }
-                    placeholder="Cari aset..."
-                    size="large"
-                    onChange={(e) => setSearch(e.target.value)}
-                    allowClear
-                    style={{ flex: 1, minWidth: 250 }}
-                  />
-                  <Select
-                    value={pageSize}
-                    onChange={setPageSize}
-                    size="large"
-                    style={{ width: 130, flexShrink: 0 }}
-                    options={[
-                      { value: 12, label: "Tampil 12" },
-                      { value: 24, label: "Tampil 24" },
-                      { value: 48, label: "Tampil 48" },
-                      { value: 9999, label: "Semua" },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              <div className="fluid-ws__catalog-scroll">
-                {!ready ? (
-                  <div className="fluid-ws__skeleton-grid">
-                    {[...Array(pageSize === 9999 ? 12 : pageSize)].map((_, i) => (
-                      <div key={i} className="fluid-ws__skeleton-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div className="fluid-ws__shimmer fluid-ws__skeleton-icon"></div>
-                          <div className="fluid-ws__shimmer" style={{ width: 60, height: 20, borderRadius: 10 }}></div>
-                        </div>
-                        <div className="fluid-ws__shimmer fluid-ws__skeleton-title"></div>
-                        <div className="fluid-ws__shimmer fluid-ws__skeleton-text"></div>
-                        <div className="fluid-ws__shimmer fluid-ws__skeleton-btn"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <div
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Empty
-                      description={
-                        <span style={{ color: "#64748b" }}>
-                          Aset tidak ditemukan
-                        </span>
-                      }
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="fluid-ws__grid fluid-ws__grid--compact">
-                      {filtered
-                        .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                        .map((asset) => {
-                          const sel = picked.includes(asset.id);
-                          const ok = canPick(asset.id);
-
-                          return (
-                            <div
-                              key={asset.id}
-                              className={`fluid-ws__card ${sel ? "fluid-ws__card--active" : ""} ${!ok ? "fluid-ws__card--disabled" : ""}`}
-                            >
-                              <div className="fluid-ws__card-top">
-                                <div
-                                  className="fluid-ws__card-icon"
-                                  style={{
-                                    background: sel
-                                      ? BMN_COLORS.gradient
-                                      : "#f1f5f9",
-                                    color: sel ? "#fff" : "#94a3b8",
-                                    boxShadow: sel
-                                      ? `0 4px 12px ${BMN_COLORS.shadowColor}`
-                                      : "none",
-                                  }}
-                                >
-                                  <FundOutlined
-                                    style={{ color: sel ? "#fff" : "#94a3b8" }}
-                                  />
-                                </div>
-                                <div className="fluid-ws__card-stock">
-                                  {!ok ? (
-                                    conflict(asset.id) ? (
-                                      <Badge status="error" text="Bentrok" />
-                                    ) : (
-                                      <Badge status="warning" text={toTitleCase(asset.status)} />
-                                    )
-                                  ) : (
-                                    <Badge status="success" text="Tersedia" />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div
-                                className="fluid-ws__card-title"
-                                title={asset.nama_barang}
-                              >
-                                {toTitleCase(asset.nama_barang)}
-                              </div>
-
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: "#64748b",
-                                  marginTop: 8,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontFamily: "monospace",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {asset.kode_bmn || "-"}
-                                </span>{" "}
-                                <br />
-                                NUP: {asset.nup || "-"} <br />
-                                Merk: {toTitleCase(asset.merek_barang || "-")}
-                              </div>
-
-                              <div
-                                className="fluid-ws__card-actions"
-                                style={{ marginTop: 16 }}
-                              >
-                                <button
-                                  className={`fluid-ws__add-btn ${sel ? "fluid-ws__add-btn--active" : ""}`}
-                                  onClick={() => {
-                                    if (!ok) return;
-                                    setPicked((p) =>
-                                      p.includes(asset.id)
-                                        ? p.filter((x) => x !== asset.id)
-                                        : [...p, asset.id],
-                                    );
-                                  }}
-                                  disabled={!ok}
-                                  style={{
-                                    background: sel
-                                      ? "#eff6ff"
-                                      : ok
-                                        ? "#1e293b"
-                                        : "#e2e8f0",
-                                    color: sel
-                                      ? "#2563eb"
-                                      : ok
-                                        ? "#fff"
-                                        : "#94a3b8",
-                                    width: "100%",
-                                    cursor: ok ? "pointer" : "not-allowed",
-                                  }}
-                                >
-                                  {sel ? (
-                                    <CheckOutlined />
-                                  ) : ok ? (
-                                    "Pilih Aset"
-                                  ) : conflict(asset.id) ? (
-                                    "Bentrok"
-                                  ) : (
-                                    "Tidak Tersedia"
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-
-                    {/* Pagination Controls */}
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        marginTop: 32,
-                        paddingBottom: 16,
-                      }}
-                    >
-                      <Pagination
-                        current={currentPage}
-                        pageSize={pageSize}
-                        total={filtered.length}
-                        onChange={(page) => setCurrentPage(page)}
-                        showSizeChanger={false} // Size is managed by our custom selector in the header
-                        showTotal={(total, range) =>
-                          `${range[0]}-${range[1]} dari ${total} aset`
-                        }
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </main>
-
-      {/* ── Slide-Out Cart Drawer ── */}
-      <Drawer
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <BankOutlined style={{ color: "#3b82f6" }} />
-            Troli Peminjaman
-          </div>
-        }
-        placement="right"
-        width={450}
-        onClose={() => setCartDrawerOpen(false)}
-        open={cartDrawerOpen}
-        className="fluid-ws__drawer"
-        footer={
-          <button
-            className="fluid-ws__checkout-btn"
-            onClick={handleCheckoutClick}
-            disabled={picked.length === 0}
-          >
-            Lanjut Tanda Tangan & Kirim{" "}
-            <ArrowRightOutlined style={{ marginLeft: 8 }} />
-          </button>
-        }
-      >
-        {picked.length === 0 ? (
-          <div className="fluid-cart__empty">
-            <BankOutlined className="fluid-cart__empty-icon" />
-            <h3>Troli Masih Kosong</h3>
-            <p>
-              Silakan pilih aset BMN dari katalog di sebelah kanan yang
-              berstatus tersedia.
-            </p>
-          </div>
-        ) : (
-          <div className="fluid-cart__items">
-            {picked.map((id) => {
-              const item = assetMap.get(id);
-              if (!item) return null;
-              return (
-                <div
-                  key={item.id}
-                  className="fluid-cart__item"
-                  style={{ display: "flex", flexDirection: "column" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      width: "100%",
-                    }}
-                  >
-                    <div className="fluid-cart__item-title">
-                      {toTitleCase(item.nama_barang)}
-                    </div>
-                    <div className="fluid-cart__item-price">
-                      <button
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color: "#ef4444",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 600,
-                        }}
-                        onClick={() =>
-                          setPicked((p) => p.filter((x) => x !== item.id))
-                        }
-                      >
-                        Batal
-                      </button>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#64748b",
-                      marginTop: 4,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {item.kode_bmn} — {item.nup}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {picked.length > 0 && (
-          <div className="fluid-cart__summary" style={{ marginTop: 24 }}>
-            <div className="fluid-cart__summary-row">
-              <span className="fluid-cart__summary-label">
-                Total Aset Diajukan
-              </span>
-              <span className="fluid-cart__summary-value">
-                {picked.length} Aset BMN
-              </span>
-            </div>
-            {range && range.length === 2 && (
-              <div className="fluid-cart__summary-row">
-                <span className="fluid-cart__summary-label">
-                  Durasi Peminjaman
-                </span>
-                <span
-                  className="fluid-cart__summary-value"
-                  style={{ color: "#f59e0b" }}
-                >
-                  {range[1].diff(range[0], "day") + 1} Hari
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </Drawer>
-
-      {/* ── Signature Modal ── */}
-      <Modal
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <FundOutlined style={{ color: "#10b981" }} />
-            Otorisasi Permintaan
-          </div>
-        }
-        open={sigOpen}
-        onCancel={() => setSigOpen(false)}
-        footer={null}
-        destroyOnClose
-        centered
-        className="fluid-ws__sig-modal"
-      >
-        <p style={{ color: "#475569", marginBottom: 20 }}>
-          Sistem menggunakan Tanda Tangan Elektronik (TTE) berbasis QR Code. 
-          Silakan masukkan <strong>Password SIPTU</strong> Anda (<strong>{user?.name || "-"}</strong>) 
-          sebagai bentuk otorisasi penandatanganan pengajuan ini.
-        </p>
-
-        <div style={{ marginBottom: 20 }}>
-          <Text strong style={{ display: 'block', marginBottom: 8 }}>Password SIPTU</Text>
-          <Input.Password 
-            size="large" 
-            placeholder="Masukkan password login SIPTU Anda..." 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onPressEnter={submitLoan}
-            prefix={<BankOutlined style={{ color: '#94a3b8' }} />}
+        <div className="simba-loan-toolbar__right">
+          <Input
+            placeholder="Cari aset / merek / kode BMN..."
+            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 250, borderRadius: 6 }}
+            size="middle"
+            allowClear
           />
         </div>
+      </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 12,
-            marginTop: 24,
-          }}
+      {/* ── Category Filter Bar ── */}
+      <div className="simba-category-bar">
+        <button
+          className={`simba-cat-btn ${selectedCat === "all" ? "simba-cat-btn--active" : ""}`}
+          onClick={() => setSelectedCat("all")}
         >
-          <Button size="large" onClick={() => setSigOpen(false)}>
-            Batal
-          </Button>
+          <AppstoreOutlined /> Semua Aset ({assets.length})
+        </button>
+        <button
+          className={`simba-cat-btn ${selectedCat === "kendaraan" ? "simba-cat-btn--active" : ""}`}
+          onClick={() => setSelectedCat("kendaraan")}
+        >
+          <CarOutlined /> Kendaraan Dinas
+        </button>
+        <button
+          className={`simba-cat-btn ${selectedCat === "it" ? "simba-cat-btn--active" : ""}`}
+          onClick={() => setSelectedCat("it")}
+        >
+          <DesktopOutlined /> IT & Multimedia
+        </button>
+        <button
+          className={`simba-cat-btn ${selectedCat === "kantor" ? "simba-cat-btn--active" : ""}`}
+          onClick={() => setSelectedCat("kantor")}
+        >
+          <ToolOutlined /> Peralatan Kantor
+        </button>
+      </div>
+
+      {/* ── Asset Cards Grid ── */}
+      {filteredAssets.length === 0 ? (
+        <div style={{ background: "#fff", padding: 40, borderRadius: 10, border: "1px solid #e2e8f0", textAlign: "center" }}>
+          <Empty description="Tidak ada aset BMN yang sesuai dengan kriteria pencarian." />
+        </div>
+      ) : (
+        <div className="simba-asset-grid">
+          {filteredAssets.map((asset) => {
+            const conflict = getAssetConflict(asset.id);
+            const isAvailable = isAssetAvailable(asset.id);
+            const isSelected = picked.includes(asset.id);
+            const cat = getCategory(asset);
+
+            const iconMap = {
+              kendaraan: <CarOutlined />,
+              it: <DesktopOutlined />,
+              kantor: <ToolOutlined />,
+            };
+
+            return (
+              <div
+                key={asset.id}
+                className={`simba-asset-card ${isSelected ? "simba-asset-card--selected" : ""}`}
+              >
+                <div>
+                  <div className="simba-asset-card__top">
+                    <div className="simba-asset-card__icon">
+                      {iconMap[cat] || <ToolOutlined />}
+                    </div>
+                    <div className="simba-asset-card__info">
+                      <h4 className="simba-asset-card__name">{asset.nama_barang}</h4>
+                      <div className="simba-asset-card__sub">
+                        {asset.merek_barang || "BMN"} {asset.nup ? `• NUP ${asset.nup}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="simba-asset-card__bottom">
+                  <div>
+                    {isAvailable ? (
+                      <Tag color="success" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
+                        🟢 Tersedia
+                      </Tag>
+                    ) : conflict ? (
+                      <Tooltip title={`Dipinjam: ${dayjs(conflict.loan_date).format('DD MMM')} - ${dayjs(conflict.return_date).format('DD MMM YYYY')}`}>
+                        <Tag color="error" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
+                          🔴 Terisi
+                        </Tag>
+                      </Tooltip>
+                    ) : (
+                      <Tag color="default" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
+                        ⚪ Tidak Aktif
+                      </Tag>
+                    )}
+                  </div>
+
+                  <Button
+                    size="small"
+                    type={isSelected ? "primary" : "default"}
+                    disabled={!isAvailable}
+                    icon={isSelected ? <CheckOutlined /> : <PlusOutlined />}
+                    onClick={() => togglePick(asset.id)}
+                    style={{ borderRadius: 6, fontSize: 11.5 }}
+                  >
+                    {isSelected ? "Terpilih" : "Pilih"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Sticky Bottom Action Bar ── */}
+      {picked.length > 0 && (
+        <div className="simba-sticky-bar">
+          <div className="simba-sticky-bar__left">
+            <span className="simba-sticky-bar__count">
+              {picked.length} Barang Terpilih
+            </span>
+            <span className="simba-sticky-bar__info">
+              Periode: <strong>{dateRange[0].format("DD MMM YYYY")}</strong> s/d <strong>{dateRange[1].format("DD MMM YYYY")}</strong>
+            </span>
+          </div>
+
           <Button
-            size="large"
             type="primary"
             icon={<SendOutlined />}
-            loading={submitting}
-            onClick={submitLoan}
-            style={{ borderRadius: 8, padding: "0 24px" }}
+            onClick={() => setConfirmModalOpen(true)}
+            style={{ borderRadius: 6, fontWeight: 600, backgroundColor: "#0F5B99" }}
           >
-            Kirim Pengajuan
+            Lanjut Kirim Pengajuan
           </Button>
+        </div>
+      )}
+
+      {/* ── Modal Konfirmasi Pengajuan (Simpel & Minimalis) ── */}
+      <Modal
+        title={null}
+        open={confirmModalOpen}
+        onCancel={() => setConfirmModalOpen(false)}
+        footer={null}
+        width={560}
+        centered
+        className="simba-detail-modal"
+      >
+        <div>
+          <div className="simba-detail-header">
+            <h3 className="simba-detail-title">
+              <SendOutlined style={{ color: "var(--color-primary, #0F5B99)" }} />
+              Konfirmasi Pengajuan Peminjaman BMN
+            </h3>
+            <div className="simba-detail-subtitle">
+              Lengkapi lokasi & keperluan kegiatan untuk menyelesaikan pengajuan.
+            </div>
+          </div>
+
+          <Form form={form} layout="vertical">
+            <div className="simba-detail-section">
+              <div className="simba-detail-section-title">Barang Terpilih ({picked.length})</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                {picked.map((id) => {
+                  const a = assetMap.get(id);
+                  return (
+                    <Tag
+                      key={id}
+                      color="blue"
+                      closable
+                      onClose={() => setPicked((prev) => prev.filter((x) => x !== id))}
+                      style={{ borderRadius: 4, padding: "3px 8px", fontSize: 11.5 }}
+                    >
+                      {a?.nama_barang}
+                    </Tag>
+                  );
+                })}
+              </div>
+
+              <div className="simba-detail-grid" style={{ marginBottom: 16 }}>
+                <div className="simba-detail-item">
+                  <span className="simba-detail-label">Pemohon</span>
+                  <span className="simba-detail-value">{user?.name || "-"}</span>
+                </div>
+                <div className="simba-detail-item">
+                  <span className="simba-detail-label">NIP</span>
+                  <span className="simba-detail-value">{user?.nip || user?.username || "-"}</span>
+                </div>
+                <div className="simba-detail-item" style={{ gridColumn: "span 2" }}>
+                  <span className="simba-detail-label">Periode Pinjam</span>
+                  <span className="simba-detail-value">
+                    {dateRange[0].format("DD MMMM YYYY")} s/d {dateRange[1].format("DD MMMM YYYY")}
+                  </span>
+                </div>
+              </div>
+
+              <Form.Item
+                name="lokasi"
+                label="Lokasi Penempatan"
+                rules={[{ required: true, message: "Pilih lokasi penempatan." }]}
+                style={{ marginBottom: 12 }}
+              >
+                <Select
+                  placeholder="Pilih Lokasi Penempatan"
+                  options={LOCATIONS.map((loc) => ({ label: loc, value: loc })).concat([
+                    { label: "Lainnya (Tulis Manual)", value: "lainnya" },
+                  ])}
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+
+              {lokasi === "lainnya" && (
+                <Form.Item
+                  name="lokasiLainnya"
+                  label="Nama Lokasi Lainnya"
+                  rules={[{ required: true, message: "Tuliskan nama lokasi." }]}
+                  style={{ marginBottom: 12 }}
+                >
+                  <Input placeholder="Contoh: Gedung Serbaguna Palopo" style={{ borderRadius: 6 }} />
+                </Form.Item>
+              )}
+
+              <Form.Item
+                name="alasan"
+                label="Keperluan / Agenda Kegiatan"
+                rules={[{ required: true, message: "Wajib diisi." }]}
+                style={{ marginBottom: 16 }}
+              >
+                <TextArea
+                  rows={3}
+                  placeholder="Contoh: Kegiatan Operasional Pengawasan Obat & Makanan di Kab. Luwu..."
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Password SIPTU (Verifikasi TTE)"
+                required
+                style={{ marginBottom: 0 }}
+              >
+                <Input.Password
+                  prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
+                  placeholder="Masukkan password akun SIPTU Anda..."
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20, paddingTop: 14, borderTop: "1px solid var(--color-border, #e2e8f0)" }}>
+              <Button onClick={() => setConfirmModalOpen(false)} style={{ borderRadius: 6 }}>
+                Batal
+              </Button>
+              <Button
+                type="primary"
+                loading={submitting}
+                onClick={submitLoan}
+                style={{ borderRadius: 6, backgroundColor: "#0F5B99" }}
+              >
+                Kirim Pengajuan
+              </Button>
+            </div>
+
+            {/* Hidden fields for auth info */}
+            <Form.Item name="nip" hidden><Input /></Form.Item>
+            <Form.Item name="nama" hidden><Input /></Form.Item>
+            <Form.Item name="fungsiBidang" hidden><Input /></Form.Item>
+          </Form>
         </div>
       </Modal>
     </div>

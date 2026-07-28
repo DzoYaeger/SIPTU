@@ -61,7 +61,9 @@ const DEFAULT_POPUP = {
   title: "",
   content: "",
   image: "",
+  image_2: "",
   link: "",
+  link_2: "",
   active: false,
   show_once: true,
 };
@@ -144,7 +146,9 @@ const LayananMandiriSliderEditor = () => {
           popup: {
             ...popup,
             image: normalizeImage(popup.image),
+            image_2: normalizeImage(popup.image_2),
             link: (popup.link || "").trim(),
+            link_2: (popup.link_2 || "").trim(),
           },
           slider_duration: sliderDuration,
         }),
@@ -213,6 +217,8 @@ const LayananMandiriSliderEditor = () => {
       if (res.ok && body.url) {
         if (index === "popup") {
           setPopup((prev) => ({ ...prev, image: normalizeImage(body.url) }));
+        } else if (index === "popup_2") {
+          setPopup((prev) => ({ ...prev, image_2: normalizeImage(body.url) }));
         } else {
           updateSlide(index, { image: normalizeImage(body.url) });
         }
@@ -395,9 +401,14 @@ const LayananMandiriSliderEditor = () => {
           <div className="vse-popup-preview-mini">
             <Text strong style={{ fontSize: 12, color: "#64748b", letterSpacing: 1 }}>PREVIEW</Text>
             <div className="vse-popup-preview-card">
-              {popup.image && (
-                <div className="vse-popup-preview-img">
-                  <img src={popup.image} alt="Popup preview" />
+              {(popup.image || popup.image_2) && (
+                <div className="vse-popup-preview-img" style={{ display: "flex", gap: 4, background: "#0f172a", padding: 4 }}>
+                  {popup.image && (
+                    <img src={popup.image} alt="Popup preview 1" style={{ flex: 1, minWidth: 0, height: 60, objectFit: "contain" }} />
+                  )}
+                  {popup.image_2 && (
+                    <img src={popup.image_2} alt="Popup preview 2" style={{ flex: 1, minWidth: 0, height: 60, objectFit: "contain" }} />
+                  )}
                 </div>
               )}
               <div className="vse-popup-preview-body">
@@ -622,16 +633,27 @@ const LayananMandiriSliderEditor = () => {
 
             {/* The popup overlay */}
             <div className="vse-popup-overlay-preview">
-              <div className={`vse-popup-modal-preview ${!popup.title && !popup.content && popup.image ? 'is-image-only' : ''}`}>
+              <div className={`vse-popup-modal-preview ${!popup.title && !popup.content && (popup.image || popup.image_2) ? 'is-image-only' : ''}`}>
                 <button className="vse-popup-close-preview">
                   <CloseOutlined />
                 </button>
-                {popup.image && (
-                  <div className={`vse-popup-modal-img ${popup.link ? 'has-link' : ''}`}>
-                    <img src={popup.image} alt="popup" />
-                    {popup.link && <div className="vse-popup-link-badge">🔗 Klik untuk buka link</div>}
+                {popup.image && popup.image_2 ? (
+                  <div style={{ display: "flex", gap: 6, background: "#0f172a", padding: 6 }}>
+                    <div className={`vse-popup-modal-img ${popup.link ? 'has-link' : ''}`} style={{ flex: 1, minWidth: 0 }}>
+                      <img src={popup.image} alt="popup 1" />
+                      {popup.link && <div className="vse-popup-link-badge">🔗 Link 1</div>}
+                    </div>
+                    <div className={`vse-popup-modal-img ${popup.link_2 || popup.link ? 'has-link' : ''}`} style={{ flex: 1, minWidth: 0 }}>
+                      <img src={popup.image_2} alt="popup 2" />
+                      {(popup.link_2 || popup.link) && <div className="vse-popup-link-badge">🔗 Link 2</div>}
+                    </div>
                   </div>
-                )}
+                ) : (popup.image || popup.image_2) ? (
+                  <div className={`vse-popup-modal-img ${popup.link || popup.link_2 ? 'has-link' : ''}`}>
+                    <img src={popup.image || popup.image_2} alt="popup" />
+                    {(popup.link || popup.link_2) && <div className="vse-popup-link-badge">🔗 Klik untuk buka link</div>}
+                  </div>
+                ) : null}
                 {(popup.title || popup.content) && (
                   <div className="vse-popup-modal-content">
                     {popup.title && <h3>{popup.title}</h3>}
@@ -709,46 +731,76 @@ const LayananMandiriSliderEditor = () => {
         </Row>
 
         <div style={{ marginTop: 32 }}>
-          <Text strong>Gambar Popup</Text>
+          <Text strong style={{ fontSize: 15 }}>Gambar Banner Popup (Dua Gambar Berdampingan)</Text>
           <Text type="secondary" style={{ display: "block", marginTop: 4, marginBottom: 12 }}>
-            Gambar akan ditampilkan di bagian atas popup. Bisa digunakan sebagai banner atau konten utama. Ukuran gambar akan menyesuaikan device secara dinamis.
+            Anda dapat mengunggah 1 atau 2 gambar. Jika mengunggah 2 gambar, kedua gambar akan tampil berdampingan secara otomatis.
           </Text>
-          <Card style={{ background: "#f8fafc" }} variant="borderless">
-            <div className="vse-upload-area">
-              <div className="vse-upload-input">
-                <Text>URL Gambar:</Text>
-                <Input
-                  placeholder="https://example.com/banner.png"
-                  value={popup.image}
-                  onChange={(e) => setPopup((p) => ({ ...p, image: e.target.value }))}
-                  className="vse-url-input"
-                />
-              </div>
-              <Divider type="vertical" style={{ height: 40 }} />
-              <Upload
-                showUploadList={false}
-                customRequest={({ file, onSuccess, onError }) => handleUpload(file, "popup", onSuccess, onError)}
-              >
-                <Button type="primary" icon={<UploadOutlined />} size="large">
-                  Upload Gambar
-                </Button>
-              </Upload>
-            </div>
-          </Card>
-        </div>
-
-        <div style={{ marginTop: 24 }}>
-          <Text strong>Link Gambar (Opsional)</Text>
-          <Text type="secondary" style={{ display: "block", marginTop: 4, marginBottom: 8 }}>
-            Jika diisi, pengguna dapat mengklik gambar popup untuk membuka link ini di tab baru.
-          </Text>
-          <Input
-            size="large"
-            placeholder="https://contoh.com/halaman-informasi"
-            value={popup.link}
-            onChange={(e) => setPopup((p) => ({ ...p, link: e.target.value }))}
-            maxLength={500}
-          />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Card title="Gambar 1 (Utama)" style={{ background: "#f8fafc" }}>
+                <div className="vse-upload-area" style={{ flexDirection: "column", gap: 12, alignItems: "stretch" }}>
+                  <div className="vse-upload-input">
+                    <Text>URL Gambar 1:</Text>
+                    <Input
+                      placeholder="https://example.com/banner1.png"
+                      value={popup.image}
+                      onChange={(e) => setPopup((p) => ({ ...p, image: e.target.value }))}
+                      className="vse-url-input"
+                    />
+                  </div>
+                  <Upload
+                    showUploadList={false}
+                    customRequest={({ file, onSuccess, onError }) => handleUpload(file, "popup", onSuccess, onError)}
+                  >
+                    <Button type="primary" icon={<UploadOutlined />} style={{ width: "100%" }}>
+                      Upload Gambar 1
+                    </Button>
+                  </Upload>
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Link Klik Gambar 1 (Opsional):</Text>
+                    <Input
+                      placeholder="https://contoh.com/halaman-1"
+                      value={popup.link}
+                      onChange={(e) => setPopup((p) => ({ ...p, link: e.target.value }))}
+                      maxLength={500}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card title="Gambar 2 (Kedua - Berdampingan)" style={{ background: "#f8fafc" }}>
+                <div className="vse-upload-area" style={{ flexDirection: "column", gap: 12, alignItems: "stretch" }}>
+                  <div className="vse-upload-input">
+                    <Text>URL Gambar 2:</Text>
+                    <Input
+                      placeholder="https://example.com/banner2.png"
+                      value={popup.image_2 || ""}
+                      onChange={(e) => setPopup((p) => ({ ...p, image_2: e.target.value }))}
+                      className="vse-url-input"
+                    />
+                  </div>
+                  <Upload
+                    showUploadList={false}
+                    customRequest={({ file, onSuccess, onError }) => handleUpload(file, "popup_2", onSuccess, onError)}
+                  >
+                    <Button type="primary" icon={<UploadOutlined />} style={{ width: "100%" }}>
+                      Upload Gambar 2
+                    </Button>
+                  </Upload>
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Link Klik Gambar 2 (Opsional):</Text>
+                    <Input
+                      placeholder="https://contoh.com/halaman-2"
+                      value={popup.link_2 || ""}
+                      onChange={(e) => setPopup((p) => ({ ...p, link_2: e.target.value }))}
+                      maxLength={500}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
         </div>
 
         <Row gutter={24} style={{ marginTop: 24 }}>

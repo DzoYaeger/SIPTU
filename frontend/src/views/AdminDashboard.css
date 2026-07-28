@@ -68,29 +68,29 @@
 }
 .module-title {
   font-family: var(--ff-heading);
-  font-size: 24px !important;
-  font-weight: 800 !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
   color: var(--db-primary) !important;
-  margin: 0 0 4px 0 !important;
-  letter-spacing: -0.8px;
+  margin: 0 0 2px 0 !important;
+  letter-spacing: -0.3px;
 }
 .module-subtitle {
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   color: var(--db-text-muted) !important;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .module-toolbar .ant-space button {
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 13px;
-  height: 38px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+  height: 36px;
   transition: all var(--trans-fast);
 }
 
 /* ── KPI Widgets Redesign ── */
 .admin-dashboard__kpi {
-  border-radius: 20px !important;
+  border-radius: 14px !important;
   border: 1px solid var(--db-border-light) !important;
   background: var(--db-card-bg) !important;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.01), 0 1px 2px rgba(0, 0, 0, 0.01) !important;
@@ -98,15 +98,15 @@
   overflow: hidden;
 }
 .admin-dashboard__kpi:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: var(--db-border) !important;
-  box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 8px 16px -6px rgba(15, 23, 42, 0.06) !important;
 }
 
 .kpi-card-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .kpi-card-main {
   display: flex;
@@ -119,12 +119,12 @@
   flex-direction: column;
 }
 .kpi-card-label {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--db-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
 }
 .kpi-card-value-wrap {
   display: flex;
@@ -133,11 +133,11 @@
 }
 .kpi-card-value {
   font-family: var(--ff-heading);
-  font-size: 28px;
-  font-weight: 850;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--db-text-main);
-  line-height: 1.1;
-  letter-spacing: -0.5px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
 }
 .kpi-card-suffix {
   font-size: 11px;
@@ -196,14 +196,14 @@
 }
 .admin-dashboard__panel-head h4 {
   font-family: var(--ff-heading);
-  font-size: 18px !important;
-  font-weight: 800 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
   color: var(--db-primary) !important;
-  letter-spacing: -0.5px;
-  margin: 0 0 3px !important;
+  letter-spacing: -0.2px;
+  margin: 0 0 2px !important;
 }
 .admin-dashboard__panel-head span {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--db-text-muted);
 }
 
@@ -270,17 +270,17 @@
 }
 .admin-dashboard__summary-value {
   font-family: var(--ff-heading);
-  font-size: 24px;
-  font-weight: 850;
-  line-height: 1.1;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 .admin-dashboard__summary-label {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--db-text-muted);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-top: 4px;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
 }
 
 /* ── Recharts overrides ── */

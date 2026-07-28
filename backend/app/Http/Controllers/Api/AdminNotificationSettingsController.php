@@ -22,7 +22,9 @@ class AdminNotificationSettingsController extends Controller
                 'title' => '',
                 'content' => '',
                 'image' => '',
+                'image_2' => '',
                 'link' => '',
+                'link_2' => '',
                 'active' => false,
                 'show_once' => true,
                 'use_duration' => false,
@@ -85,7 +87,9 @@ class AdminNotificationSettingsController extends Controller
             'popup.title' => ['nullable', 'string', 'max:120'],
             'popup.content' => ['nullable', 'string', 'max:2000'],
             'popup.image' => ['nullable', 'string', 'max:500'],
+            'popup.image_2' => ['nullable', 'string', 'max:500'],
             'popup.link' => ['nullable', 'string', 'max:500'],
+            'popup.link_2' => ['nullable', 'string', 'max:500'],
             'popup.active' => ['nullable', 'boolean'],
             'popup.show_once' => ['nullable', 'boolean'],
             'popup.use_duration' => ['nullable', 'boolean'],
@@ -198,6 +202,9 @@ class AdminNotificationSettingsController extends Controller
             if (!empty($popup['image'])) {
                 $popup['image'] = $this->normalizeHeroImagePath($popup['image']);
             }
+            if (!empty($popup['image_2'])) {
+                $popup['image_2'] = $this->normalizeHeroImagePath($popup['image_2']);
+            }
             if (!empty($popup['sound_url'])) {
                 $popup['sound_url'] = $this->normalizeHeroImagePath($popup['sound_url']);
             }
@@ -233,7 +240,9 @@ class AdminNotificationSettingsController extends Controller
                 'title' => '',
                 'content' => '',
                 'image' => '',
+                'image_2' => '',
                 'link' => '',
+                'link_2' => '',
                 'active' => false,
                 'show_once' => true,
                 'use_duration' => false,
@@ -270,7 +279,9 @@ class AdminNotificationSettingsController extends Controller
             'popup.title' => ['nullable', 'string', 'max:120'],
             'popup.content' => ['nullable', 'string', 'max:2000'],
             'popup.image' => ['nullable', 'string', 'max:500'],
+            'popup.image_2' => ['nullable', 'string', 'max:500'],
             'popup.link' => ['nullable', 'string', 'max:500'],
+            'popup.link_2' => ['nullable', 'string', 'max:500'],
             'popup.active' => ['nullable', 'boolean'],
             'popup.show_once' => ['nullable', 'boolean'],
             'popup.use_duration' => ['nullable', 'boolean'],
@@ -311,7 +322,9 @@ class AdminNotificationSettingsController extends Controller
                 'title' => trim($popupInput['title'] ?? ''),
                 'content' => trim($popupInput['content'] ?? ''),
                 'image' => $this->normalizeHeroImagePath(trim($popupInput['image'] ?? '')),
+                'image_2' => $this->normalizeHeroImagePath(trim($popupInput['image_2'] ?? '')),
                 'link' => trim($popupInput['link'] ?? ''),
+                'link_2' => trim($popupInput['link_2'] ?? ''),
                 'active' => (bool) ($popupInput['active'] ?? false),
                 'show_once' => (bool) ($popupInput['show_once'] ?? true),
                 'use_duration' => (bool) ($popupInput['use_duration'] ?? false),

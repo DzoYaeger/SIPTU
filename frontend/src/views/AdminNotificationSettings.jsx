@@ -128,7 +128,9 @@ const AdminNotificationSettings = () => {
     title: '',
     content: '',
     image: '',
+    image_2: '',
     link: '',
+    link_2: '',
     active: false,
     show_once: true,
     use_duration: false,
@@ -183,7 +185,9 @@ const AdminNotificationSettings = () => {
           title: stored.popup.title ?? '',
           content: stored.popup.content ?? '',
           image: stored.popup.image ?? '',
+          image_2: stored.popup.image_2 ?? '',
           link: stored.popup.link ?? '',
+          link_2: stored.popup.link_2 ?? '',
           active: Boolean(stored.popup.active),
           show_once: Boolean(stored.popup.show_once ?? true),
           use_duration: Boolean(stored.popup.use_duration ?? false),
@@ -300,7 +304,9 @@ const AdminNotificationSettings = () => {
         popup: {
           ...popup,
           image: normalizeImage(popup.image),
+          image_2: normalizeImage(popup.image_2),
           link: (popup.link || '').trim(),
+          link_2: (popup.link_2 || '').trim(),
         },
       };
       if (fonnteTokenTouched) {
@@ -380,7 +386,10 @@ const AdminNotificationSettings = () => {
       const imageUrl = normalizeImage(body?.url || '');
       if (index === 'popup') {
         setPopup((p) => ({ ...p, image: imageUrl }));
-        notification.success({ message: 'Gambar popup berhasil diupload' });
+        notification.success({ message: 'Gambar popup 1 berhasil diupload' });
+      } else if (index === 'popup_2') {
+        setPopup((p) => ({ ...p, image_2: imageUrl }));
+        notification.success({ message: 'Gambar popup 2 berhasil diupload' });
       } else if (index === 'popup_sound') {
         setPopup((p) => ({ ...p, sound_url: imageUrl }));
         notification.success({ message: 'Audio berhasil diupload' });
@@ -842,32 +851,82 @@ const AdminNotificationSettings = () => {
                           />
                         </div>
 
-                        <div>
-                          <Typography.Text strong>Gambar Banner Popup</Typography.Text>
-                          <Space.Compact style={{ width: '100%', marginTop: 4 }}>
-                            <Input
-                              placeholder="URL Gambar Banner (contoh: https://domain.com/banner.png)"
-                              value={popup.image}
-                              onChange={(e) => setPopup((p) => ({ ...p, image: e.target.value }))}
-                            />
-                            <Upload
-                              showUploadList={false}
-                              customRequest={({ file, onSuccess, onError }) =>
-                                handleHeroUpload(file, 'popup', onSuccess, onError)
-                              }
-                            >
-                              <Button icon={<UploadOutlined />}>Upload Gambar</Button>
-                            </Upload>
-                          </Space.Compact>
-                          {popup.image && (
-                            <div style={{ marginTop: 8 }}>
-                              <img
-                                src={popup.image}
-                                alt="preview-popup"
-                                style={{ maxHeight: 140, maxWidth: '100%', borderRadius: 8, objectFit: 'contain', background: '#0f172a' }}
+                        <div className="notification-settings__grid">
+                          <div>
+                            <Typography.Text strong>Gambar Banner 1 (Utama)</Typography.Text>
+                            <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+                              <Input
+                                placeholder="URL Gambar Banner 1 (contoh: https://domain.com/banner1.png)"
+                                value={popup.image}
+                                onChange={(e) => setPopup((p) => ({ ...p, image: e.target.value }))}
+                              />
+                              <Upload
+                                showUploadList={false}
+                                customRequest={({ file, onSuccess, onError }) =>
+                                  handleHeroUpload(file, 'popup', onSuccess, onError)
+                                }
+                              >
+                                <Button icon={<UploadOutlined />}>Upload Gambar 1</Button>
+                              </Upload>
+                            </Space.Compact>
+                            <div style={{ marginTop: 6 }}>
+                              <Typography.Text type="secondary">Link Gambar 1 (Opsional):</Typography.Text>
+                              <Input
+                                size="small"
+                                placeholder="https://contoh.com/link-1"
+                                value={popup.link}
+                                onChange={(e) => setPopup((p) => ({ ...p, link: e.target.value }))}
+                                style={{ marginTop: 2 }}
                               />
                             </div>
-                          )}
+                            {popup.image && (
+                              <div style={{ marginTop: 8 }}>
+                                <img
+                                  src={popup.image}
+                                  alt="preview-popup-1"
+                                  style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 8, objectFit: 'contain', background: '#0f172a' }}
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <Typography.Text strong>Gambar Banner 2 (Kedua - Berdampingan)</Typography.Text>
+                            <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+                              <Input
+                                placeholder="URL Gambar Banner 2 (contoh: https://domain.com/banner2.png)"
+                                value={popup.image_2 || ''}
+                                onChange={(e) => setPopup((p) => ({ ...p, image_2: e.target.value }))}
+                              />
+                              <Upload
+                                showUploadList={false}
+                                customRequest={({ file, onSuccess, onError }) =>
+                                  handleHeroUpload(file, 'popup_2', onSuccess, onError)
+                                }
+                              >
+                                <Button icon={<UploadOutlined />}>Upload Gambar 2</Button>
+                              </Upload>
+                            </Space.Compact>
+                            <div style={{ marginTop: 6 }}>
+                              <Typography.Text type="secondary">Link Gambar 2 (Opsional):</Typography.Text>
+                              <Input
+                                size="small"
+                                placeholder="https://contoh.com/link-2"
+                                value={popup.link_2 || ''}
+                                onChange={(e) => setPopup((p) => ({ ...p, link_2: e.target.value }))}
+                                style={{ marginTop: 2 }}
+                              />
+                            </div>
+                            {popup.image_2 && (
+                              <div style={{ marginTop: 8 }}>
+                                <img
+                                  src={popup.image_2}
+                                  alt="preview-popup-2"
+                                  style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 8, objectFit: 'contain', background: '#0f172a' }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <Divider style={{ margin: '8px 0' }} />

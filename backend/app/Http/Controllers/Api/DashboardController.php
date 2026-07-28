@@ -87,6 +87,30 @@ class DashboardController extends Controller
     }
 
     /**
+     * Get pending badge counts for sidebar navigation.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function badgeCounts()
+    {
+        $counts = [
+            'kearsipan-peminjaman' => ArchiveLoan::whereIn('status', ['menunggu_paraf', 'pengajuan', 'pending', 'SUBMITTED'])->count(),
+            'bmn-peminjaman-aset' => BmnLoan::whereIn('status', ['pengajuan', 'pending', 'menunggu', 'DIMAJUKAN'])->count(),
+            'bmn-permintaan-persediaan' => InventoryRequest::whereIn('status', ['pengajuan', 'pending'])->count(),
+            'bmn-pemeliharaan-keluhan' => \App\Models\BmnMaintenanceReport::whereIn('status', ['pending', 'lapor', 'pengajuan'])->count(),
+            'kepegawaian-surat-tugas' => SuratTugas::whereIn('status', ['draft', 'pending', 'menunggu_paraf'])->count(),
+            'rispeg-izin-keluar' => ExitPermit::whereIn('status', ['out', 'pending', 'pengajuan'])->count(),
+            'it-helpdesk-pelaporan' => ItHelpdeskTicket::whereIn('status', ['open', 'pending'])->count(),
+            'pengadaan-pbj' => \App\Models\ProcurementProposal::whereIn('status', ['submitted', 'pending', 'pengajuan'])->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'counts' => $counts,
+        ]);
+    }
+
+    /**
      * Get recent activities across modules.
      *
      * @return \Illuminate\Http\JsonResponse

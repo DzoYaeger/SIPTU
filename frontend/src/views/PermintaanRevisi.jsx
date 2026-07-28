@@ -227,10 +227,15 @@ const PermintaanRevisi = () => {
         throw new Error('Permintaan revisi harus memiliki minimal satu penambahan dan satu pengurangan.');
       }
 
-      const totalAdd = adjustments.filter(adj => adj.tipe === 'Tambah Anggaran').reduce((sum, adj) => sum + adj.nilai, 0);
-      const totalReduce = adjustments.filter(adj => adj.tipe === 'Kurang Anggaran').reduce((sum, adj) => sum + adj.nilai, 0);
+      const hasInvalidAdj = adjustments.some(adj => !adj.mak || !adj.tipe || !adj.nilai || Number(adj.nilai) <= 0);
+      if (hasInvalidAdj) {
+        throw new Error('Semua baris penyesuaian anggaran wajib diisi (MAK, Tipe, dan Nominal > 0).');
+      }
 
-      if (totalAdd !== totalReduce) {
+      const totalAdd = adjustments.filter(adj => adj.tipe === 'Tambah Anggaran').reduce((sum, adj) => sum + Number(adj.nilai || 0), 0);
+      const totalReduce = adjustments.filter(adj => adj.tipe === 'Kurang Anggaran').reduce((sum, adj) => sum + Number(adj.nilai || 0), 0);
+
+      if (Math.abs(totalAdd - totalReduce) > 0.01) {
         throw new Error('Total penambahan harus sama dengan total pengurangan.');
       }
 
@@ -702,10 +707,10 @@ const PermintaanRevisi = () => {
             <Typography.Title level={5} style={{ marginTop: 16 }}>Penyesuaian Anggaran</Typography.Title>
             <Table
               dataSource={detailTicket.adjustments}
-              columns={adjustmentColumns.filter(col => col.key !== 'aksi')} // Exclude action column for detail view
+              columns={adjustmentColumns.filter(col => col.key !== 'aksi')}
               pagination={false}
               size="small"
-              rowKey="id"
+              rowKey={(record) => record.id || record.key || record.mak}
               scroll={{ x: true }}
             />
           </Space>

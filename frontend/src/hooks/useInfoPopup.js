@@ -12,8 +12,6 @@ export function useInfoPopup() {
   const [popupTimeLeft, setPopupTimeLeft] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
-
     const fetchPopup = async () => {
       try {
         const res = await apiFetch("/hero-slider");
@@ -21,7 +19,7 @@ export function useInfoPopup() {
         const data = await res.json().catch(() => ({}));
 
         if (data?.popup && data.popup.active) {
-          const rawId = data.popup.title || data.popup.image || "default_popup";
+          const rawId = data.popup.title || data.popup.image || data.popup.image_2 || "default_popup";
           const hashedId = btoa(encodeURIComponent(rawId)).substring(0, 16);
           const localKey = `siptu_popup_dismissed_${hashedId}`;
 
@@ -54,7 +52,7 @@ export function useInfoPopup() {
     };
 
     fetchPopup();
-  }, [apiFetch, user]);
+  }, [apiFetch]);
 
   // Countdown timer
   useEffect(() => {
@@ -81,7 +79,7 @@ export function useInfoPopup() {
     setShowPopup(false);
     
     if (popupData) {
-      const rawId = popupData.title || popupData.image || "default_popup";
+      const rawId = popupData.title || popupData.image || popupData.image_2 || "default_popup";
       const hashedId = btoa(encodeURIComponent(rawId)).substring(0, 16);
       window.__siptu_popup_shown_in_spa = true;
 
@@ -94,8 +92,10 @@ export function useInfoPopup() {
 
   const ensureAbsoluteUrl = useCallback((url) => {
     if (!url) return "";
-    const trimmed = url.trim();
+    const trimmed = String(url).trim();
     if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("mailto:")) return trimmed;
+    if (trimmed.startsWith("/")) return `${window.location.origin}${trimmed}`;
+    if (trimmed.startsWith("storage/")) return `${window.location.origin}/${trimmed}`;
     return `https://${trimmed}`;
   }, []);
 
