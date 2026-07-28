@@ -1030,6 +1030,7 @@ export default function KeuanganLpj() {
                                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                         <Button 
                                                             type="primary" 
+                                                            style={{ backgroundColor: '#0F5B99', borderColor: '#0F5B99' }}
                                                             icon={<FileProtectOutlined />} 
                                                             onClick={() => handlePrintSingle(activeEmployee)}
                                                             disabled={!lpjData}
@@ -1041,7 +1042,7 @@ export default function KeuanganLpj() {
                                                         {isPalopo(selectedSt?.lokasi_tugas) && (
                                                             <Button 
                                                                 type="primary" 
-                                                                style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                                                                style={{ backgroundColor: '#059669', borderColor: '#059669' }}
                                                                 icon={<FileProtectOutlined />} 
                                                                 onClick={() => handlePrintRill(activeEmployee)}
                                                                 disabled={!lpjData}
@@ -1054,10 +1055,10 @@ export default function KeuanganLpj() {
                                                     </div>
                                                 </div>
 
-                                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nomor SPD:</span>
+                                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Nomor SPD</span>
                                                     <Input 
-                                                        style={{ flex: 1 }}
+                                                        style={{ flex: 1, borderRadius: '6px' }}
                                                         placeholder="Masukkan nomor lampiran SPD (contoh: PW.01.10.51B.06.26.238B)" 
                                                         value={activeEmployee.nomor_spd || ""}
                                                         onChange={e => updateItemProperty(activeEmployeeKey, "nomor_spd", e.target.value)}
@@ -1156,37 +1157,39 @@ export default function KeuanganLpj() {
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="klpj-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="klpj-modal-footer">
                             <div>
                                 {lpjData && (
                                     <Space size="middle">
                                         <Button 
                                             icon={<FileProtectOutlined />} 
                                             onClick={handlePrintAll}
+                                            style={{ borderRadius: '6px' }}
                                         >
-                                            Cetak Semua Rincian (PDF)
+                                            Cetak Semua Rincian
                                         </Button>
                                         {isPalopo(selectedSt?.lokasi_tugas) && (
                                             <Button 
                                                 icon={<FileProtectOutlined />} 
-                                                style={{ color: '#10b981', borderColor: '#10b981' }}
+                                                style={{ color: '#059669', borderColor: '#059669', borderRadius: '6px' }}
                                                 onClick={handlePrintAllRill}
                                             >
-                                                Cetak Semua Pengeluaran Riil (PDF)
+                                                Cetak Pengeluaran Riil
                                             </Button>
                                         )}
                                         <Button 
                                             icon={<FileProtectOutlined />} 
                                             onClick={handlePrintRekap}
+                                            style={{ borderRadius: '6px' }}
                                         >
-                                            Cetak Rekapitulasi (PDF)
+                                            Cetak Rekapitulasi
                                         </Button>
                                     </Space>
                                 )}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <Button onClick={() => setModalVisible(false)}>Batal</Button>
-                                <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                                <Button onClick={() => setModalVisible(false)} style={{ borderRadius: '6px' }}>Batal</Button>
+                                <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ backgroundColor: '#0F5B99', borderColor: '#0F5B99', borderRadius: '6px' }}>
                                     Simpan Laporan Biaya
                                 </Button>
                             </div>
