@@ -569,15 +569,19 @@
   background-color: #f8fafc;
 }
 
-.app-sider {
+.app-sider,
+.app-sider .ant-layout-sider-children {
   background: #ffffff !important;
-  border-right: 1px solid #e2e8f0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
   z-index: 100;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow: visible !important;
+}
+
+.app-sider {
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
 }
 
 .app-sider.ant-layout-sider-collapsed {
@@ -587,10 +591,30 @@
   flex: 0 0 60px !important;
 }
 
+.sidebar-border-toggle-btn {
+  position: absolute !important;
+  right: -13px !important;
+  top: 13px !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 1000 !important;
+  outline: none !important;
+  padding: 0 !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 .sidebar-border-toggle-btn:hover {
   background: #f8fafc !important;
-  border-color: #2563eb !important;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+  border-color: #0F5B99 !important;
+  box-shadow: 0 4px 12px rgba(15, 91, 153, 0.25) !important;
 }
 
 .app-sider .brand {
