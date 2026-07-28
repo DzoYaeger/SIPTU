@@ -41,6 +41,7 @@ import {
   FireOutlined,
   RiseOutlined,
   BarChartOutlined,
+  FolderOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
@@ -65,14 +66,14 @@ dayjs.locale("id");
 const { Title, Text, Paragraph } = Typography;
 
 const MODULE_ICONS = {
-  surat_tugas: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  izin_keluar: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  permintaan_persediaan: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  peminjaman_aset: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  pemeliharaan_aset: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  pengadaan_pdtt: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  kearsipan_peminjaman: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
-  it_helpdesk: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  surat_tugas: <FolderOutlined style={{ fontSize: 18 }} />,
+  izin_keluar: <FolderOutlined style={{ fontSize: 18 }} />,
+  permintaan_persediaan: <FolderOutlined style={{ fontSize: 18 }} />,
+  peminjaman_aset: <FolderOutlined style={{ fontSize: 18 }} />,
+  pemeliharaan_aset: <FolderOutlined style={{ fontSize: 18 }} />,
+  pengadaan_pdtt: <FolderOutlined style={{ fontSize: 18 }} />,
+  kearsipan_peminjaman: <FolderOutlined style={{ fontSize: 18 }} />,
+  it_helpdesk: <FolderOutlined style={{ fontSize: 18 }} />,
 };
 
 const MODULE_PATHS = {

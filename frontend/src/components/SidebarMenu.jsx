@@ -8,6 +8,7 @@ import {
   DollarCircleOutlined,
   FileDoneOutlined,
   FileProtectOutlined,
+  FolderOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
@@ -111,17 +112,10 @@ const SidebarMenu = ({
 
   const renderFolderIcon = useCallback((slug) => {
     const isOpen = openKeys.includes(slug) || activeKey === slug || (activeKey && activeKey.startsWith(slug));
-    return (
-      <i 
-        className={isOpen ? "fi fi-tr-folder-open" : "fi fi-tr-folder"} 
-        style={{ 
-          fontSize: 18, 
-          color: isOpen ? '#0F5B99' : '#64748b', 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
-        }} 
-      />
+    return isOpen ? (
+      <FolderOpenOutlined style={{ fontSize: 18, color: '#0F5B99' }} />
+    ) : (
+      <FolderOutlined style={{ fontSize: 18, color: '#64748b' }} />
     );
   }, [openKeys, activeKey]);
 

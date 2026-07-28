@@ -58,6 +58,7 @@ import {
   CodeSandboxOutlined,
   AlertOutlined,
   CustomerServiceOutlined,
+  FolderOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 
@@ -77,35 +78,35 @@ const MODULE_META = {
   archive: {
     title: "Kearsipan",
     tone: "blue",
-    icon: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+    icon: <FolderOutlined style={{ fontSize: 18 }} />,
     route: "/app/kearsipan-peminjaman",
     color: MODULE_COLORS.kearsipan,
   },
   bmn: {
     title: "BMN",
     tone: "green",
-    icon: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+    icon: <FolderOutlined style={{ fontSize: 18 }} />,
     route: "/app/bmn-peminjaman-aset",
     color: MODULE_COLORS.bmn,
   },
   inventory: {
     title: "Persediaan",
     tone: "orange",
-    icon: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+    icon: <FolderOutlined style={{ fontSize: 18 }} />,
     route: "/app/bmn-permintaan-persediaan",
     color: MODULE_COLORS.persediaan,
   },
   it_helpdesk: {
     title: "IT Helpdesk",
     tone: "pink",
-    icon: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+    icon: <FolderOutlined style={{ fontSize: 18 }} />,
     route: "/app/it-helpdesk-pelaporan",
     color: MODULE_COLORS.itHelpdesk,
   },
   exit_permit: {
     title: "Izin Keluar",
     tone: "purple",
-    icon: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+    icon: <FolderOutlined style={{ fontSize: 18 }} />,
     route: "/app/rispeg-izin-keluar",
     color: MODULE_COLORS.rispeg,
   },
