@@ -1,7 +1,8 @@
 import '@ant-design/v5-patch-for-react-19';
+import '@flaticon/flaticon-uicons/css/thin/rounded.css';
 import '@flaticon/flaticon-uicons/css/thin/straight.css';
-import '@flaticon/flaticon-uicons/css/regular/straight.css';
 import '@flaticon/flaticon-uicons/css/regular/rounded.css';
+import '@flaticon/flaticon-uicons/css/regular/straight.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
