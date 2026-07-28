@@ -107,6 +107,24 @@ const SidebarMenu = ({
   extraItems = [],
   badgeCounts = {},
 }) => {
+  const [openKeys, setOpenKeys] = useState([]);
+
+  const renderFolderIcon = useCallback((slug) => {
+    const isOpen = openKeys.includes(slug) || activeKey === slug || (activeKey && activeKey.startsWith(slug));
+    return (
+      <i 
+        className={isOpen ? "fi fi-tr-folder-open" : "fi fi-tr-folder"} 
+        style={{ 
+          fontSize: 18, 
+          color: isOpen ? '#0F5B99' : '#64748b', 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }} 
+      />
+    );
+  }, [openKeys, activeKey]);
+
   const menuItems = useMemo(() => {
     const allowedSet = new Set(allowedSlugs ?? []);
 
@@ -149,7 +167,7 @@ const SidebarMenu = ({
           return {
             key: node.slug,
             label: renderLabel,
-            icon: iconMap[node.slug] || <FileTextOutlined style={{ color: '#2563eb' }} />,
+            icon: renderFolderIcon(node.slug),
             children: childItems,
             _totalBadgeCount: totalBadgeCount,
           };
@@ -170,7 +188,7 @@ const SidebarMenu = ({
                   <span className="sidebar-menu-text-title">{c.name}</span>
                 </span>
               ),
-              icon: iconMap[c.slug] || <FileTextOutlined style={{ color: '#2563eb' }} />,
+              icon: renderFolderIcon(c.slug),
             }))
           : undefined;
         const hasChildren = Boolean(childItems && childItems.length > 0);
@@ -181,21 +199,19 @@ const SidebarMenu = ({
               <span className="sidebar-menu-text-title">{node.name}</span>
             </span>
           ),
-          icon: iconMap[node.slug] || <FileTextOutlined style={{ color: '#2563eb' }} />,
+          icon: renderFolderIcon(node.slug),
           children: childItems,
         };
       });
     }
 
     return [...filtered, ...extraItems];
-  }, [modules, extraItems, allowedSlugs, isAdmin, badgeCounts, collapsed]);
+  }, [modules, extraItems, allowedSlugs, isAdmin, badgeCounts, collapsed, renderFolderIcon]);
 
   const submenuKeys = useMemo(
     () => menuItems.filter((item) => Array.isArray(item.children) && item.children.length > 0).map((item) => item.key),
     [menuItems],
   );
-
-  const [openKeys, setOpenKeys] = useState([]);
 
   useEffect(() => {
     if (collapsed) {

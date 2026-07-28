@@ -65,14 +65,14 @@ dayjs.locale("id");
 const { Title, Text, Paragraph } = Typography;
 
 const MODULE_ICONS = {
-  surat_tugas: <FileProtectOutlined />,
-  izin_keluar: <ExportOutlined />,
-  permintaan_persediaan: <ShoppingCartOutlined />,
-  peminjaman_aset: <KeyOutlined />,
-  pemeliharaan_aset: <AlertOutlined />,
-  pengadaan_pdtt: <AuditOutlined />,
-  kearsipan_peminjaman: <FileTextOutlined />,
-  it_helpdesk: <CustomerServiceOutlined />,
+  surat_tugas: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  izin_keluar: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  permintaan_persediaan: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  peminjaman_aset: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  pemeliharaan_aset: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  pengadaan_pdtt: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  kearsipan_peminjaman: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
+  it_helpdesk: <i className="fi fi-tr-folder" style={{ fontSize: 18 }} />,
 };
 
 const MODULE_PATHS = {

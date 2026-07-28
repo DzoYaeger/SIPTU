@@ -56,47 +56,52 @@ const MODULE_META = {
     title: "Kearsipan",
     tone: "cyan",
     route: "/app/kearsipan-peminjaman",
-    icon: <DatabaseOutlined />,
+    icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />,
+    iconOpen: <i className="fi fi-tr-folder-open" style={{ fontSize: 20 }} />,
     gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
   },
   bmn: {
     title: "BMN",
     tone: "blue",
     route: "/app/bmn-peminjaman-aset",
-    icon: <CloudServerOutlined />,
+    icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />,
+    iconOpen: <i className="fi fi-tr-folder-open" style={{ fontSize: 20 }} />,
     gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
   },
   it_helpdesk: {
     title: "IT Helpdesk",
     tone: "green",
     route: "/app/it-helpdesk-pelaporan",
-    icon: <AppstoreOutlined />,
+    icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />,
+    iconOpen: <i className="fi fi-tr-folder-open" style={{ fontSize: 20 }} />,
     gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
   },
   exit_permit: {
     title: "Izin Keluar",
     tone: "amber",
     route: "/app/rispeg-izin-keluar",
-    icon: <FieldTimeOutlined />,
+    icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />,
+    iconOpen: <i className="fi fi-tr-folder-open" style={{ fontSize: 20 }} />,
     gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
   },
   surat_tugas: {
     title: "Surat Tugas",
     tone: "rose",
     route: "/app/kepegawaian-surat-tugas",
-    icon: <FilePdfOutlined />,
+    icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />,
+    iconOpen: <i className="fi fi-tr-folder-open" style={{ fontSize: 20 }} />,
     gradient: "linear-gradient(135deg, #f43f5e, #e11d48)",
   },
 };
 
 // ── KPI Config ───────────────────────────────────────────────────
 const KPI_CONFIG = [
-  { key: "services_total", label: "Total Layanan", suffix: "tiket", icon: <ThunderboltOutlined />, color: "#6366f1" },
-  { key: "services_today", label: "Layanan Hari Ini", suffix: "aktivitas", icon: <ClockCircleOutlined />, color: "#0ea5e9" },
-  { key: "users_total", label: "Pengguna", suffix: "akun", icon: <UserOutlined />, color: "#8b5cf6" },
-  { key: "employees_total", label: "Pegawai", suffix: "orang", icon: <TeamOutlined />, color: "#ec4899" },
-  { key: "assets_total", label: "Aset BMN", suffix: "item", icon: <CloudServerOutlined />, color: "#f59e0b" },
-  { key: "inventories_total", label: "Persediaan", suffix: "item", icon: <ShoppingOutlined />, color: "#10b981" },
+  { key: "services_total", label: "Total Layanan", suffix: "tiket", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#6366f1" },
+  { key: "services_today", label: "Layanan Hari Ini", suffix: "aktivitas", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#0ea5e9" },
+  { key: "users_total", label: "Pengguna", suffix: "akun", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#8b5cf6" },
+  { key: "employees_total", label: "Pegawai", suffix: "orang", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#ec4899" },
+  { key: "assets_total", label: "Aset BMN", suffix: "item", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#f59e0b" },
+  { key: "inventories_total", label: "Persediaan", suffix: "item", icon: <i className="fi fi-tr-folder" style={{ fontSize: 20 }} />, color: "#10b981" },
 ];
 
 function AdminDashboard() {
