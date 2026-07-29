@@ -574,18 +574,27 @@
   border-right: 1px solid #e2e8f0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
   z-index: 100;
-  overflow: visible !important;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), flex 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .app-sider .ant-layout-sider-children {
-  overflow: visible !important;
+  transition: opacity 0.25s ease-in-out !important;
 }
 
 .app-sider.ant-layout-sider-collapsed {
-  width: 60px !important;
-  min-width: 60px !important;
-  max-width: 60px !important;
-  flex: 0 0 60px !important;
+  width: 0px !important;
+  min-width: 0px !important;
+  max-width: 0px !important;
+  flex: 0 0 0px !important;
+  overflow: hidden !important;
+  border-right: none !important;
+  box-shadow: none !important;
+}
+
+.app-sider.ant-layout-sider-collapsed .ant-layout-sider-children {
+  opacity: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
 }
 
 .sidebar-border-toggle-btn {

@@ -42,6 +42,7 @@ export default function PengajuanPdttForm() {
     const [saldo, setSaldo] = useState(0);
     const [jumlahHari, setJumlahHari] = useState(0);
     const [existingRequest, setExistingRequest] = useState(null);
+    const [allMyRequests, setAllMyRequests] = useState([]);
 
     const applyExistingRequest = useCallback((requestData, availableItems = []) => {
         const availableIds = new Set(availableItems.map((it) => it.id));
@@ -75,7 +76,7 @@ export default function PengajuanPdttForm() {
                 throw new Error(data?.message ?? "Gagal memuat daftar barang.");
             }
             const availableItems = data?.data || [];
-            const activePeriod = data?.meta?.period || dayjs().format("YYYY-MM");
+            const activePeriod = periodArg || data?.meta?.period || dayjs().format("YYYY-MM");
 
             setPdttItems(availableItems);
             setPeriodStr(activePeriod);
@@ -89,6 +90,7 @@ export default function PengajuanPdttForm() {
             }
 
             const myRequests = reqData?.data || [];
+            setAllMyRequests(myRequests);
             const currentPeriodRequest = myRequests.find((r) => r.period === activePeriod) || null;
             setExistingRequest(currentPeriodRequest);
             if (currentPeriodRequest) {
@@ -105,7 +107,85 @@ export default function PengajuanPdttForm() {
         } finally {
             setPdttLoading(false);
         }
-    }, [apiFetch, message, token]);
+    }, [apiFetch, applyExistingRequest, message, token]);
+
+    const existingItemsMap = useMemo(() => {
+        const map = {};
+        if (existingRequest && Array.isArray(existingRequest.items)) {
+            existingRequest.items.forEach((it) => {
+                const itemId = it?.pdtt_item_id ?? it?.pdtt_item?.id;
+                if (itemId) {
+                    const diajukan = Number(it.jumlah || 0);
+                    const terbeli = Number(it.jumlah_terbeli || 0);
+                    const sisa = Math.max(0, diajukan - terbeli);
+                    map[itemId] = {
+                        diajukan,
+                        terbeli,
+                        sisa,
+                    };
+                }
+            });
+        }
+        return map;
+    }, [existingRequest]);
+
+    const purchasedQtyMap = useMemo(() => {
+        const map = {};
+        Object.keys(existingItemsMap).forEach((id) => {
+            map[id] = existingItemsMap[id].terbeli;
+        });
+        return map;
+    }, [existingItemsMap]);
+
+    const unfulfilledItemsFromPeriod = useMemo(() => {
+        if (!existingRequest || !Array.isArray(existingRequest.items)) return [];
+        const availableIds = new Set(pdttItems.map((it) => it.id));
+        const result = [];
+
+        existingRequest.items.forEach((it) => {
+            const itemId = it?.pdtt_item_id ?? it?.pdtt_item?.id;
+            if (!itemId || !availableIds.has(itemId)) return;
+
+            const reqQty = Number(it.jumlah) || 0;
+            const boughtQty = Number(it.jumlah_terbeli) || 0;
+            const sisa = reqQty - boughtQty;
+
+            if (sisa > 0) {
+                result.push({
+                    itemId,
+                    pdtt_item: it.pdtt_item,
+                    sisa,
+                    boughtQty,
+                    reqQty,
+                    period: existingRequest.period,
+                });
+            }
+        });
+
+        return result;
+    }, [existingRequest, pdttItems]);
+
+    const handleImportUnfulfilledItems = () => {
+        if (!unfulfilledItemsFromPeriod.length) {
+            message.info("Tidak ada sisa item yang belum terbeli pada periode ini.");
+            return;
+        }
+
+        const nextKeys = Array.from(new Set([...selectedPdttKeys, ...unfulfilledItemsFromPeriod.map((i) => i.itemId)]));
+        const nextQty = { ...quantities };
+        const nextConfirmed = { ...confirmedQuantities };
+
+        unfulfilledItemsFromPeriod.forEach((i) => {
+            nextQty[i.itemId] = Number(i.sisa || 1);
+            nextConfirmed[i.itemId] = true;
+        });
+
+        setSelectedPdttKeys(nextKeys);
+        setQuantities(nextQty);
+        setConfirmedQuantities(nextConfirmed);
+
+        message.success(`Berhasil memuat ${unfulfilledItemsFromPeriod.length} sisa item periode ${dayjs(periodStr, "YYYY-MM").format("MMMM YYYY")}!`);
+    };
 
     useEffect(() => {
         fetchPdttItems(periodStr || dayjs().format("YYYY-MM"));
@@ -113,18 +193,23 @@ export default function PengajuanPdttForm() {
 
     const handlePeriodChange = (date) => {
         if (date) {
-            fetchPdttItems(date.format("YYYY-MM"));
+            const pStr = date.format("YYYY-MM");
+            setPeriodStr(pStr);
+            fetchPdttItems(pStr);
         }
     };
 
     const handleQuantityChange = (id, val) => {
-        setQuantities((prev) => ({ ...prev, [id]: val }));
+        const minVal = purchasedQtyMap[id] || 1;
+        const numVal = Math.max(minVal, Number(val) || minVal);
+        setQuantities((prev) => ({ ...prev, [id]: numVal }));
     };
 
     const handleConfirmQuantity = (id) => {
-        const qty = Number(quantities[id] || 1);
-        if (!qty || qty < 1) {
-            message.warning("Jumlah minimal 1.");
+        const minVal = purchasedQtyMap[id] || 1;
+        const qty = Number(quantities[id] || minVal);
+        if (qty < minVal) {
+            message.warning(`Kuantitas tidak boleh kurang dari ${minVal} buah (jumlah yang sudah terbeli).`);
             return;
         }
         setConfirmedQuantities((prev) => ({ ...prev, [id]: true }));
@@ -135,6 +220,11 @@ export default function PengajuanPdttForm() {
     };
 
     const handleResetItem = (id) => {
+        const bought = purchasedQtyMap[id] || 0;
+        if (bought > 0) {
+            message.warning(`Item ini sudah terbeli sebanyak ${bought} buah sehingga tidak dapat dihapus.`);
+            return;
+        }
         setQuantities((prev) => ({ ...prev, [id]: 0 }));
         setSelectedPdttKeys((prev) => prev.filter((key) => key !== id));
         setConfirmedQuantities((prev) => {
@@ -146,18 +236,23 @@ export default function PengajuanPdttForm() {
     };
 
     const handleSelectionChange = (keys) => {
-        setSelectedPdttKeys(keys);
+        // Items with purchasedQtyMap[id] > 0 cannot be unchecked
+        const requiredKeys = Object.keys(purchasedQtyMap).filter((id) => purchasedQtyMap[id] > 0).map(Number);
+        const finalKeys = Array.from(new Set([...keys, ...requiredKeys]));
+
+        setSelectedPdttKeys(finalKeys);
         setQuantities((prev) => {
             const next = {};
-            keys.forEach((id) => {
-                next[id] = Number(prev[id] || 1);
+            finalKeys.forEach((id) => {
+                const minVal = purchasedQtyMap[id] || 1;
+                next[id] = Math.max(minVal, Number(prev[id] || minVal));
             });
             return next;
         });
         setConfirmedQuantities((prev) => {
             const next = {};
-            keys.forEach((id) => {
-                if (prev[id]) next[id] = true;
+            finalKeys.forEach((id) => {
+                if (prev[id] || (purchasedQtyMap[id] || 0) > 0) next[id] = true;
             });
             return next;
         });
@@ -231,9 +326,12 @@ export default function PengajuanPdttForm() {
 
     const pdttColumns = [
         {
-            title: "Nama Barang",
-            dataIndex: "item_name",
+            title: "Nama Barang & Ukuran",
             key: "item_name",
+            render: (_, r) => {
+                const spec = (r.jumlah || r.satuan) ? ` (${r.jumlah ? `${r.jumlah} ` : ""}${r.satuan || ""})` : "";
+                return <span><Text strong>{r.item_name}</Text>{spec}</span>;
+            },
         },
         {
             title: "Merek",
@@ -242,9 +340,9 @@ export default function PengajuanPdttForm() {
             render: (v) => v || "-",
         },
         {
-            title: "Kuantitas Master",
+            title: "Ukuran / Isi Kemasan",
             key: "satuan",
-            render: (_, r) => <span>{r.jumlah ? `${r.jumlah} ` : ""}{r.satuan || "-"}</span>,
+            render: (_, r) => <span>{(r.jumlah || r.satuan) ? `${r.jumlah ? `${r.jumlah} ` : ""}${r.satuan || ""}` : "-"}</span>,
         },
         {
             title: "Harga Satuan Estimasi",
@@ -252,19 +350,37 @@ export default function PengajuanPdttForm() {
             render: (_, r) => <Text strong>{formatCurrency(r.price)}</Text>,
         },
         {
-            title: "Kuantitas Diajukan",
+            title: "Kuantitas Diajukan & Status Realisasi",
             key: "qty_request",
             render: (_, r) => {
                 const isSelected = selectedPdttKeys.includes(r.id);
                 if (!isSelected) return <Text type="secondary" style={{ fontSize: 12 }}>Centang baris terlebih dahulu</Text>;
                 const isConfirmed = Boolean(confirmedQuantities[r.id]);
-                const qty = quantities[r.id] || 1;
+
+                const info = existingItemsMap[r.id];
+                const boughtQty = info ? info.terbeli : 0;
+                const minVal = Math.max(1, boughtQty);
+                const currentFormQty = Math.max(minVal, quantities[r.id] || minVal);
+                const diajukanCount = info ? info.diajukan : currentFormQty;
+                const sisaCount = info ? Math.max(0, diajukanCount - boughtQty) : currentFormQty;
 
                 if (isConfirmed) {
                     return (
-                        <Space>
-                            <Tag color="success" style={{ marginInlineEnd: 0 }}>
-                                <CheckOutlined /> {qty}
+                        <Space wrap style={{ alignItems: 'center' }}>
+                            <Tag color={boughtQty > 0 ? "warning" : "success"} style={{ marginInlineEnd: 0, padding: '4px 10px', fontSize: 13, borderRadius: 6 }}>
+                                <CheckOutlined style={{ marginRight: 4 }} />
+                                <span>
+                                    Diajukan: <strong>{diajukanCount} buah</strong>
+                                    {boughtQty > 0 && (
+                                        <span>
+                                            {" | Terbeli: "}
+                                            <strong style={{ color: '#047857' }}>{boughtQty} buah</strong>
+                                            {" (Sisa: "}
+                                            <strong style={{ color: '#c2410c' }}>{sisaCount} buah</strong>
+                                            {")"}
+                                        </span>
+                                    )}
+                                </span>
                             </Tag>
                             <Button
                                 type="link"
@@ -274,40 +390,56 @@ export default function PengajuanPdttForm() {
                             >
                                 Edit
                             </Button>
-                            <Button
-                                type="link"
-                                size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleResetItem(r.id)}
-                            >
-                                Hapus
-                            </Button>
+                            {boughtQty === 0 && (
+                                <Button
+                                    type="link"
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    onClick={() => handleResetItem(r.id)}
+                                >
+                                    Hapus
+                                </Button>
+                            )}
                         </Space>
                     );
                 }
 
                 return (
-                    <Space>
-                        <InputNumber
-                            min={1}
-                            value={qty}
-                            onChange={(val) => handleQuantityChange(r.id, val)}
-                            style={{ width: 80 }}
-                        />
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<CheckOutlined />}
-                            onClick={() => handleConfirmQuantity(r.id)}
-                        />
-                        <Button
-                            type="text"
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleResetItem(r.id)}
-                        />
+                    <Space direction="vertical" size={2}>
+                        <Space>
+                            <InputNumber
+                                min={minVal}
+                                value={currentFormQty}
+                                onChange={(val) => handleQuantityChange(r.id, val)}
+                                addonAfter="buah"
+                                style={{ width: 130 }}
+                            />
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<CheckOutlined />}
+                                onClick={() => handleConfirmQuantity(r.id)}
+                            />
+                            {boughtQty === 0 && (
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    onClick={() => handleResetItem(r.id)}
+                                />
+                            )}
+                        </Space>
+                        {boughtQty > 0 ? (
+                            <Text type="secondary" style={{ fontSize: 11, color: "#ea580c" }}>
+                                {`*Diajukan: ${diajukanCount} buah | Terbeli: ${boughtQty} buah | Sisa: ${sisaCount} buah (Min. ${minVal} buah)`}
+                            </Text>
+                        ) : (
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                                *Masukkan kuantitas yang diajukan
+                            </Text>
+                        )}
                     </Space>
                 );
             },
@@ -319,7 +451,9 @@ export default function PengajuanPdttForm() {
                 const isSelected = selectedPdttKeys.includes(r.id);
                 if (!isSelected) return "-";
                 if (!confirmedQuantities[r.id]) return <Text type="secondary" style={{ fontSize: 12 }}>Konfirmasi dulu</Text>;
-                const qty = quantities[r.id] || 1;
+                const boughtQty = purchasedQtyMap[r.id] || 0;
+                const minVal = Math.max(1, boughtQty);
+                const qty = Math.max(minVal, quantities[r.id] || minVal);
                 const subtotal = qty * (r.price || 0);
                 return <Text strong>{formatCurrency(subtotal)}</Text>;
             },
@@ -359,6 +493,34 @@ export default function PengajuanPdttForm() {
 
             <div style={{ background: '#fff', borderRadius: 8, padding: '24px' }}>
                 <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                    {unfulfilledItemsFromPeriod.length > 0 && (
+                        <Alert
+                            type="warning"
+                            showIcon
+                            style={{ border: "1px solid #fed7aa", background: "#fff7ed", borderRadius: 8 }}
+                            message={
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                                    <div>
+                                        <Text strong style={{ color: "#c2410c", fontSize: 14, display: "block" }}>
+                                            Sisa Item Belum Terbeli Periode {periodStr ? dayjs(periodStr, "YYYY-MM").format("MMMM YYYY") : ""}
+                                        </Text>
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            Terdapat {unfulfilledItemsFromPeriod.length} jenis item dari pengajuan periode bulan {periodStr ? dayjs(periodStr, "YYYY-MM").format("MMMM YYYY") : ""} yang belum/sebagian terbeli ({unfulfilledItemsFromPeriod.map(i => `${i.pdtt_item?.item_name || 'Barang'} [Sisa: ${i.sisa} buah]`).join(', ')}).
+                                        </Text>
+                                    </div>
+                                    <Button
+                                        type="primary"
+                                        size="middle"
+                                        onClick={handleImportUnfulfilledItems}
+                                        style={{ background: "#0F5B99", borderColor: "#0F5B99", fontWeight: 600 }}
+                                    >
+                                        Muat Sisa Item Bulan {periodStr ? dayjs(periodStr, "YYYY-MM").format("MMM YYYY") : ""}
+                                    </Button>
+                                </div>
+                            }
+                        />
+                    )}
+
                     <Alert
                         message="Pembuatan Pengajuan PDTT"
                         description="Pilih barang-barang di bawah ini yang akan Anda ajukan ke PPK/Admin. Harga dan Kuantitas di bawah ini merupakan referensi Master yang sudah ditetapkan untuk periode ini."

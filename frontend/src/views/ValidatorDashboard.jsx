@@ -66,14 +66,14 @@ dayjs.locale("id");
 const { Title, Text, Paragraph } = Typography;
 
 const MODULE_ICONS = {
-  surat_tugas: <FolderOutlined style={{ fontSize: 18 }} />,
-  izin_keluar: <FolderOutlined style={{ fontSize: 18 }} />,
-  permintaan_persediaan: <FolderOutlined style={{ fontSize: 18 }} />,
-  peminjaman_aset: <FolderOutlined style={{ fontSize: 18 }} />,
-  pemeliharaan_aset: <FolderOutlined style={{ fontSize: 18 }} />,
-  pengadaan_pdtt: <FolderOutlined style={{ fontSize: 18 }} />,
-  kearsipan_peminjaman: <FolderOutlined style={{ fontSize: 18 }} />,
-  it_helpdesk: <FolderOutlined style={{ fontSize: 18 }} />,
+  surat_tugas: <FolderOutlined style={{ fontSize: 18, color: "#f43f5e" }} />,
+  izin_keluar: <FolderOutlined style={{ fontSize: 18, color: "#8b5cf6" }} />,
+  permintaan_persediaan: <FolderOutlined style={{ fontSize: 18, color: "#f59e0b" }} />,
+  peminjaman_aset: <FolderOutlined style={{ fontSize: 18, color: "#3b82f6" }} />,
+  pemeliharaan_aset: <FolderOutlined style={{ fontSize: 18, color: "#06b6d4" }} />,
+  pengadaan_pdtt: <FolderOutlined style={{ fontSize: 18, color: "#10b981" }} />,
+  kearsipan_peminjaman: <FolderOutlined style={{ fontSize: 18, color: "#6366f1" }} />,
+  it_helpdesk: <FolderOutlined style={{ fontSize: 18, color: "#ec4899" }} />,
 };
 
 const MODULE_PATHS = {

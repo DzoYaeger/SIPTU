@@ -982,7 +982,14 @@ function AppLayout() {
 
       <Layout className="app-main-layout">
         <Header className="app-top-header">
-          <div className="header-left">
+          <div className="header-left" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Button
+              type="text"
+              icon={sidebarCollapsed ? <MenuUnfoldOutlined style={{ fontSize: 18, color: '#0F5B99' }} /> : <MenuFoldOutlined style={{ fontSize: 18, color: '#0F5B99' }} />}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? "Buka Sidebar Menu" : "Tutup Sidebar Menu"}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 8 }}
+            />
             <div className="header-sync-container" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div
                 className="header-sync-tag"

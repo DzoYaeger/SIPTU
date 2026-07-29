@@ -50,6 +50,23 @@ const formatCurrency = (value) => {
   }).format(Number(value));
 };
 
+const getItemVolumeSpec = (item) => {
+  if (!item) return "";
+  const jml = item.jumlah ?? "";
+  const sat = item.satuan ?? "";
+  if (jml && sat) return `${jml} ${sat}`;
+  if (jml) return `${jml}`;
+  if (sat) return `${sat}`;
+  return "";
+};
+
+const getItemDisplayName = (item) => {
+  if (!item) return "-";
+  const name = item.item_name || "-";
+  const spec = getItemVolumeSpec(item);
+  return spec ? `${name} (${spec})` : name;
+};
+
 export default function PengadaanPdtt() {
   const { apiFetch } = useAuth();
   const { message } = AntdApp.useApp();
@@ -371,10 +388,9 @@ export default function PengadaanPdtt() {
 
   const columns = [
     {
-      title: "Nama Barang",
-      dataIndex: "item_name",
-      key: "item_name",
-      width: 260,
+      title: "Nama Barang & Ukuran",
+      key: "item_name_spec",
+      render: (_, r) => <Text strong>{getItemDisplayName(r)}</Text>,
     },
     {
       title: "Merek",
@@ -384,10 +400,10 @@ export default function PengadaanPdtt() {
       render: (v) => v || "-",
     },
     {
-      title: "Jumlah & Satuan",
-      key: "jumlah_satuan",
-      width: 160,
-      render: (_, r) => <span>{r.jumlah ? `${r.jumlah} ` : ""}{r.satuan || "-"}</span>,
+      title: "Ukuran / Isi Kemasan",
+      key: "item_spec",
+      width: 180,
+      render: (_, r) => <Tag color="cyan" style={{ fontWeight: 600 }}>{getItemVolumeSpec(r) || "-"}</Tag>,
     },
     {
       title: `Harga (${periodLabel})`,
@@ -472,9 +488,9 @@ export default function PengadaanPdtt() {
   ];
 
   const proposalColumns = [
-    { title: "Nama Barang", dataIndex: "item_name", key: "item_name" },
+    { title: "Nama Barang & Ukuran", key: "item_name", render: (_, r) => `${r.item_name || "-"}${r.satuan ? ` (${r.satuan})` : ""}` },
     { title: "Merek", dataIndex: "brand", key: "brand", render: v => v || "-" },
-    { title: "Jumlah & Satuan", key: "jml", render: (_, r) => `${r.jumlah ? `${r.jumlah} ` : ""}${r.satuan || "-"}` },
+    { title: "Jumlah Permintaan", key: "jml", render: (_, r) => `${r.jumlah ? `${r.jumlah} buah` : "-"}` },
     { title: "Pengusul", dataIndex: "created_by_name", key: "created_by", render: v => v || "Pegawai" },
     {
       title: "Harga Survey Manual",
@@ -709,9 +725,9 @@ export default function PengadaanPdtt() {
           <Table
             rowKey="id"
             columns={[
-              { title: "Nama Barang", dataIndex: "item_name", key: "item_name" },
+              { title: "Nama Barang & Ukuran", key: "item_name", render: (_, r) => `${r.item_name || "-"}${r.satuan ? ` (${r.satuan})` : ""}` },
               { title: "Merek", dataIndex: "brand", key: "brand", render: (v) => v || "-" },
-              { title: "Jumlah & Satuan", key: "jumlah_satuan", render: (_, r) => `${r.jumlah ? `${r.jumlah} ` : ""}${r.satuan || "-"}` },
+              { title: "Jumlah Permintaan", key: "jumlah_satuan", render: (_, r) => `${r.jumlah ? `${r.jumlah} buah` : "-"}` },
               {
                 title: "Harga Periode",
                 dataIndex: "price",

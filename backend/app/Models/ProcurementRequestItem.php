@@ -10,7 +10,9 @@ class ProcurementRequestItem extends Model
         'procurement_request_id',
         'pdtt_item_id',
         'jumlah',
+        'jumlah_terbeli',
         'harga_saat_ini',
+        'harga_terbeli',
     ];
 
     public function procurementRequest()

@@ -250,10 +250,19 @@ class PdttItemController extends Controller
         }
 
         $period = $this->parsePeriod($request->query('period'));
+        $targetUserId = $request->query('user_id');
+
+        $effectiveUser = $user;
+        if ($targetUserId && $this->isAdminOrValidator($user)) {
+            $targetUser = \App\Models\User::find($targetUserId);
+            if ($targetUser) {
+                $effectiveUser = $targetUser;
+            }
+        }
 
         // Authorization check
-        $authUser = \App\Models\PdttAuthorizedUser::where('user_id', $user->id)->first();
-        if (!$authUser && !$this->isAdminOrValidator($user)) {
+        $authUser = \App\Models\PdttAuthorizedUser::where('user_id', $effectiveUser->id)->first();
+        if (!$authUser && !$this->isAdminOrValidator($effectiveUser)) {
             return response()->json([
                 'data' => [],
                 'meta' => [

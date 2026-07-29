@@ -115,7 +115,7 @@ const SidebarMenu = ({
     return isOpen ? (
       <FolderOpenOutlined style={{ fontSize: 18, color: '#0F5B99' }} />
     ) : (
-      <FolderOutlined style={{ fontSize: 18, color: '#64748b' }} />
+      <FolderOutlined style={{ fontSize: 18, color: '#0284c7' }} />
     );
   }, [openKeys, activeKey]);
 
@@ -228,7 +228,7 @@ const SidebarMenu = ({
       collapsible
       collapsed={collapsed}
       width={210}
-      collapsedWidth={60}
+      collapsedWidth={0}
       className="app-sider"
       style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 100 }}
     >
@@ -238,18 +238,18 @@ const SidebarMenu = ({
           type="button"
           onClick={onToggleCollapse}
           className="sidebar-border-toggle-btn"
-          title={collapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-          aria-label={collapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
+          title={collapsed ? "Perluas Sidebar Menu" : "Tutup Sidebar Menu"}
+          aria-label={collapsed ? "Perluas Sidebar Menu" : "Tutup Sidebar Menu"}
           style={{
             position: 'absolute',
-            right: -13,
+            right: collapsed ? -28 : -13,
             top: 13,
             width: 26,
             height: 26,
             borderRadius: '50%',
             background: '#ffffff',
             border: '1px solid #cbd5e1',
-            boxShadow: '0 2px 6px rgba(15, 23, 42, 0.12)',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.18)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -257,7 +257,7 @@ const SidebarMenu = ({
             zIndex: 101,
             outline: 'none',
             padding: 0,
-            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <LeftOutlined
@@ -265,7 +265,7 @@ const SidebarMenu = ({
               fontSize: 11,
               color: '#334155',
               transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           />
         </button>
@@ -273,11 +273,7 @@ const SidebarMenu = ({
 
       <div className="brand" style={{ padding: '0 12px', display: 'flex', alignItems: 'center', height: 52, borderBottom: '1px solid #f1f5f9' }}>
         {collapsed ? (
-          <img
-            src="/logo/favicon.png"
-            alt="SIPTU Logo"
-            style={{ width: 28, height: 28, objectFit: 'contain', margin: '0 auto' }}
-          />
+          <span style={{ fontWeight: 800, fontSize: 16, color: '#0F5B99', letterSpacing: '-0.5px', margin: '0 auto' }}>SIPTU</span>
         ) : (
           <img
             src="/logo/logo-samping.png"

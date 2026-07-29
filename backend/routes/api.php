@@ -403,8 +403,10 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::get('/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'index']);
     Route::post('/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'store']);
     Route::get('/admin/procurement-requests', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'indexAdmin']);
+    Route::put('/admin/procurement-requests/bulk-fulfillment', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'bulkFulfillment']);
     Route::put('/admin/procurement-requests/{id}', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'updateAdmin']);
     Route::put('/admin/procurement-requests/{id}/status', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'updateStatus']);
+    Route::put('/admin/procurement-requests/{id}/fulfillment', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'updateFulfillment']);
     Route::delete('/admin/procurement-requests/{id}', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'destroyAdmin']);
     Route::post('/admin/procurement-requests/cross-tab-report', [\App\Http\Controllers\Api\ProcurementRequestController::class, 'crossTabReport']);
 

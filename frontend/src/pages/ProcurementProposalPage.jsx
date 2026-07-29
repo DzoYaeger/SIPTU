@@ -295,9 +295,9 @@ export default function ProcurementProposalPage() {
         ),
     },
     {
-      title: "Jumlah & Satuan",
+      title: "Jumlah Permintaan & Ukuran",
       key: "volume",
-      width: 220,
+      width: 240,
       render: (_, r) =>
         isEditing(r.key) ? (
           <Space>
@@ -306,20 +306,20 @@ export default function ProcurementProposalPage() {
               min={1}
               value={draft.jumlah}
               onChange={(e) => setDraft((p) => ({ ...p, jumlah: e.target.value }))}
-              placeholder="Jml"
-              style={{ width: 80 }}
+              placeholder="Jml buah"
+              style={{ width: 90 }}
             />
             <Select
               value={draft.satuan}
               options={VOLUME_OPTIONS}
               allowClear
-              placeholder="Satuan"
+              placeholder="Ukuran"
               onChange={(value) => setDraft((p) => ({ ...p, satuan: value }))}
               style={{ width: 120 }}
             />
           </Space>
         ) : (
-          <span>{r.jumlah ? `${r.jumlah} ` : ""}{r.satuan || "-"}</span>
+          <span>{r.jumlah ? `${r.jumlah} buah` : "-"}{r.satuan ? ` (${r.satuan})` : ""}</span>
         ),
     },
     {
