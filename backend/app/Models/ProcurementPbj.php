@@ -23,6 +23,9 @@ class ProcurementPbj extends Model
         'no_bast',
         'tanggal_bast',
         'status_barang',
+        'file_surat_pesanan',
+        'file_bast',
+        'file_invoice',
     ];
 
     protected $casts = [
@@ -32,4 +35,40 @@ class ProcurementPbj extends Model
         'tanggal_bast' => 'date',
         'nominal' => 'decimal:2',
     ];
+
+    protected $appends = [
+        'file_surat_pesanan_url',
+        'file_bast_url',
+        'file_invoice_url',
+    ];
+
+    public function getFileSuratPesananUrlAttribute(): ?string
+    {
+        if (!$this->file_surat_pesanan) return null;
+        if (str_starts_with($this->file_surat_pesanan, 'http')) return $this->file_surat_pesanan;
+        if (str_starts_with($this->file_surat_pesanan, 'procurement-pbj/')) {
+            return asset('storage/' . $this->file_surat_pesanan);
+        }
+        return url("/api/procurement-pbjs/{$this->id}/file/sp");
+    }
+
+    public function getFileBastUrlAttribute(): ?string
+    {
+        if (!$this->file_bast) return null;
+        if (str_starts_with($this->file_bast, 'http')) return $this->file_bast;
+        if (str_starts_with($this->file_bast, 'procurement-pbj/')) {
+            return asset('storage/' . $this->file_bast);
+        }
+        return url("/api/procurement-pbjs/{$this->id}/file/bast");
+    }
+
+    public function getFileInvoiceUrlAttribute(): ?string
+    {
+        if (!$this->file_invoice) return null;
+        if (str_starts_with($this->file_invoice, 'http')) return $this->file_invoice;
+        if (str_starts_with($this->file_invoice, 'procurement-pbj/')) {
+            return asset('storage/' . $this->file_invoice);
+        }
+        return url("/api/procurement-pbjs/{$this->id}/file/invoice");
+    }
 }

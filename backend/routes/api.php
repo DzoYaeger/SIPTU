@@ -139,6 +139,8 @@ Route::middleware('throttle:public-api')->group(function () {
 
     // Public Procurement PBJ listing
     Route::get('/procurement-pbjs', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'index']);
+    Route::get('/procurement-pbjs/{id}/file/{fileType}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'viewFile']);
+    Route::get('/public/procurement-pbjs/{id}/file/{fileType}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'viewFile']);
     Route::get('/public/inventory-requests/{token}', [InventoryRequestController::class, 'showPublic']);
     Route::put('/public/inventory-requests/{token}/approve', [InventoryRequestController::class, 'approvePublic']);
     Route::put('/public/inventory-requests/{token}/reject', [InventoryRequestController::class, 'rejectPublic']);
@@ -235,6 +237,11 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::post('/nextcloud/move', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'move']);
     Route::post('/nextcloud/copy', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'copy']);
     Route::get('/nextcloud/search', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'search']);
+
+    // Employee Training / Diseminasi routes
+    Route::get('/employee-trainings', [\App\Http\Controllers\Api\EmployeeTrainingController::class, 'index']);
+    Route::get('/employee-trainings/stats', [\App\Http\Controllers\Api\EmployeeTrainingController::class, 'stats']);
+    Route::post('/employee-trainings/sync', [\App\Http\Controllers\Api\EmployeeTrainingController::class, 'sync']);
 
     // Push Notifications
     Route::post('/push-subscribe', [PushNotificationController::class, 'subscribe']);
@@ -413,6 +420,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // Proses Pengadaan PBJ (Protected mutation routes)
     Route::post('/procurement-pbjs', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'store']);
     Route::put('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'update']);
+    Route::post('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'update']);
     Route::delete('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'destroy']);
 
     // Inventory routes
@@ -471,6 +479,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/surat-tugas/{id}/reject', [SuratTugasController::class, 'reject']);
     Route::put('/surat-tugas/{id}/complete', [SuratTugasController::class, 'completeData']);
     Route::put('/surat-tugas/{id}/user-update', [SuratTugasController::class, 'updateUserData']);
+    Route::post('/surat-tugas/{id}/re-sign', [SuratTugasController::class, 'reSign']);
     Route::post('/surat-tugas/{id}/send-siamparan', [SuratTugasController::class, 'resendSiamparan']);
     Route::post('/surat-tugas/{id}/resend-lengkap', [SuratTugasController::class, 'resendLengkapNotification']);
     Route::post('/surat-tugas/{id}/reset-to-draft', [SuratTugasController::class, 'resetToDraft']);

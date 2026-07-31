@@ -22,6 +22,32 @@ class LpjController extends Controller
         $query = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim'])
             ->where('status', 'lengkap');
 
+        // Filter for non-admin users: only show Surat Tugas where user/employee is tagged
+        $user = $request->user();
+        if ($user && ($user->base_role ?? 'operator') !== 'admin') {
+            $employeeId = $user->employee?->id ?? DB::table('employees')->where('nip', $user->nip)->value('id');
+            $userNip = $user->nip;
+            $userId = $user->id;
+
+            $query->where(function ($q) use ($employeeId, $userNip, $userId) {
+                $q->where('created_by', $userId);
+                if ($employeeId) {
+                    $q->orWhere('ketua_tim_id', $employeeId)
+                      ->orWhere('penandatangan_id', $employeeId)
+                      ->orWhereHas('employees', function ($eq) use ($employeeId, $userNip) {
+                          $eq->where('employees.id', $employeeId);
+                          if ($userNip) {
+                              $eq->orWhere('employees.nip', $userNip);
+                          }
+                      });
+                } elseif ($userNip) {
+                    $q->orWhereHas('employees', function ($eq) use ($userNip) {
+                        $eq->where('employees.nip', $userNip);
+                    });
+                }
+            });
+        }
+
         // Exclude STs that have been marked as 'excluded'
         $excludedIds = LpjHeader::where('status', 'excluded')->pluck('surat_tugas_id')->toArray();
         if (!empty($excludedIds)) {
@@ -167,12 +193,15 @@ class LpjController extends Controller
                     'bendahara_id' => $request->bendahara_id,
                     'created_by' => $request->user()?->id,
                 ]
-            );
+            );            // Update mak pada SuratTugas jika dikirimkan
+            if ($request->has('mak')) {
+                $st->update(['mak' => $request->mak]);
+            }
 
             // Update header jika sudah ada
             $lpj->update([
-                'status'     => $request->status ?? $lpj->status,
-                'keterangan' => $request->keterangan ?? $lpj->keterangan,
+                'status'       => $request->status ?? $lpj->status,
+                'keterangan'   => $request->keterangan ?? $lpj->keterangan,
                 'bendahara_id' => $request->has('bendahara_id') ? $request->bendahara_id : $lpj->bendahara_id,
             ]);
 
@@ -189,6 +218,7 @@ class LpjController extends Controller
                 $busTotal   = $num('uang_transport_bus_berangkat') + $num('uang_transport_bus_pulang');
                 $taxiTotal  = $num('uang_transport_taxi_berangkat') + $num('uang_transport_taxi_pulang');
                 $pesawatTotal = $num('uang_transport_pesawat_berangkat') + $num('uang_transport_pesawat_pulang');
+                $umumTotal   = $num('uang_transport_umum_berangkat') + $num('uang_transport_umum_pulang');
                 $sewaMobilTotal = $num('uang_transport_sewa_mobil_harian') * $int('uang_transport_sewa_mobil_hari');
                 $harianTotal = $num('uang_harian_per_hari') * $int('uang_harian_hari');
                 $penginapanTotal = $num('uang_penginapan_harian') * $int('uang_penginapan_hari');
@@ -203,44 +233,73 @@ class LpjController extends Controller
                     'employee_nip'        => $item['employee_nip'] ?? null,
                     'is_external'         => (bool) ($item['is_external'] ?? false),
                     'nomor_spd'           => $val('nomor_spd'),
+                    'nama_hotel'          => $val('nama_hotel'),
+                    'nomor_kamar'         => $val('nomor_kamar'),
+
                     // Transport Bus
                     'uang_transport_bus'            => $busTotal ?: $val('uang_transport_bus'),
                     'uang_transport_bus_berangkat'  => $val('uang_transport_bus_berangkat'),
                     'uang_transport_bus_pulang'     => $val('uang_transport_bus_pulang'),
+                    'uang_transport_bus_keterangan' => $val('uang_transport_bus_keterangan'),
+
                     // Transport Taxi
                     'uang_transport_taxi'           => $taxiTotal ?: $val('uang_transport_taxi'),
                     'uang_transport_taxi_berangkat' => $val('uang_transport_taxi_berangkat'),
                     'uang_transport_taxi_pulang'    => $val('uang_transport_taxi_pulang'),
+                    'uang_transport_taxi_keterangan' => $val('uang_transport_taxi_keterangan'),
+
                     // Transport Pesawat
                     'uang_transport_pesawat'           => $pesawatTotal ?: $val('uang_transport_pesawat'),
                     'uang_transport_pesawat_berangkat' => $val('uang_transport_pesawat_berangkat'),
                     'uang_transport_pesawat_pulang'    => $val('uang_transport_pesawat_pulang'),
+                    'uang_transport_pesawat_keterangan' => $val('uang_transport_pesawat_keterangan'),
+
                     // Transport BBM
-                    'uang_transport_bbm'  => $val('uang_transport_bbm'),
+                    'uang_transport_bbm'            => $val('uang_transport_bbm'),
+                    'uang_transport_bbm_keterangan' => $val('uang_transport_bbm_keterangan'),
+
                     // Transport Sewa Mobil
-                    'uang_transport_sewa_mobil'        => $sewaMobilTotal ?: $val('uang_transport_sewa_mobil'),
-                    'uang_transport_sewa_mobil_harian'  => $val('uang_transport_sewa_mobil_harian'),
-                    'uang_transport_sewa_mobil_hari'    => $val('uang_transport_sewa_mobil_hari'),
-                    // Uang Harian
-                    'uang_harian'          => $harianTotal ?: $val('uang_harian'),
-                    'uang_harian_per_hari' => $val('uang_harian_per_hari'),
-                    'uang_harian_hari'     => $val('uang_harian_hari'),
-                    // Penginapan
-                    'uang_penginapan'        => $penginapanTotal ?: $val('uang_penginapan'),
-                    'uang_penginapan_harian' => $val('uang_penginapan_harian'),
-                    'uang_penginapan_hari'   => $val('uang_penginapan_hari'),
-                    // Fullboard
-                    'uang_fullboard'        => $fullboardTotal ?: $val('uang_fullboard'),
-                    'uang_fullboard_harian' => $val('uang_fullboard_harian'),
-                    'uang_fullboard_hari'   => $val('uang_fullboard_hari'),
-                    // Uang Harian Fullboard
-                    'uang_harian_fullboard'          => $harianFullboardTotal ?: $val('uang_harian_fullboard'),
-                    'uang_harian_fullboard_per_hari' => $val('uang_harian_fullboard_per_hari'),
-                    'uang_harian_fullboard_hari'     => $val('uang_harian_fullboard_hari'),
+                    'uang_transport_sewa_mobil'            => $sewaMobilTotal ?: $val('uang_transport_sewa_mobil'),
+                    'uang_transport_sewa_mobil_harian'      => $val('uang_transport_sewa_mobil_harian'),
+                    'uang_transport_sewa_mobil_hari'        => $val('uang_transport_sewa_mobil_hari'),
+                    'uang_transport_sewa_mobil_keterangan'  => $val('uang_transport_sewa_mobil_keterangan'),
+
                     // Transport Lokal
                     'uang_transport_lokal'           => $lokalTotal ?: $val('uang_transport_lokal'),
                     'uang_transport_lokal_harian'    => $val('uang_transport_lokal_harian'),
                     'uang_transport_lokal_hari'      => $val('uang_transport_lokal_hari'),
+                    'uang_transport_lokal_keterangan' => $val('uang_transport_lokal_keterangan'),
+
+                    // Transport Umum
+                    'uang_transport_umum'           => $umumTotal ?: $val('uang_transport_umum'),
+                    'uang_transport_umum_berangkat'  => $val('uang_transport_umum_berangkat'),
+                    'uang_transport_umum_pulang'     => $val('uang_transport_umum_pulang'),
+                    'uang_transport_umum_keterangan' => $val('uang_transport_umum_keterangan'),
+
+                    // Uang Harian
+                    'uang_harian'            => $harianTotal ?: $val('uang_harian'),
+                    'uang_harian_per_hari'   => $val('uang_harian_per_hari'),
+                    'uang_harian_hari'       => $val('uang_harian_hari'),
+                    'uang_harian_keterangan' => $val('uang_harian_keterangan'),
+
+                    // Penginapan
+                    'uang_penginapan'            => $penginapanTotal ?: $val('uang_penginapan'),
+                    'uang_penginapan_harian'     => $val('uang_penginapan_harian'),
+                    'uang_penginapan_hari'       => $val('uang_penginapan_hari'),
+                    'uang_penginapan_keterangan' => $val('uang_penginapan_keterangan'),
+
+                    // Fullboard
+                    'uang_fullboard'            => $fullboardTotal ?: $val('uang_fullboard'),
+                    'uang_fullboard_harian'     => $val('uang_fullboard_harian'),
+                    'uang_fullboard_hari'       => $val('uang_fullboard_hari'),
+                    'uang_fullboard_keterangan' => $val('uang_fullboard_keterangan'),
+
+                    // Uang Harian Fullboard
+                    'uang_harian_fullboard'            => $harianFullboardTotal ?: $val('uang_harian_fullboard'),
+                    'uang_harian_fullboard_per_hari'   => $val('uang_harian_fullboard_per_hari'),
+                    'uang_harian_fullboard_hari'       => $val('uang_harian_fullboard_hari'),
+                    'uang_harian_fullboard_keterangan' => $val('uang_harian_fullboard_keterangan'),
+
                     'created_at'          => $now,
                     'updated_at'          => $now,
                 ];
@@ -273,41 +332,35 @@ class LpjController extends Controller
         $lpj = LpjHeader::updateOrCreate(
             ['surat_tugas_id' => $st->id],
             [
-                'status'     => 'manual',
-                'keterangan' => 'LPJ dibuat di luar sistem (manual)',
+                'status' => 'manual',
                 'created_by' => $request->user()?->id,
             ]
         );
 
         return response()->json([
-            'message' => 'LPJ ditandai sebagai manual.',
+            'message' => 'LPJ berhasil ditandai sebagai manual.',
             'lpj'     => $lpj,
         ]);
     }
 
     /**
-     * Sembunyikan ST dari daftar LPJ (tidak menghapus Surat Tugas).
+     * Sembunyikan ST dari daftar LPJ (status = 'excluded').
      */
     public function exclude(Request $request, $suratTugasId)
     {
         $st = SuratTugas::where('status', 'lengkap')->findOrFail($suratTugasId);
 
-        // Remove any existing LPJ data first
-        $existing = LpjHeader::where('surat_tugas_id', $st->id)->first();
-        if ($existing) {
-            $existing->items()->delete();
-            $existing->update(['status' => 'excluded']);
-        } else {
-            LpjHeader::create([
-                'surat_tugas_id' => $st->id,
-                'status'         => 'excluded',
-                'keterangan'     => 'Dihapus dari daftar LPJ',
-                'created_by'     => $request->user()?->id,
-            ]);
-        }
+        $lpj = LpjHeader::updateOrCreate(
+            ['surat_tugas_id' => $st->id],
+            [
+                'status' => 'excluded',
+                'created_by' => $request->user()?->id,
+            ]
+        );
 
         return response()->json([
-            'message' => 'Surat Tugas berhasil dihapus dari daftar LPJ.',
+            'message' => 'Surat tugas berhasil disembunyikan dari daftar LPJ.',
+            'lpj'     => $lpj,
         ]);
     }
 
@@ -323,7 +376,7 @@ class LpjController extends Controller
     }
 
     /**
-     * Export LPJ details to PDF.
+     * Export Rincian Biaya LPJ ke PDF (menggunakan Dompdf).
      */
     public function exportPdf(Request $request, $suratTugasId)
     {
@@ -381,7 +434,7 @@ class LpjController extends Controller
                     'title' => 'Transport (Bus)',
                     'breakdown' => $breakdown,
                     'total' => $item->uang_transport_bus,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_bus_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_bus;
             }
@@ -400,7 +453,7 @@ class LpjController extends Controller
                     'title' => 'Transport (Taksi)',
                     'breakdown' => $breakdown,
                     'total' => $item->uang_transport_taxi,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_taxi_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_taxi;
             }
@@ -419,7 +472,7 @@ class LpjController extends Controller
                     'title' => 'Transport (Pesawat)',
                     'breakdown' => $breakdown,
                     'total' => $item->uang_transport_pesawat,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_pesawat_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_pesawat;
             }
@@ -431,7 +484,7 @@ class LpjController extends Controller
                     'title' => 'Transport (BBM)',
                     'breakdown' => [],
                     'total' => $item->uang_transport_bbm,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_bbm_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_bbm;
             }
@@ -445,7 +498,7 @@ class LpjController extends Controller
                         ['label' => '', 'qty' => $item->uang_transport_sewa_mobil_hari, 'rate' => $item->uang_transport_sewa_mobil_harian, 'total' => $item->uang_transport_sewa_mobil]
                     ],
                     'total' => $item->uang_transport_sewa_mobil,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_sewa_mobil_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_sewa_mobil;
             }
@@ -459,9 +512,28 @@ class LpjController extends Controller
                         ['label' => '', 'qty' => $item->uang_transport_lokal_hari, 'rate' => $item->uang_transport_lokal_harian, 'total' => $item->uang_transport_lokal]
                     ],
                     'total' => $item->uang_transport_lokal,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_transport_lokal_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_transport_lokal;
+            }
+
+            // Transport Umum
+            if ($item->uang_transport_umum !== null && $item->uang_transport_umum > 0) {
+                $breakdown = [];
+                if ($item->uang_transport_umum_berangkat > 0) {
+                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_umum_berangkat, 'total' => $item->uang_transport_umum_berangkat];
+                }
+                if ($item->uang_transport_umum_pulang > 0) {
+                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_umum_pulang, 'total' => $item->uang_transport_umum_pulang];
+                }
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Umum)',
+                    'breakdown' => $breakdown,
+                    'total' => $item->uang_transport_umum,
+                    'keterangan' => $item->uang_transport_umum_keterangan ?? ''
+                ];
+                $totalAmount += $item->uang_transport_umum;
             }
 
             // Uang Harian
@@ -473,13 +545,19 @@ class LpjController extends Controller
                         ['label' => '', 'qty' => $item->uang_harian_hari, 'rate' => $item->uang_harian_per_hari, 'total' => $item->uang_harian]
                     ],
                     'total' => $item->uang_harian,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_harian_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_harian;
             }
 
             // Penginapan
             if ($item->uang_penginapan !== null && $item->uang_penginapan > 0) {
+                $hotelParts = [];
+                if (!empty($item->nama_hotel)) $hotelParts[] = 'Hotel: ' . $item->nama_hotel;
+                if (!empty($item->nomor_kamar)) $hotelParts[] = 'Kmr: ' . $item->nomor_kamar;
+                if (!empty($item->uang_penginapan_keterangan)) $hotelParts[] = $item->uang_penginapan_keterangan;
+                $penginapanKet = implode(', ', $hotelParts);
+
                 $rows[] = [
                     'no' => $no++,
                     'title' => 'Penginapan',
@@ -487,7 +565,7 @@ class LpjController extends Controller
                         ['label' => '', 'qty' => $item->uang_penginapan_hari, 'rate' => $item->uang_penginapan_harian, 'total' => $item->uang_penginapan]
                     ],
                     'total' => $item->uang_penginapan,
-                    'keterangan' => ''
+                    'keterangan' => $penginapanKet
                 ];
                 $totalAmount += $item->uang_penginapan;
             }
@@ -499,7 +577,7 @@ class LpjController extends Controller
                     'title' => 'Paket Fullboard',
                     'breakdown' => [],
                     'total' => $item->uang_fullboard,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_fullboard_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_fullboard;
             }
@@ -513,7 +591,7 @@ class LpjController extends Controller
                         ['label' => '', 'qty' => $item->uang_harian_fullboard_hari, 'rate' => $item->uang_harian_fullboard_per_hari, 'total' => $item->uang_harian_fullboard]
                     ],
                     'total' => $item->uang_harian_fullboard,
-                    'keterangan' => ''
+                    'keterangan' => $item->uang_harian_fullboard_keterangan ?? ''
                 ];
                 $totalAmount += $item->uang_harian_fullboard;
             }
@@ -544,7 +622,9 @@ class LpjController extends Controller
                 + ($item->uang_transport_taxi ?? 0)
                 + ($item->uang_transport_pesawat ?? 0)
                 + ($item->uang_transport_bbm ?? 0)
-                + ($item->uang_transport_sewa_mobil ?? 0);
+                + ($item->uang_transport_sewa_mobil ?? 0)
+                + ($item->uang_transport_lokal ?? 0)
+                + ($item->uang_transport_umum ?? 0);
             $penginapan = $item->uang_penginapan ?? 0;
             $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
 

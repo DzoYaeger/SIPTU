@@ -11,6 +11,8 @@ import {
   Empty,
   Tooltip,
   Space,
+  message,
+  Dropdown,
 } from "antd";
 import {
   FileProtectOutlined,
@@ -29,6 +31,8 @@ import {
   TeamOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  EditOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
@@ -51,6 +55,16 @@ const SuratTugasUnifiedModule = () => {
   // Detail Modal State
   const [selectedST, setSelectedST] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  // Edit Modal State
+  const [editingST, setEditingST] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // Re-sign Modal State
+  const [reSignST, setReSignST] = useState(null);
+  const [reSignModalOpen, setReSignModalOpen] = useState(false);
+  const [reSignPassword, setReSignPassword] = useState("");
+  const [reSigning, setReSigning] = useState(false);
 
   // Check if user has validator/admin access
   const isValidatorOrAdmin = useMemo(() => {
@@ -187,6 +201,35 @@ const SuratTugasUnifiedModule = () => {
     setDetailModalOpen(true);
   };
 
+  // Re-sign TTE Execution
+  const executeReSign = async () => {
+    if (!reSignST || !reSignPassword) {
+      message.warning("Password SIPTU wajib diisi.");
+      return;
+    }
+    try {
+      setReSigning(true);
+      const res = await apiFetch(`/surat-tugas/${reSignST.id}/re-sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: reSignPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal melakukan tanda tangan ulang.");
+      }
+      message.success("Tanda tangan TTE berhasil diperbarui secara sah!");
+      setReSignModalOpen(false);
+      setReSignST(null);
+      setReSignPassword("");
+      fetchMyAssignments();
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setReSigning(false);
+    }
+  };
+
   // Columns for My Assignments Table
   const columns = [
     {
@@ -278,38 +321,57 @@ const SuratTugasUnifiedModule = () => {
       title: "Aksi",
       key: "action",
       align: "center",
-      render: (_, r) => (
-        <Space size={6}>
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleOpenDetail(r)}
-            style={{ borderRadius: 6, fontSize: 11 }}
-          >
-            Detail
-          </Button>
+      render: (_, r) => {
+        const canEdit = r.status !== "selesai";
+        const items = [
+          {
+            key: "detail",
+            label: "Lihat Detail Surat Tugas",
+            icon: <EyeOutlined style={{ color: "#1e293b" }} />,
+            onClick: () => handleOpenDetail(r),
+          },
+        ];
 
-          <Button
-            size="small"
-            type="primary"
-            icon={<FileProtectOutlined style={{ color: "#ffffff" }} />}
-            onClick={() => {
-              const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-              const tokenStr = r.signature_token || r.token || "";
-              const protokolUrl = `${baseUrl.replace(/\/+$/, "")}/public/surat-tugas/${r.id}/protokol-kerja?with_qr=1&token=${tokenStr}`;
-              window.open(protokolUrl, "_blank");
-            }}
-            style={{
-              borderRadius: 6,
-              fontSize: 11,
-              backgroundColor: "#0F5B99",
-              borderColor: "#0F5B99",
-            }}
-          >
-            Protokol Kerja
-          </Button>
-        </Space>
-      ),
+        if (canEdit) {
+          items.push({
+            key: "edit",
+            label: "Edit Data Surat Tugas",
+            icon: <EditOutlined style={{ color: "#1e293b" }} />,
+            onClick: () => {
+              setEditingST(r);
+              setEditModalOpen(true);
+            },
+          });
+          items.push({
+            key: "resign",
+            label: "Tanda Tangan (TTD) Ulang",
+            icon: <SafetyCertificateOutlined style={{ color: "#1e293b" }} />,
+            onClick: () => {
+              setReSignST(r);
+              setReSignPassword("");
+              setReSignModalOpen(true);
+            },
+          });
+        }
+
+        items.push({
+          key: "protokol",
+          label: "Buka Protokol Kerja (PDF)",
+          icon: <FileProtectOutlined style={{ color: "#1e293b" }} />,
+          onClick: () => {
+            const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+            const tokenStr = r.signature_token || r.token || "";
+            const protokolUrl = `${baseUrl.replace(/\/+$/, "")}/public/surat-tugas/${r.id}/protokol-kerja?with_qr=1&token=${tokenStr}`;
+            window.open(protokolUrl, "_blank");
+          },
+        });
+
+        return (
+          <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#1e293b", fontSize: 16 }} />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -591,6 +653,89 @@ const SuratTugasUnifiedModule = () => {
             </div>
           </div>
         )}
+      </Modal>
+      {/* Modal Edit Surat Tugas */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: "#fffbe6", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+              <EditOutlined />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Edit Data Surat Tugas</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>{editingST?.nomor_st || `ST #${editingST?.id}`}</div>
+            </div>
+          </div>
+        }
+        open={editModalOpen}
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingST(null);
+        }}
+        footer={null}
+        width={850}
+        destroyOnClose
+        centered
+      >
+        {editingST && (
+          <div style={{ padding: "12px 0" }}>
+            <SuratTugasForm
+              isEmbedded={true}
+              editData={editingST}
+              onEditSuccess={() => {
+                setEditModalOpen(false);
+                setEditingST(null);
+                fetchMyAssignments();
+              }}
+              onCancel={() => {
+                setEditModalOpen(false);
+                setEditingST(null);
+              }}
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal TTD Ulang TTE */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 8, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+              <SafetyCertificateOutlined />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Tanda Tangan Ulang TTE</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>{reSignST?.nomor_st || `ST #${reSignST?.id}`}</div>
+            </div>
+          </div>
+        }
+        open={reSignModalOpen}
+        onOk={executeReSign}
+        onCancel={() => {
+          setReSignModalOpen(false);
+          setReSignST(null);
+          setReSignPassword("");
+        }}
+        confirmLoading={reSigning}
+        okText="Tanda Tangan Sekarang"
+        cancelText="Batal"
+        destroyOnClose
+        centered
+      >
+        <div style={{ padding: "12px 0" }}>
+          <p style={{ marginBottom: 14, fontSize: 13, color: "#475569" }}>
+            Masukkan <strong>Password SIPTU</strong> Anda untuk membubuhkan TTE ulang secara sah pada Surat Tugas ini.
+          </p>
+          <Input.Password
+            placeholder="Masukkan Password SIPTU"
+            value={reSignPassword}
+            onChange={(e) => setReSignPassword(e.target.value)}
+            onPressEnter={executeReSign}
+            size="large"
+            style={{ borderRadius: 8 }}
+            autoFocus
+          />
+        </div>
       </Modal>
     </div>
   );

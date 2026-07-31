@@ -71,10 +71,17 @@ const DataPegawai = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // UI State
+  // UI & Pagination State
   const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterFungsi, setFilterFungsi] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset to page 1 on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterFungsi]);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -408,14 +415,36 @@ const DataPegawai = () => {
             rowKey="id"
             loading={loading}
             scroll={{ x: 800 }}
-            pagination={{ pageSize: 10, showSizeChanger: true }}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredData.length,
+              onChange: (page, pSize) => {
+                setCurrentPage(page);
+                setPageSize(pSize);
+              },
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '15', '25', '50', '100'],
+              showTotal: (total, range) => `Menampilkan ${range[0]}-${range[1]} dari ${total} pegawai`,
+            }}
           />
         ) : (
           <List
             grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4, xl: 4 }}
             dataSource={filteredData}
             loading={loading}
-            pagination={{ pageSize: 12 }}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredData.length,
+              onChange: (page, pSize) => {
+                setCurrentPage(page);
+                setPageSize(pSize);
+              },
+              showSizeChanger: true,
+              pageSizeOptions: ['12', '24', '48'],
+              showTotal: (total, range) => `Menampilkan ${range[0]}-${range[1]} dari ${total} pegawai`,
+            }}
             renderItem={item => (
               <List.Item>
                 <Card

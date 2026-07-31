@@ -18,8 +18,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   InfoCircleOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
-import { Card, Table, Tag, Button, Tooltip, Typography, Spin, Badge, Modal } from 'antd';
+import { Card, Table, Tag, Button, Tooltip, Typography, Spin, Badge, Modal, Dropdown } from 'antd';
 import dayjs from 'dayjs';
 
 // Sub-component imports for form & features
@@ -340,38 +341,39 @@ const BmnUnifiedModule = () => {
                   {
                     title: 'Aksi',
                     key: 'actions',
-                    render: (_, record) => (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <Button
-                          size="small"
-                          icon={<InfoCircleOutlined />}
-                          onClick={() => {
+                    width: 70,
+                    align: 'center',
+                    render: (_, record) => {
+                      const items = [
+                        {
+                          key: 'detail',
+                          label: 'Lihat Detail Peminjaman',
+                          icon: <InfoCircleOutlined style={{ color: '#1e293b' }} />,
+                          onClick: () => {
                             setSelectedLoan(record);
                             setLoanModalOpen(true);
-                          }}
-                          style={{ borderRadius: 6 }}
-                        >
-                          Detail
-                        </Button>
-                        <Tooltip title="Lacak Status">
-                          <Button
-                            size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => window.open(`/peminjaman-aset/track/${record.token}`, '_blank')}
-                            style={{ borderRadius: 6 }}
-                          />
-                        </Tooltip>
-                        <Tooltip title="Cetak SPA (PDF)">
-                          <Button
-                            size="small"
-                            type="primary"
-                            icon={<FilePdfOutlined style={{ color: '#ffffff' }} />}
-                            onClick={() => window.open(`/api/public/bmn-loans/${record.token}/pdf`, '_blank')}
-                            style={{ borderRadius: 6, backgroundColor: 'var(--color-primary, #0F5B99)', borderColor: 'var(--color-primary, #0F5B99)', color: '#ffffff' }}
-                          />
-                        </Tooltip>
-                      </div>
-                    ),
+                          },
+                        },
+                        {
+                          key: 'track',
+                          label: 'Lacak Status Peminjaman',
+                          icon: <EyeOutlined style={{ color: '#1e293b' }} />,
+                          onClick: () => window.open(`/peminjaman-aset/track/${record.token}`, '_blank'),
+                        },
+                        {
+                          key: 'pdf',
+                          label: 'Cetak Dokumen SPA (PDF)',
+                          icon: <FilePdfOutlined style={{ color: '#1e293b' }} />,
+                          onClick: () => window.open(`/api/public/bmn-loans/${record.token}/pdf`, '_blank'),
+                        },
+                      ];
+
+                      return (
+                        <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+                          <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+                        </Dropdown>
+                      );
+                    },
                   },
                 ]}
               />
@@ -455,19 +457,27 @@ const BmnUnifiedModule = () => {
                   {
                     title: 'Aksi',
                     key: 'actions',
-                    render: (_, record) => (
-                      <Button
-                        size="small"
-                        icon={<InfoCircleOutlined />}
-                        onClick={() => {
-                          setSelectedInventory(record);
-                          setInventoryModalOpen(true);
-                        }}
-                        style={{ borderRadius: 6 }}
-                      >
-                        Detail
-                      </Button>
-                    ),
+                    width: 70,
+                    align: 'center',
+                    render: (_, record) => {
+                      const items = [
+                        {
+                          key: 'detail',
+                          label: 'Lihat Detail Permintaan',
+                          icon: <InfoCircleOutlined style={{ color: '#1e293b' }} />,
+                          onClick: () => {
+                            setSelectedInventory(record);
+                            setInventoryModalOpen(true);
+                          },
+                        },
+                      ];
+
+                      return (
+                        <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+                          <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+                        </Dropdown>
+                      );
+                    },
                   },
                 ]}
               />

@@ -432,7 +432,8 @@ export function AuthProvider({ children }) {
   const accessibleModules = useMemo(() => {
     if (!user) return [];
 
-    if (currentRole === "admin" || user.base_role === "admin") {
+    // Hanya jika role aktif saat ini adalah admin, berikan akses admin
+    if (currentRole === "admin") {
       return ["dashboard", ...(roleModules.admin ?? [])];
     }
 
@@ -461,11 +462,68 @@ export function AuthProvider({ children }) {
       if (!slug) return;
 
       const hasGrant = roleKey
-        ? Boolean(perm[roleKey]) || Boolean(perm.is_operator) || Boolean(perm.is_validator)
+        ? Boolean(perm[roleKey])
         : Boolean(perm.is_operator) || Boolean(perm.is_validator) || Boolean(perm.is_admin);
 
       if (hasGrant) {
         slugs.push(slug);
+      }
+    });
+
+    // Petakan sub-modul ke parent modulnya agar parent group otomatis aktif di navigation bar & routing
+    const parentMap = {
+      "kepegawaian-data-pegawai": "kepegawaian",
+      "kepegawaian-kgb": "kepegawaian",
+      "kepegawaian-kalender": "kepegawaian",
+      "kepegawaian-surat-tugas": "kepegawaian",
+      "kepegawaian-bangkom": "kepegawaian",
+      "zoom-generator": "kepegawaian",
+
+      "rispeg-ruh": "rispeg",
+      "rispeg-dashboard": "rispeg",
+      "rispeg-izin-keluar": "rispeg",
+      "rispeg-pengaturan-izin-keluar": "rispeg",
+      "rispeg-pengumuman": "rispeg",
+
+      "kearsipan-peminjaman": "kearsipan",
+      "kearsipan-pencatatan-surat": "kearsipan",
+      "kearsipan-manajemen-up-uk": "kearsipan",
+      "kearsipan-arsip-vital": "kearsipan",
+      "kearsipan-laporan": "kearsipan",
+
+      "bmn-data-aset-tetap": "bmn",
+      "bmn-data-persediaan": "bmn",
+      "bmn-permintaan-persediaan": "bmn",
+      "bmn-peminjaman-aset": "bmn",
+      "bmn-pemeliharaan-keluhan": "bmn",
+      "bmn-laporan": "bmn",
+
+      "keuangan-anggaran": "keuangan",
+      "keuangan-realisasi-anggaran": "keuangan",
+      "keuangan-revisi": "keuangan",
+      "keuangan-invoice": "keuangan",
+      "keuangan-lpj": "keuangan",
+      "keuangan-pejabat": "keuangan",
+
+      "perjadin-st": "perjadin",
+      "perjadin-lpj": "perjadin",
+      "perjadin-monitoring": "perjadin",
+
+      "pengadaan-pdtt-katalog": "pengadaan-pdtt",
+      "pengadaan-pdtt-rekapan": "pengadaan-pdtt",
+      "pengadaan-pdtt-pengajuan-pdtt": "pengadaan-pdtt",
+      "pengadaan-pbj": "pengadaan-pdtt",
+      "pengelola-pegawai-pdtt": "pengadaan-pdtt",
+
+      "it-helpdesk-pelaporan": "it-helpdesk",
+      "it-helpdesk-rekapan": "it-helpdesk",
+
+      "pengaturan-slider": "layanan-mandiri",
+    };
+
+    slugs.forEach((s) => {
+      if (parentMap[s]) {
+        slugs.push(parentMap[s]);
       }
     });
 
@@ -475,25 +533,35 @@ export function AuthProvider({ children }) {
   // Fungsi untuk mengecek apakah user memiliki role tertentu pada modul tertentu
   const hasRole = useCallback(
     (role, moduleSlug) => {
-      if (!user || !moduleSlug) return false;
+      if (!user) return false;
 
-      // Admin memiliki akses ke semua modul
-      if (user.base_role === "admin") return true;
+      if (role === "admin" && (currentRole === "admin" || user.base_role === "admin")) {
+        return true;
+      }
 
-      // Cek permission berdasarkan role dan module
-      if (user.module_permissions) {
+      if (!moduleSlug) {
+        if (currentRole === role) return true;
+        if (user.base_role === role) return true;
+        return (user.available_roles ?? []).includes(role);
+      }
+
+      // Jika role aktif saat ini adalah admin, berikan akses penuh ke semua modul
+      if (currentRole === "admin") return true;
+
+      // Cek permission spesifik untuk module berdasarkan module_permissions
+      if (Array.isArray(user.module_permissions)) {
         return user.module_permissions.some(
           (permission) =>
             (permission.module_slug ??
               permission.module_id ??
               permission.slug) === moduleSlug &&
-            permission[`is_${role}`] === true,
+            Boolean(permission[`is_${role}`]),
         );
       }
 
       return false;
     },
-    [user],
+    [user, currentRole],
   );
 
   const value = useMemo(

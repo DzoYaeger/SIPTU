@@ -4,16 +4,16 @@
 
 /* ── Header ── */
 .rl-header { margin-bottom:28px; }
-.rl-header h2 { font-size:24px; font-weight:800; color:#0f172a; margin:0 0 4px; letter-spacing:-0.5px; display:flex; align-items:center; gap:10px; }
+.rl-header h2 { font-size:22px; font-weight:800; color:#0f172a; margin:0 0 4px; letter-spacing:-0.5px; display:flex; align-items:center; gap:10px; }
 .rl-header h2 .rl-header-icon { color:#6366f1; }
-.rl-header p { font-size:14px; color:#64748b; margin:0; }
+.rl-header p { font-size:12px; color:#64748b; margin:0; }
 
 /* ── Stats Strip ── */
 .rl-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
 .rl-stat-card { background:#fff; border:1px solid #e8ecf1; border-radius:14px; padding:16px 18px; transition:all .25s; position:relative; overflow:hidden; }
 .rl-stat-card::before { content:""; position:absolute; top:0; left:0; width:4px; height:100%; border-radius:4px 0 0 4px; background:var(--stat-color,#6366f1); }
 .rl-stat-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.06); }
-.rl-stat-value { font-size:26px; font-weight:800; color:var(--stat-color,#0f172a); line-height:1.1; }
+.rl-stat-value { font-size:22px; font-weight:800; color:var(--stat-color,#0f172a); line-height:1.1; }
 .rl-stat-label { font-size:11px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.3px; margin-top:4px; }
 
 /* ── Toolbar ── */
@@ -44,7 +44,7 @@
 .rl-table thead { background:linear-gradient(135deg,#f8fafc,#f1f5f9); }
 .rl-table th { padding:12px 16px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; text-align:left; border-bottom:1px solid #e8ecf1; white-space:nowrap; }
 .rl-table th.center { text-align:center; }
-.rl-table td { padding:12px 16px; font-size:13px; color:#334155; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.rl-table td { padding:10px 16px; font-size:12px; color:#334155; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
 .rl-table tr:last-child td { border-bottom:none; }
 .rl-table tr { transition:background .15s; }
 .rl-table tbody tr:hover { background:#fafbff; }

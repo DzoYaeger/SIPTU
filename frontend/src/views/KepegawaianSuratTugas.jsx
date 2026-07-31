@@ -413,8 +413,8 @@ const KepegawaianSuratTugas = () => {
         const items = [
             {
                 key: "edit",
-                label: record.status === "draft" ? "Lengkapi Data" : "Edit Data",
-                icon: <EditOutlined />,
+                label: record.status === "draft" ? "Lengkapi Data ST" : "Edit Data ST",
+                icon: <EditOutlined style={{ color: "#1e293b" }} />,
                 onClick: () => openCompleteModal(record),
             },
         ];
@@ -422,7 +422,7 @@ const KepegawaianSuratTugas = () => {
         items.push({
             key: "preview_protokol",
             label: "Pratinjau Protokol Kerja",
-            icon: <FileTextOutlined />,
+            icon: <FileTextOutlined style={{ color: "#1e293b" }} />,
             onClick: () => openProtokolPreview(record),
         });
 
@@ -430,7 +430,7 @@ const KepegawaianSuratTugas = () => {
             items.push({
                 key: "reset_draft",
                 label: "Kembalikan ke Draft",
-                icon: <UndoOutlined />,
+                icon: <UndoOutlined style={{ color: "#1e293b" }} />,
                 disabled: resetLoadingId === record.id,
                 onClick: () => handleResetToDraft(record),
             });
@@ -440,26 +440,26 @@ const KepegawaianSuratTugas = () => {
             items.push({
                 key: "resend_lengkap",
                 label: "Kirim Notifikasi Lengkap",
-                icon: <BellOutlined />,
+                icon: <BellOutlined style={{ color: "#1e293b" }} />,
                 disabled: resendLengkapLoadingId === record.id,
                 onClick: () => handleResendLengkapNotification(record),
             });
             items.push({
                 key: "download",
-                label: "Generate & Download Baru",
-                icon: <DownloadOutlined />,
+                label: "Generate & Download Dokumen",
+                icon: <DownloadOutlined style={{ color: "#1e293b" }} />,
                 onClick: () => handleDownload(record),
             });
             items.push({
                 key: "documents",
                 label: "Riwayat Dokumen",
-                icon: <HistoryOutlined />,
+                icon: <HistoryOutlined style={{ color: "#1e293b" }} />,
                 onClick: () => openDocumentsDrawer(record),
             });
             items.push({
                 key: "send",
                 label: "Kirim ke SIAMPARAN",
-                icon: <SendOutlined />,
+                icon: <SendOutlined style={{ color: "#1e293b" }} />,
                 disabled: resendLoadingId === record.id,
                 onClick: () => handleResendToSiamparan(record),
             });
@@ -468,9 +468,8 @@ const KepegawaianSuratTugas = () => {
         items.push({ type: "divider" });
         items.push({
             key: "delete",
-            label: "Hapus",
-            icon: <DeleteOutlined />,
-            danger: true,
+            label: <span style={{ color: "#ef4444" }}>Hapus Surat Tugas</span>,
+            icon: <DeleteOutlined style={{ color: "#ef4444" }} />,
             onClick: () => confirmDelete(record),
         });
 
@@ -692,15 +691,16 @@ const KepegawaianSuratTugas = () => {
         {
             title: "Aksi",
             key: "action",
-            width: 90,
+            width: 70,
             fixed: "right",
+            align: "center",
             render: (_, record) => (
                 <Dropdown
                     placement="bottomRight"
                     trigger={["click"]}
                     menu={{ items: buildActionItems(record) }}
                 >
-                    <Button size="small" icon={<MoreOutlined />} />
+                    <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#1e293b", fontSize: 16 }} />} />
                 </Dropdown>
             ),
         },

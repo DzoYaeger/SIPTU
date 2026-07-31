@@ -368,9 +368,9 @@ class SuratTugasController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        if (($st->status ?? 'draft') !== 'draft') {
+        if (in_array(($st->status ?? 'draft'), ['selesai'])) {
             return response()->json([
-                'message' => 'Surat tugas sudah diproses dan tidak dapat diedit.',
+                'message' => 'Surat tugas yang sudah selesai sepenuhnya tidak dapat diedit lagi.',
             ], 422);
         }
 
@@ -383,6 +383,7 @@ class SuratTugasController extends Controller
             'mak'             => 'nullable|string|max:255',
             'lokasi_tugas'    => 'nullable|string|max:500',
             'deskripsi_tugas' => 'nullable|string',
+            'password'        => 'nullable|string',
             'sarana'          => 'nullable|array',
             'sarana.*.id'     => 'nullable|integer',
             'sarana.*.nama'   => 'nullable|string|max:255',
@@ -412,7 +413,7 @@ class SuratTugasController extends Controller
         $saranaLocs  = collect($saranaData)->pluck('lokasi')->filter()->values()->toArray();
 
         $oldMak = $st->mak;
-        $st->update([
+        $updateData = [
             'tanggal_mulai'   => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'mak'             => $request->mak,
@@ -423,7 +424,20 @@ class SuratTugasController extends Controller
             'sarana_lokasi'   => !empty($saranaLocs) ? implode('; ', $saranaLocs) : null,
             'ketua_tim_id'    => $ketuaTimId,
             'external_participants' => $externalParticipants,
-        ]);
+        ];
+
+        // Handle re-signing TTE with password if provided
+        if ($request->filled('password')) {
+            if (Hash::check($request->password, $user->password)) {
+                $updateData['signature_token'] = (string) Str::uuid();
+                $updateData['signed_at'] = now();
+                $updateData['signed_by'] = $user->id;
+            } else {
+                return response()->json(['message' => 'Password SIPTU salah. Gagal memperbarui TTE.'], 422);
+            }
+        }
+
+        $st->update($updateData);
 
         $syncData = [];
         foreach ($employeeIds as $index => $id) {
@@ -444,6 +458,53 @@ class SuratTugasController extends Controller
 
         return response()->json([
             'message' => 'Data surat tugas berhasil diperbarui.',
+            'data' => $st,
+        ]);
+    }
+
+    /**
+     * Tanda tangan ulang (Re-sign) TTE oleh Pembuat/Petugas ST.
+     */
+    public function reSign(Request $request, $id, FonnteService $fonnteService)
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+        $st = SuratTugas::with(['employees', 'ketuaTim', 'creator'])->findOrFail($id);
+
+        $employee = Employee::query()->where('nip', $user->nip)->first();
+        $isAllowed = ($st->created_by === $user->id) ||
+                     ($st->user_id === $user->id) ||
+                     ($st->ketua_tim_id && $employee && $st->ketua_tim_id === $employee->id) ||
+                     ($st->ketuaTim && ($st->ketuaTim->nip === $user->nip || $st->ketuaTim->user_id === $user->id));
+
+        if (!$isAllowed) {
+            return response()->json(['message' => 'Anda tidak memiliki hak akses untuk menandatangani surat tugas ini.'], 403);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Password SIPTU yang Anda masukkan salah.'], 422);
+        }
+
+        $st->signature_token = (string) Str::uuid();
+        $st->signed_at = now();
+        $st->signed_by = $user->id;
+        $st->save();
+
+        try {
+            $this->notifyKetuaTimForSign($st, $fonnteService);
+        } catch (\Throwable $e) {
+            Log::warning('Re-sign notification error: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Tanda tangan TTE berhasil diperbarui secara sah!',
             'data' => $st,
         ]);
     }

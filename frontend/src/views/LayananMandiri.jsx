@@ -37,6 +37,7 @@ import {
   MailOutlined,
   PhoneOutlined,
   VideoCameraOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { Modal, Steps, Tag, Spin, Button } from "antd";
 import dayjs from "dayjs";
@@ -227,7 +228,9 @@ const LayananMandiri = () => {
   // Categories filter removed
 
   const rawServices = [
+    { id: "simkeu", title: "SIMKEU", description: "Sistem Informasi Keuangan: Pembuatan & Kelola LPJ Pertanggungjawaban Keuangan serta Invoice Belanja.", icon: <BankOutlined />, link: "/app/simkeu", accent: "#10b981", emoji: "💰", category: "keuangan" },
     { id: "siptu-drive", title: "SIPTU Drive", description: "Penyimpanan cloud terintegrasi untuk berkas kerja dan kolaborasi dokumen Anda.", icon: <CloudServerOutlined />, link: "/app/penyimpanan-cloud", accent: "#1a73e8", emoji: "☁️", category: "kepegawaian" },
+    { id: "pelatihan-pegawai", title: "Sesi Kompak", description: "Sinkronkan & lihat data pelatihan teknis, workshop, serta diseminasi pegawai dari Google Sheets.", icon: <BookOutlined />, link: "/app/pelatihan-pegawai", accent: "#0f5b99", emoji: "📚", category: "kepegawaian" },
     { id: "kearsipan", title: "Peminjaman Arsip", description: "Ajukan peminjaman arsip fisik atau digital dengan validasi TTE.", icon: <FileProtectOutlined />, link: "/kearsipan-peminjaman/new", accent: "#3b82f6", emoji: "📁", category: "kepegawaian" },
     { id: "simba", title: "SIMBA", description: "Sistem Informasi Manajemen Barang & Aset BMN: Peminjaman Aset, Permintaan Persediaan, dan Keluhan Pemeliharaan.", icon: <BankOutlined />, link: "/app/simba", accent: "#2563eb", emoji: "📦", category: "logistik" },
     { id: "ruangan", title: "Peminjaman Ruangan", description: "Lihat jadwal dan ajukan peminjaman ruangan rapat atau aula.", icon: <FundOutlined />, link: "/peminjaman-ruangan", accent: "#6366f1", emoji: "🏢", category: "logistik" },

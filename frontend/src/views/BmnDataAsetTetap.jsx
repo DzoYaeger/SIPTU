@@ -21,7 +21,8 @@ import {
   Badge,
   Descriptions,
   Divider,
-  QRCode // Ant Design has a QRCode component now in newer versions, falling back to icon if issue
+  QRCode, // Ant Design has a QRCode component now in newer versions, falling back to icon if issue
+  Dropdown,
 } from 'antd';
 import { buildMessageAdapter } from '../utils/notify.js';
 import {
@@ -39,7 +40,8 @@ import {
   WarningOutlined,
   QrcodeOutlined,
   DownloadOutlined,
-  GoldOutlined
+  GoldOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import StatisticCard from '../components/StatisticCard.jsx';
@@ -265,27 +267,42 @@ const BmnDataAsetTetap = () => {
       }
     },
     {
-      title: 'QR Code',
-      key: 'qr',
-      align: 'center',
-      width: 80,
-      render: (_, r) => (
-        <Tooltip title="Lihat QR">
-          <Button type="text" icon={<QrcodeOutlined style={{ color: '#1890ff' }} />} onClick={() => { setActiveAsset(r); setQrModalOpen(true); }} />
-        </Tooltip>
-      )
-    },
-    {
       title: 'Aksi',
       key: 'action',
-      align: 'right',
-      render: (_, r) => (
-        <Space>
-          <Tooltip title="Edit"><Button type="text" icon={<EditOutlined style={{ color: '#faad14' }} />} onClick={() => handleEdit(r)} /></Tooltip>
-          <Tooltip title="Hapus"><Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} /></Tooltip>
-        </Space>
-      )
-    }
+      width: 70,
+      align: 'center',
+      render: (_, r) => {
+        const items = [
+          {
+            key: 'qr',
+            label: 'Lihat QR Code',
+            icon: <QrcodeOutlined style={{ color: '#1e293b' }} />,
+            onClick: () => { setActiveAsset(r); setQrModalOpen(true); },
+          },
+          {
+            key: 'edit',
+            label: 'Edit Data Aset',
+            icon: <EditOutlined style={{ color: '#1e293b' }} />,
+            onClick: () => handleEdit(r),
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            label: <span style={{ color: '#ef4444' }}>Hapus Data</span>,
+            icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+            onClick: () => handleDelete(r),
+          },
+        ];
+
+        return (
+          <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+          </Dropdown>
+        );
+      },
+    },
   ];
 
   return (

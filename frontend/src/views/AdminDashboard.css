@@ -68,14 +68,14 @@
 }
 .module-title {
   font-family: var(--ff-heading);
-  font-size: 20px !important;
+  font-size: 22px !important;
   font-weight: 700 !important;
   color: var(--db-primary) !important;
   margin: 0 0 2px 0 !important;
   letter-spacing: -0.3px;
 }
 .module-subtitle {
-  font-size: 12.5px !important;
+  font-size: 12px !important;
   color: var(--db-text-muted) !important;
   font-weight: 400;
 }
@@ -83,8 +83,8 @@
 .module-toolbar .ant-space button {
   border-radius: 8px;
   font-weight: 600;
-  font-size: 12.5px;
-  height: 36px;
+  font-size: 13px;
+  height: 32px;
   transition: all var(--trans-fast);
 }
 

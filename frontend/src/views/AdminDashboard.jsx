@@ -14,7 +14,6 @@ import {
   Select,
   Skeleton,
   Space,
-  Statistic,
   Tabs,
   Tag,
   Tooltip,
@@ -26,15 +25,11 @@ import {
   BellOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  CloudServerOutlined,
-  DatabaseOutlined,
-  FieldTimeOutlined,
   FilePdfOutlined,
   LineChartOutlined,
   ReloadOutlined,
   RocketOutlined,
   SafetyOutlined,
-  ShoppingOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   UserOutlined,
@@ -43,6 +38,9 @@ import {
   ArrowDownOutlined,
   FolderOutlined,
   FolderOpenOutlined,
+  BookOutlined,
+  RightOutlined,
+  CheckCircleFilled,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -56,6 +54,7 @@ const { Title, Text } = Typography;
 const MODULE_META = {
   archive: {
     title: "Kearsipan",
+    desc: "Peminjaman & Tata Kearsipan",
     tone: "cyan",
     route: "/app/kearsipan-peminjaman",
     icon: <FolderOutlined style={{ fontSize: 20, color: "#06b6d4" }} />,
@@ -63,7 +62,8 @@ const MODULE_META = {
     gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
   },
   bmn: {
-    title: "BMN",
+    title: "BMN & Persediaan",
+    desc: "Aset Tetap & Permintaan Barang",
     tone: "blue",
     route: "/app/bmn-peminjaman-aset",
     icon: <FolderOutlined style={{ fontSize: 20, color: "#3b82f6" }} />,
@@ -72,6 +72,7 @@ const MODULE_META = {
   },
   it_helpdesk: {
     title: "IT Helpdesk",
+    desc: "Pelaporan & Kendala Sistem",
     tone: "green",
     route: "/app/it-helpdesk-pelaporan",
     icon: <FolderOutlined style={{ fontSize: 20, color: "#22c55e" }} />,
@@ -79,7 +80,8 @@ const MODULE_META = {
     gradient: "linear-gradient(135deg, #22c55e, #16a34a)",
   },
   exit_permit: {
-    title: "Izin Keluar",
+    title: "Izin Keluar RISPEG",
+    desc: "Monitoring Izin Keluar Kantor",
     tone: "amber",
     route: "/app/rispeg-izin-keluar",
     icon: <FolderOutlined style={{ fontSize: 20, color: "#f59e0b" }} />,
@@ -88,11 +90,21 @@ const MODULE_META = {
   },
   surat_tugas: {
     title: "Surat Tugas",
+    desc: "Pengajuan & Riwayat Surat Tugas",
     tone: "rose",
     route: "/app/kepegawaian-surat-tugas",
     icon: <FolderOutlined style={{ fontSize: 20, color: "#f43f5e" }} />,
     iconOpen: <FolderOpenOutlined style={{ fontSize: 20, color: "#e11d48" }} />,
     gradient: "linear-gradient(135deg, #f43f5e, #e11d48)",
+  },
+  pelatihan: {
+    title: "Pelatihan & Diseminasi",
+    desc: "Monitoring SESI KOMPAK & Bangkom",
+    tone: "indigo",
+    route: "/app/pelatihan-pegawai",
+    icon: <BookOutlined style={{ fontSize: 20, color: "#6366f1" }} />,
+    iconOpen: <BookOutlined style={{ fontSize: 20, color: "#4f46e5" }} />,
+    gradient: "linear-gradient(135deg, #6366f1, #4f46e5)",
   },
 };
 
@@ -123,7 +135,6 @@ function AdminDashboard() {
   const [reportDateRange, setReportDateRange] = useState([dayjs().startOf("month"), dayjs().endOf("month")]);
   const [reportLoading, setReportLoading] = useState(false);
   const { message } = AntdApp.useApp();
-
 
   // AI Audit states
   const [auditLoading, setAuditLoading] = useState(false);
@@ -164,7 +175,6 @@ function AdminDashboard() {
         queryStr += `&start_date=${start}&end_date=${end}`;
         filename += `_Periode_${reportDateRange[0].format("YYYYMMDD")}_${reportDateRange[1].format("YYYYMMDD")}`;
       } else {
-        // monthly
         queryStr += `&month=${reportMonth.format("M")}&year=${reportMonth.format("YYYY")}`;
         filename += `_${reportMonth.format("MMMM_YYYY")}`;
       }
@@ -219,12 +229,6 @@ function AdminDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const trendMax = useMemo(() => {
-    if (!data?.trends?.series) return 1;
-    const values = Object.values(data.trends.series).flat();
-    return Math.max(1, ...values);
-  }, [data]);
-
   const trendChartData = useMemo(() => {
     if (!data?.trends?.labels) return [];
     return data.trends.labels.map((label, idx) => ({
@@ -238,7 +242,7 @@ function AdminDashboard() {
   }, [data]);
 
   const kpiDetails = useMemo(() => {
-    const details = {
+    return {
       services_total: { target: 1000, rate: "+12.4%", label: "vs bln lalu", positive: true },
       services_today: { target: 20, rate: "+8.2%", label: "vs kemarin", positive: true },
       users_total: { target: 50, rate: "+4.1%", label: "vs bln lalu", positive: true },
@@ -246,7 +250,6 @@ function AdminDashboard() {
       assets_total: { target: 500, rate: "+5.8%", label: "vs bln lalu", positive: true },
       inventories_total: { target: 200, rate: "-1.4%", label: "vs bln lalu", positive: false },
     };
-    return details;
   }, []);
 
   if (currentRole !== "admin") {
@@ -254,7 +257,9 @@ function AdminDashboard() {
       <Card className="admin-dashboard__guard" variant="borderless">
         <Title level={4}>Akses Terbatas</Title>
         <Text>Dashboard command center hanya tersedia untuk admin.</Text>
-        <Button type="primary" style={{ marginTop: 12 }} onClick={() => navigate("/app/layanan-mandiri")}>Buka Layanan Mandiri</Button>
+        <Button type="primary" style={{ marginTop: 12 }} onClick={() => navigate("/app/layanan-mandiri")}>
+          Buka Layanan Mandiri
+        </Button>
       </Card>
     );
   }
@@ -270,9 +275,9 @@ function AdminDashboard() {
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>
         <div>
-          <Title level={3} className="module-title">Dashboard Administrasi</Title>
+          <Title level={3} className="module-title">Dashboard Operasional Administrasi</Title>
           <Text className="module-subtitle">
-            Panel analitik lintas modul. Pengguna: <strong>{user?.name ?? "-"}</strong> | Update terakhir: <strong>{data?.generated_at ? new Date(data.generated_at).toLocaleString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Memuat..."}</strong>
+            Pusat Kendali & Analitik Layanan SIPTU | Pengguna: <strong>{user?.name ?? "-"}</strong> | Terakhir Diperbarui: <strong>{data?.generated_at ? new Date(data.generated_at).toLocaleString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Memuat..."}</strong>
           </Text>
         </div>
         <Space wrap>
@@ -282,7 +287,7 @@ function AdminDashboard() {
             danger
             type="primary"
           >
-            Cetak Laporan Operasional
+            Cetak Laporan PDF
           </Button>
           <Button
             icon={<SafetyOutlined />}
@@ -303,128 +308,127 @@ function AdminDashboard() {
         </Space>
       </div>
 
-          {/* ─── Report Export Modal ──────────────────────────── */}
-          <Modal
-            open={reportModalOpen}
-            onCancel={() => setReportModalOpen(false)}
-            title={
-              <Space>
-                <FilePdfOutlined style={{ color: "#ef4444" }} />
-                <span>Cetak Laporan Operasional SIPTU</span>
-              </Space>
-            }
-            okText={reportLoading ? "Memproses AI..." : "Generate & Download PDF"}
-            okButtonProps={{
-              loading: reportLoading,
-              icon: <FilePdfOutlined />,
-              style: { borderRadius: 8, fontWeight: 600 },
-            }}
-            cancelButtonProps={{ style: { borderRadius: 8 } }}
-            onOk={handleExportReport}
-            centered
-            styles={{ body: { paddingTop: 8 } }}
-          >
-            <div style={{ padding: "4px 0" }}>
-              <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                Pilih periode laporan. Sistem akan mengumpulkan data dari seluruh modul dan menggunakan <strong>Gemini AI</strong> untuk membuat analisis secara otomatis.
-              </Text>
-              
-              <Tabs
-                activeKey={reportType}
-                onChange={setReportType}
-                type="card"
-                items={[
-                  {
-                    key: "monthly",
-                    label: "Bulanan",
-                    children: (
-                      <div style={{ textAlign: "center", padding: "16px 0" }}>
-                        <DatePicker
-                          picker="month"
-                          value={reportMonth}
-                          onChange={(val) => val && setReportMonth(val)}
-                          allowClear={false}
-                          format="MMMM YYYY"
-                          style={{ width: "100%", borderRadius: 8 }}
-                          size="large"
-                        />
-                      </div>
-                    ),
-                  },
-                  {
-                    key: "custom",
-                    label: "Rentang Tanggal",
-                    children: (
-                      <div style={{ textAlign: "center", padding: "16px 0" }}>
-                        <DatePicker.RangePicker
-                          value={reportDateRange}
-                          onChange={(val) => val && setReportDateRange(val)}
-                          allowClear={false}
-                          format="DD MMM YYYY"
-                          style={{ width: "100%", borderRadius: 8 }}
-                          size="large"
-                        />
-                      </div>
-                    ),
-                  },
-                  {
-                    key: "quarterly",
-                    label: "Triwulan",
-                    children: (
-                      <div style={{ display: "flex", gap: 12, padding: "16px 0" }}>
-                        <Select
-                          value={reportQuarter}
-                          onChange={setReportQuarter}
-                          size="large"
-                          style={{ flex: 1 }}
-                          options={[
-                            { value: 1, label: "TW I (Jan - Mar)" },
-                            { value: 2, label: "TW II (Apr - Jun)" },
-                            { value: 3, label: "TW III (Jul - Sep)" },
-                            { value: 4, label: "TW IV (Okt - Des)" },
-                          ]}
-                        />
-                        <DatePicker
-                          picker="year"
-                          value={reportYear}
-                          onChange={(val) => val && setReportYear(val)}
-                          allowClear={false}
-                          style={{ width: 120, borderRadius: 8 }}
-                          size="large"
-                        />
-                      </div>
-                    ),
-                  },
-                  {
-                    key: "yearly",
-                    label: "Tahunan",
-                    children: (
-                      <div style={{ textAlign: "center", padding: "16px 0" }}>
-                        <DatePicker
-                          picker="year"
-                          value={reportYear}
-                          onChange={(val) => val && setReportYear(val)}
-                          allowClear={false}
-                          style={{ width: "100%", borderRadius: 8 }}
-                          size="large"
-                        />
-                      </div>
-                    ),
-                  },
-                ]}
-              />
+      {/* ─── Report Export Modal ──────────────────────────── */}
+      <Modal
+        open={reportModalOpen}
+        onCancel={() => setReportModalOpen(false)}
+        title={
+          <Space>
+            <FilePdfOutlined style={{ color: "#ef4444" }} />
+            <span>Cetak Laporan Operasional SIPTU</span>
+          </Space>
+        }
+        okText={reportLoading ? "Memproses AI..." : "Generate & Download PDF"}
+        okButtonProps={{
+          loading: reportLoading,
+          icon: <FilePdfOutlined />,
+          style: { borderRadius: 8, fontWeight: 600 },
+        }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+        onOk={handleExportReport}
+        centered
+      >
+        <div style={{ padding: "4px 0" }}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            Pilih periode laporan. Sistem akan mengumpulkan data dari seluruh modul dan menggunakan <strong>Gemini AI</strong> untuk membuat analisis secara otomatis.
+          </Text>
+          
+          <Tabs
+            activeKey={reportType}
+            onChange={setReportType}
+            type="card"
+            items={[
+              {
+                key: "monthly",
+                label: "Bulanan",
+                children: (
+                  <div style={{ textAlign: "center", padding: "16px 0" }}>
+                    <DatePicker
+                      picker="month"
+                      value={reportMonth}
+                      onChange={(val) => val && setReportMonth(val)}
+                      allowClear={false}
+                      format="MMMM YYYY"
+                      style={{ width: "100%", borderRadius: 8 }}
+                      size="large"
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: "custom",
+                label: "Rentang Tanggal",
+                children: (
+                  <div style={{ textAlign: "center", padding: "16px 0" }}>
+                    <DatePicker.RangePicker
+                      value={reportDateRange}
+                      onChange={(val) => val && setReportDateRange(val)}
+                      allowClear={false}
+                      format="DD MMM YYYY"
+                      style={{ width: "100%", borderRadius: 8 }}
+                      size="large"
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: "quarterly",
+                label: "Triwulan",
+                children: (
+                  <div style={{ display: "flex", gap: 12, padding: "16px 0" }}>
+                    <Select
+                      value={reportQuarter}
+                      onChange={setReportQuarter}
+                      size="large"
+                      style={{ flex: 1 }}
+                      options={[
+                        { value: 1, label: "TW I (Jan - Mar)" },
+                        { value: 2, label: "TW II (Apr - Jun)" },
+                        { value: 3, label: "TW III (Jul - Sep)" },
+                        { value: 4, label: "TW IV (Okt - Des)" },
+                      ]}
+                    />
+                    <DatePicker
+                      picker="year"
+                      value={reportYear}
+                      onChange={(val) => val && setReportYear(val)}
+                      allowClear={false}
+                      style={{ width: 120, borderRadius: 8 }}
+                      size="large"
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: "yearly",
+                label: "Tahunan",
+                children: (
+                  <div style={{ textAlign: "center", padding: "16px 0" }}>
+                    <DatePicker
+                      picker="year"
+                      value={reportYear}
+                      onChange={(val) => val && setReportYear(val)}
+                      allowClear={false}
+                      style={{ width: "100%", borderRadius: 8 }}
+                      size="large"
+                    />
+                  </div>
+                ),
+              },
+            ]}
+          />
 
-              {reportLoading && (
-                <div style={{ marginTop: 12, textAlign: "center" }}>
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    ⏳ Sedang memproses data dan membuat analisis AI...
-                    <br />
-                    Proses ini memerlukan waktu 10-20 detik.
-                  </Text>
-                </div>
-              )}
+          {reportLoading && (
+            <div style={{ marginTop: 12, textAlign: "center" }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                ⏳ Sedang memproses data dan membuat analisis AI...
+                <br />
+                Proses ini memerlukan waktu 10-20 detik.
+              </Text>
             </div>
-          </Modal>
+          )}
+        </div>
+      </Modal>
 
       {error && (
         <Alert
@@ -494,18 +498,69 @@ function AdminDashboard() {
         })}
       </Row>
 
+      {/* ─── Modul Layanan Inti & Pintasan Aksi ───────────────────── */}
+      <Card className="admin-dashboard__panel" variant="borderless">
+        <div className="admin-dashboard__panel-head" style={{ marginBottom: 16 }}>
+          <Title level={4}><AppstoreOutlined style={{ marginRight: 8 }} />Modul Layanan Inti & Pintasan Aksi</Title>
+          <Text type="secondary">Akses cepat dan ringkasan status operasional per modul layanan.</Text>
+        </div>
+        <Row gutter={[16, 16]}>
+          {Object.entries(MODULE_META).map(([key, meta]) => {
+            const svc = data?.services?.[key] ?? { total: 0, pending: 0, active: 0, completed: 0 };
+            return (
+              <Col xs={24} sm={12} md={8} lg={4} key={key}>
+                <div 
+                  className="module-shortcut-card"
+                  onClick={() => navigate(meta.route)}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 12,
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    height: "100%",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {meta.icon}
+                      </div>
+                      <RightOutlined style={{ fontSize: 11, color: "#94a3b8" }} />
+                    </div>
+                    <Text strong style={{ fontSize: 13, color: "#0f172a", display: "block", marginBottom: 2 }}>
+                      {meta.title}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: "#64748b" }}>{meta.desc}</Text>
+                  </div>
+
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                    <span>Pending: <strong style={{ color: svc.pending > 0 ? "#dc2626" : "#64748b" }}>{svc.pending}</strong></span>
+                    <span>Aktif: <strong style={{ color: "#2563eb" }}>{svc.active}</strong></span>
+                  </div>
+                </div>
+              </Col>
+            );
+          })}
+        </Row>
+      </Card>
+
       {/* ─── AI Audit Results ───────────────────────────────────── */}
       {(auditLoading || auditData) && (
         <Card 
           className="admin-dashboard__panel admin-dashboard__panel--ai" 
           variant="borderless"
-          style={{ marginTop: 14, background: "linear-gradient(to right, #1e1b4b, #0f172a)", border: "1px solid rgba(99, 102, 241, 0.2)" }}
+          style={{ background: "linear-gradient(to right, #1e1b4b, #0f172a)", border: "1px solid rgba(99, 102, 241, 0.2)" }}
         >
           {auditLoading ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
               <ThunderboltOutlined spin style={{ fontSize: 32, color: "#6366f1", marginBottom: 16 }} />
-              <Title level={4} style={{ color: "#e2e8f0" }}>Gemini sedang melakukan audit data...</Title>
-              <Text type="secondary" style={{ color: "#94a3b8" }}>Menganalisis anomali, beban kerja, dan integritas data seluruh modul.</Text>
+              <Title level={4} style={{ color: "#e2e8f0" }}>Gemini AI sedang menganalisis seluruh data operasional...</Title>
+              <Text type="secondary" style={{ color: "#94a3b8" }}>Mendeteksi anomali, pola beban kerja, dan ringkasan eksekutif.</Text>
             </div>
           ) : (
             <div className="admin-dashboard__ai-content">
@@ -519,7 +574,7 @@ function AdminDashboard() {
                       trailColor="rgba(255,255,255,0.05)"
                       format={(percent) => (
                         <div style={{ color: "#fff" }}>
-                          <div style={{ fontSize: 24, fontWeight: 800 }}>{percent}</div>
+                          <div style={{ fontSize: 24, fontWeight: 800 }}>{percent}%</div>
                           <div style={{ fontSize: 10, opacity: 0.7 }}>HEALTH SCORE</div>
                         </div>
                       )}
@@ -616,18 +671,18 @@ function AdminDashboard() {
                     })} 
                     margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(226, 232, 240, 0.5)" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} allowDecimals={false} />
                     <RechartsTooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8, color: '#f8fafc' }}
+                      contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: 8, color: '#f8fafc' }}
                       itemStyle={{ color: '#f8fafc' }}
-                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
                     />
                     <Legend wrapperStyle={{ paddingTop: 10 }} />
                     <Bar dataKey="Pending" stackId="a" fill="#dc2626" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Aktif" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Selesai" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Aktif" stackId="a" fill="#2563eb" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Selesai" stackId="a" fill="#16a34a" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -711,11 +766,11 @@ function AdminDashboard() {
                         <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(226, 232, 240, 0.3)" vertical={false} />
-                    <XAxis dataKey="date" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 11 }} />
-                    <YAxis stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(226, 232, 240, 0.5)" vertical={false} />
+                    <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} />
+                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
                     <RechartsTooltip
-                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8, color: '#f8fafc', fontSize: 12 }}
+                      contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: 8, color: '#f8fafc', fontSize: 12 }}
                       itemStyle={{ color: '#f8fafc' }}
                     />
                     <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />

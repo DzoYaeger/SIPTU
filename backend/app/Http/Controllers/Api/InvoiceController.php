@@ -96,6 +96,12 @@ class InvoiceController extends Controller
     {
         $query = Invoice::with(['taxes', 'creator', 'approver']);
 
+        // Filter for non-admin users: only show invoices created by the logged-in user
+        $user = $request->user();
+        if ($user && ($user->base_role ?? 'operator') !== 'admin') {
+            $query->where('created_by', $user->id);
+        }
+
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
@@ -103,7 +109,8 @@ class InvoiceController extends Controller
                   ->orWhere('invoice_no', 'like', "%$s%")
                   ->orWhere('mak', 'like', "%$s%")
                   ->orWhere('deskripsi', 'like', "%$s%")
-                  ->orWhere('penerima_name', 'like', "%$s%");
+                  ->orWhere('penerima_name', 'like', "%$s%")
+                  ->orWhereHas('creator', fn($cq) => $cq->where('name', 'like', "%$s%"));
             });
         }
 

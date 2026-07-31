@@ -77,6 +77,13 @@ const Kgb = () => {
 
   const [activeTab, setActiveTab] = useState('eligible');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset to page 1 on search or tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
 
   const [inputModalOpen, setInputModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -376,8 +383,19 @@ const Kgb = () => {
             columns={commonColumns}
             dataSource={filteredData}
             rowKey="id"
-            pagination={{ pageSize: 10 }}
             loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: filteredData.length,
+              onChange: (page, pSize) => {
+                setCurrentPage(page);
+                setPageSize(pSize);
+              },
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '15', '25', '50', '100'],
+              showTotal: (total, range) => `Menampilkan ${range[0]}-${range[1]} dari ${total} data KGB`,
+            }}
           />
         )}
       </Card>

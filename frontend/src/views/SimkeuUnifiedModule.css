@@ -1,0 +1,166 @@
+/* ============================================================
+   SimkeuUnifiedModule.css — SIMKEU Corporate Minimalist Design System
+   ============================================================ */
+
+:root {
+  --simkeu-primary: #0F5B99;
+  --simkeu-primary-dark: #0A4373;
+  --simkeu-emerald: #059669;
+  --simkeu-bg: #F8FAFC;
+  --simkeu-card-bg: #FFFFFF;
+  --simkeu-text-dark: #0F172A;
+  --simkeu-text-muted: #64748B;
+  --simkeu-border: #E2E8F0;
+  --simkeu-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+.simkeu-unified-container {
+  min-height: 100vh;
+  background-color: var(--simkeu-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  padding: 24px;
+  color: var(--simkeu-text-dark);
+}
+
+/* ── Top Corporate Header ── */
+.simkeu-header {
+  background: var(--simkeu-card-bg);
+  border-radius: 12px;
+  padding: 18px 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--simkeu-border);
+  box-shadow: var(--simkeu-shadow-sm);
+}
+
+.simkeu-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.simkeu-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.simkeu-back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--simkeu-border);
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.simkeu-back-btn:hover {
+  background: #f1f5f9;
+  color: var(--simkeu-primary);
+  border-color: #cbd5e1;
+}
+
+.simkeu-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.simkeu-brand-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f5b99 0%, #0a4373 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(15, 91, 153, 0.22);
+}
+
+.simkeu-brand-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--simkeu-text-dark);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.02em;
+}
+
+.simkeu-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--simkeu-primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.simkeu-brand-subtitle {
+  font-size: 13px;
+  color: var(--simkeu-text-muted);
+  margin-top: 2px;
+}
+
+.simkeu-header-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: #f8fafc;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--simkeu-border);
+}
+
+/* ── Body & Tabs ── */
+.simkeu-body {
+  background: var(--simkeu-card-bg);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--simkeu-border);
+  box-shadow: var(--simkeu-shadow-sm);
+}
+
+.simkeu-tabs .ant-tabs-nav {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.simkeu-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+
+.simkeu-tab-content {
+  min-height: 500px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .simkeu-unified-container {
+    padding: 14px;
+  }
+  .simkeu-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .simkeu-header-user {
+    align-items: flex-start;
+    width: 100%;
+  }
+}

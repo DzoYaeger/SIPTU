@@ -233,7 +233,7 @@
 
 .ant-table-tbody > tr > td {
   font-family: var(--ff-body) !important;
-  font-size: var(--fs-body) !important;
+  font-size: var(--fs-sm) !important; /* 12px <= 10pt */
   color: var(--color-text) !important;
 }
 

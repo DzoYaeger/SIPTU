@@ -365,29 +365,31 @@ const BmnPeminjamanAset = () => {
     {
       title: 'Aksi',
       key: 'actions',
-      width: 80,
+      width: 70,
       align: 'center',
       render: (_, record) => {
         const items = [
           {
             key: 'detail',
-            label: 'Detail',
-            icon: <EyeOutlined style={{ color: '#1890ff' }} />,
+            label: 'Lihat Detail Peminjaman',
+            icon: <EyeOutlined style={{ color: '#1e293b' }} />,
             onClick: () => handleViewDetail(record)
           }
         ];
         if (currentRole === 'admin' || currentRole === 'validator') {
           items.push({
+            type: 'divider',
+          });
+          items.push({
             key: 'delete',
-            label: 'Hapus',
-            danger: true,
-            icon: <DeleteOutlined />,
+            label: <span style={{ color: '#ef4444' }}>Hapus Data</span>,
+            icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
             onClick: () => handleDelete(record)
           });
         }
         return (
           <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
           </Dropdown>
         );
       }

@@ -1,4 +1,81 @@
-/* ── Page Layout (used alongside NavbarMenu) ── */
+/* ── Aesthetic Weather & Time Header Widget ── */
+.aesthetic-header-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-left: 8px;
+  box-shadow: none;
+}
+
+.aesthetic-header-widget .widget-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.aesthetic-header-widget .weather-box {
+  color: #0f172a;
+}
+
+.aesthetic-header-widget .location-name {
+  font-weight: 700;
+  color: #0f5b99;
+}
+
+.aesthetic-header-widget .weather-temp {
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  border: none;
+}
+
+.aesthetic-header-widget .weather-badge {
+  font-size: 11px;
+  color: #475569;
+  background: #f8fafc;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  border: none;
+}
+
+.aesthetic-header-widget .widget-divider {
+  width: 1px;
+  height: 14px;
+  background: #e2e8f0;
+}
+
+.aesthetic-header-widget .time-box {
+  color: #0f5b99;
+}
+
+.aesthetic-header-widget .clock-icon {
+  color: #2563eb;
+  font-size: 12px;
+}
+
+.aesthetic-header-widget .clock-time {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #0f172a;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.aesthetic-header-widget .clock-date {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
 
 .profile-role {
   font-size: 11px;
@@ -634,7 +711,7 @@
   border-right: none !important;
   background: transparent !important;
   padding: 4px 0 !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   max-height: calc(100vh - 52px);
   overflow-y: auto;
 }
@@ -686,17 +763,28 @@
   overflow: hidden !important;
 }
 
-/* Compact Menu & Submenu Items */
-.app-sider .sidebar-menu .ant-menu-item,
-.app-sider .sidebar-menu .ant-menu-submenu-title {
+/* Compact Menu & Submenu Items — Auto-wrap text for long titles */
+.app-sider:not(.ant-layout-sider-collapsed) .sidebar-menu .ant-menu-item,
+.app-sider:not(.ant-layout-sider-collapsed) .sidebar-menu .ant-menu-submenu-title {
   margin: 2px 4px !important;
   width: calc(100% - 8px) !important;
   border-radius: 6px !important;
-  height: 34px !important;
-  line-height: 34px !important;
+  height: auto !important;
+  min-height: 34px !important;
+  line-height: 1.35 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
   padding-left: 8px !important;
   padding-right: 6px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.app-sider:not(.ant-layout-sider-collapsed) .sidebar-menu .ant-menu-title-content {
+  white-space: normal !important;
+  word-break: break-word !important;
+  line-height: 1.35 !important;
 }
 
 .app-sider .sidebar-menu .ant-menu-item .ant-menu-item-icon,
@@ -705,11 +793,14 @@
   min-width: 16px !important;
 }
 
-.app-sider .sidebar-menu .ant-menu-sub .ant-menu-item {
+.app-sider:not(.ant-layout-sider-collapsed) .sidebar-menu .ant-menu-sub .ant-menu-item {
   padding-left: 26px !important;
-  height: 32px !important;
-  line-height: 32px !important;
-  font-size: 11.5px !important;
+  height: auto !important;
+  min-height: 32px !important;
+  line-height: 1.35 !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  font-size: 12px !important;
 }
 
 .app-sider .sidebar-menu .ant-menu-item-selected {
@@ -721,7 +812,7 @@
 .app-top-header {
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0;
-  padding: 0 16px !important;
+  padding: 0 !important;
   height: 48px !important;
   line-height: normal !important;
   display: flex !important;
@@ -868,9 +959,11 @@
 }
 
 .sidebar-menu-text-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.35 !important;
   flex-shrink: 1;
 }
 

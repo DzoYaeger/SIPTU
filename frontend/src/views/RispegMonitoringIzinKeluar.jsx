@@ -40,6 +40,7 @@ import {
   HomeOutlined,
   TeamOutlined,
   MoreOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
@@ -87,6 +88,7 @@ function RispegMonitoringIzinKeluar() {
   const [editReturnEnabled, setEditReturnEnabled] = useState(false);
   const [savingEditTime, setSavingEditTime] = useState(false);
   const [filterPermitType, setFilterPermitType] = useState("all");
+  const [filterDuration, setFilterDuration] = useState("all"); // all | hide_zero | only_zero
   const [breakSettings, setBreakSettings] = useState({
     mon_thu: { start: "12:00", end: "13:00" },
     fri: { start: "12:00", end: "13:30" },
@@ -153,7 +155,7 @@ function RispegMonitoringIzinKeluar() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterDate, filterMode, search, filterPermitType]);
+  }, [filterDate, filterMode, search, filterPermitType, filterDuration]);
 
   useEffect(() => {
     const intervalId = setInterval(() => setLiveNow(Date.now()), 1000);
@@ -472,10 +474,22 @@ function RispegMonitoringIzinKeluar() {
     return result; 
   };
 
+  // Filter raw permits by duration option (e.g. hide 00:00:00 duration)
+  const processedData = useMemo(() => {
+    if (filterDuration === "all") return data;
+    return data.filter((item) => {
+      const { effective } = getLiveDurationSeconds(item);
+      const isZero = (effective || 0) <= 0;
+      if (filterDuration === "hide_zero") return !isZero;
+      if (filterDuration === "only_zero") return isZero;
+      return true;
+    });
+  }, [data, filterDuration, liveNow, breakSettings]);
+
   // Group data by employee
   const groupedData = useMemo(() => {
     const groups = {};
-    data.forEach((item) => {
+    processedData.forEach((item) => {
       const key = item.employee_id || item.nip;
       if (!groups[key]) {
         groups[key] = {
@@ -505,7 +519,7 @@ function RispegMonitoringIzinKeluar() {
       }
     });
     return Object.values(groups);
-  }, [data, liveNow, breakSettings]);
+  }, [processedData, liveNow, breakSettings]);
 
   // Filter grouped data by search
   const filteredGroupedData = useMemo(() => {
@@ -1082,13 +1096,37 @@ function RispegMonitoringIzinKeluar() {
           <Select
             value={filterPermitType}
             onChange={setFilterPermitType}
-            style={{ width: 150 }}
+            style={{ width: 140 }}
             options={[
               { value: "all", label: "Semua Urusan" },
               { value: "Pribadi", label: "Urusan Pribadi" },
               { value: "Kantor", label: "Urusan Kantor" },
             ]}
           />
+          <Select
+            value={filterDuration}
+            onChange={setFilterDuration}
+            style={{ width: 220 }}
+            options={[
+              { value: "all", label: "Semua Durasi" },
+              { value: "hide_zero", label: "Sembunyikan Durasi 00:00:00" },
+              { value: "only_zero", label: "Hanya Durasi 00:00:00" },
+            ]}
+          />
+          {(search || filterPermitType !== "all" || filterDuration !== "all") && (
+            <Button
+              icon={<ClearOutlined />}
+              type="text"
+              danger
+              onClick={() => {
+                setSearch("");
+                setFilterPermitType("all");
+                setFilterDuration("all");
+              }}
+            >
+              Reset Filter
+            </Button>
+          )}
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchData}

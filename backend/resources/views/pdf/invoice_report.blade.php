@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <title>BUKTI PEMBELIAN - {{ $invoice->invoice_no }}</title>
     <style>
         @page {
-            size: 612pt 936pt; /* Standard F4 / Folio Size (8.5 in x 13 in) */
-            margin: 40pt 45pt 40pt 45pt; /* ~15mm clean white paper margins on all 4 sides */
+            size: 612pt 936pt;
+            /* Standard F4 / Folio Size (8.5 in x 13 in) */
+            margin: 40pt 45pt 40pt 45pt;
+            /* ~15mm clean white paper margins on all 4 sides */
         }
 
         * {
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 11pt;
             line-height: 1.35;
@@ -25,6 +29,7 @@
         .outer-border {
             border: 2px solid #000;
             padding: 20px 22px;
+            margin: 20px 22px;
             min-height: 820pt;
             box-sizing: border-box;
         }
@@ -35,7 +40,7 @@
             margin-left: auto;
             margin-right: 0;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 10px;
         }
 
         .top-meta-table td {
@@ -66,7 +71,7 @@
 
         /* Space for physical receipt attachment */
         .receipt-attachment-space {
-            height: 480pt;
+            height: 570pt;
             width: 100%;
         }
 
@@ -78,7 +83,7 @@
         }
 
         .details-table td {
-            padding: 5px 0;
+            padding: 3px 0;
             vertical-align: top;
             font-size: 11pt;
         }
@@ -86,6 +91,7 @@
         .col-label {
             width: 26%;
             font-weight: normal;
+            font-size: 11pt;
         }
 
         .col-colon {
@@ -106,15 +112,12 @@
         .terbilang-row td {
             border-top: 1.5px solid #000;
             border-bottom: 1.5px solid #000;
-            padding: 7px 0;
+            padding: 4px 0;
             font-weight: bold;
-        }
-
-        .space-row td {
-            padding: 5px 0;
         }
     </style>
 </head>
+
 <body>
     <div class="outer-border">
         <!-- Top Right Metadata Table -->
@@ -184,9 +187,6 @@
                 </tr>
             @endif
 
-            <!-- Empty Space Row before Net Total -->
-            <tr class="space-row"><td colspan="3"></td></tr>
-
             <!-- Jumlah yg dibayarkan -->
             <tr>
                 <td class="col-label" style="font-weight: normal;">Jumlah yg dibayarkan</td>
@@ -195,9 +195,6 @@
                     Rp {{ number_format($invoice->nilai_bersih, 0, ',', '.') }}
                 </td>
             </tr>
-
-            <!-- Space Row before Terbilang -->
-            <tr class="space-row"><td colspan="3"></td></tr>
 
             <!-- Terbilang -->
             <tr class="terbilang-row">
@@ -210,4 +207,5 @@
         </table>
     </div>
 </body>
+
 </html>

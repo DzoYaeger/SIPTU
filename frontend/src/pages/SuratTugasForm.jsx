@@ -57,7 +57,7 @@ const TRANSPORT_OPTIONS = [
   "Lainnya",
 ];
 
-const SuratTugasForm = ({ isEmbedded = false }) => {
+const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = null, onCancel = null }) => {
   const navigate = useNavigate();
   const { token, apiFetch, user } = useAuth();
   const [form] = Form.useForm();
@@ -102,6 +102,33 @@ const SuratTugasForm = ({ isEmbedded = false }) => {
       }
     })();
   }, [token, apiFetch]);
+
+  /* ── Pre-fill when editData is provided ── */
+  useEffect(() => {
+    if (editData) {
+      const isCustomLoc = editData.lokasi_tugas && !LOKASI_OPTIONS.includes(editData.lokasi_tugas);
+      form.setFieldsValue({
+        periode: [
+          editData.tanggal_mulai ? dayjs(editData.tanggal_mulai) : null,
+          editData.tanggal_selesai ? dayjs(editData.tanggal_selesai) : null,
+        ],
+        lokasi: isCustomLoc ? "lainnya" : editData.lokasi_tugas,
+        lokasiLainnya: isCustomLoc ? editData.lokasi_tugas : "",
+        maksud_tugas: editData.deskripsi_tugas || editData.maksud_tugas || "",
+        mak: editData.mak || "",
+      });
+
+      if (Array.isArray(editData.employees)) {
+        setSelectedEmployees(editData.employees);
+      }
+      if (editData.ketua_tim_id) {
+        setKetuaTimId(editData.ketua_tim_id);
+      }
+      if (Array.isArray(editData.external_participants)) {
+        setSelectedExternal(editData.external_participants);
+      }
+    }
+  }, [editData, form]);
 
   /* ── MAK Suggestions Fetcher ── */
   const fetchMakSuggestions = useCallback(
@@ -179,7 +206,7 @@ const SuratTugasForm = ({ isEmbedded = false }) => {
         return;
       }
 
-      if (!password) {
+      if (!password && !editData) {
         message.warning("Password SIPTU wajib diisi untuk verifikasi TTE.");
         return;
       }
@@ -211,9 +238,14 @@ const SuratTugasForm = ({ isEmbedded = false }) => {
         password: password,
       };
 
-      const endpoint = token ? "/surat-tugas" : "/public/surat-tugas";
+      const isEditMode = !!editData;
+      const endpoint = isEditMode
+        ? `/surat-tugas/${editData.id}/user-update`
+        : token ? "/surat-tugas" : "/public/surat-tugas";
+      const method = isEditMode ? "PUT" : "POST";
+
       const res = await apiFetch(endpoint, {
-        method: "POST",
+        method,
         body: JSON.stringify(payload),
       });
 
@@ -221,15 +253,20 @@ const SuratTugasForm = ({ isEmbedded = false }) => {
       if (!res.ok) {
         if (data.errors) {
           const firstErr = Object.values(data.errors).flat()[0];
-          throw new Error(firstErr || data.message || "Gagal membuat pengajuan surat tugas.");
+          throw new Error(firstErr || data.message || "Gagal menyimpan surat tugas.");
         }
-        throw new Error(data.message || "Gagal membuat pengajuan surat tugas.");
+        throw new Error(data.message || "Gagal menyimpan surat tugas.");
       }
 
-      const createdST = data.data || data;
-      setResultData(createdST);
-      setSubmitted(true);
-      message.success("Pengajuan Surat Tugas berhasil dikirim!");
+      const updatedST = data.data || data;
+      message.success(isEditMode ? "Data Surat Tugas berhasil diperbarui!" : "Pengajuan Surat Tugas berhasil dikirim!");
+
+      if (isEditMode) {
+        onEditSuccess?.(updatedST);
+      } else {
+        setResultData(updatedST);
+        setSubmitted(true);
+      }
     } catch (err) {
       message.error(err.message || "Pastikan seluruh data wajib telah diisi.");
     } finally {

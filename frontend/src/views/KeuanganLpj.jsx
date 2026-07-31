@@ -51,6 +51,7 @@ const COMPONENTS = [
     { key: "uang_transport_bus",       label: "Transport Bus",        color: "#4f46e5", type: "departure_return" },
     { key: "uang_transport_taxi",      label: "Transport Taxi",       color: "#6366f1", type: "departure_return" },
     { key: "uang_transport_pesawat",   label: "Transport Pesawat",    color: "#3b82f6", type: "departure_return" },
+    { key: "uang_transport_umum",      label: "Transport (Umum)",     color: "#0284c7", type: "departure_return" },
     { key: "uang_transport_bbm",       label: "Transport BBM",        color: "#0ea5e9", type: "simple" },
     { key: "uang_transport_sewa_mobil",label: "Transport Sewa Mobil", color: "#06b6d4", type: "rate_days" },
     { key: "uang_transport_lokal",     label: "Transport Lokal",      color: "#1e1b4b", type: "rate_days" },
@@ -81,6 +82,7 @@ const getIconForComponent = (key) => {
         case "uang_transport_bus":        return <CompassOutlined />;
         case "uang_transport_taxi":       return <CarOutlined />;
         case "uang_transport_pesawat":    return <SendOutlined />;
+        case "uang_transport_umum":       return <CarOutlined />;
         case "uang_transport_bbm":        return <CarOutlined />;
         case "uang_transport_sewa_mobil": return <CarOutlined />;
         case "uang_harian":               return <DollarOutlined />;
@@ -96,6 +98,7 @@ const getDescForComponent = (key) => {
         case "uang_transport_bus":        return "Biaya perjalanan menggunakan bus dinas/umum";
         case "uang_transport_taxi":       return "Biaya perjalanan taksi/online ride-sharing";
         case "uang_transport_pesawat":    return "Biaya tiket pesawat kelas ekonomi";
+        case "uang_transport_umum":       return "Biaya perjalanan transport umum lainnya";
         case "uang_transport_bbm":        return "Biaya BBM/Pertalite/Pertamax dinas";
         case "uang_transport_sewa_mobil": return "Biaya rental/sewa mobil harian";
         case "uang_harian":               return "Uang saku harian perjalanan dinas";
@@ -126,14 +129,15 @@ const calcTotal = (item) => COMPONENTS.reduce((sum, c) => sum + getComponentTota
 
 /* ── Default empty component state ── */
 const emptyComp = (type, autoRate) => {
-    if (type === "departure_return") return { checked: false, berangkat: 0, pulang: 0 };
-    if (type === "rate_days")        return { checked: false, per_hari: 0, hari: 0 };
-    if (type === "daily")            return { checked: false, per_hari: autoRate || 0, hari: 0 };
-    return { checked: false, value: 0 }; // simple
+    if (type === "departure_return") return { checked: false, berangkat: 0, pulang: 0, keterangan: "" };
+    if (type === "rate_days")        return { checked: false, per_hari: 0, hari: 0, keterangan: "" };
+    if (type === "daily")            return { checked: false, per_hari: autoRate || 0, hari: 0, keterangan: "" };
+    return { checked: false, value: 0, keterangan: "" }; // simple
 };
 
 export default function KeuanganLpj() {
-    const { apiFetch } = useAuth();
+    const { apiFetch, user, currentRole } = useAuth();
+    const isAdmin = user?.base_role === 'admin' || currentRole === 'admin';
 
     const [stList, setStList] = useState([]);
     const [stLoading, setStLoading] = useState(false);
@@ -149,6 +153,7 @@ export default function KeuanganLpj() {
     const [items, setItems] = useState({});
     const [lpjStatus, setLpjStatus] = useState("draft");
     const [keterangan, setKeterangan] = useState("");
+    const [mak, setMak] = useState("");
     const [activeEmployeeKey, setActiveEmployeeKey] = useState(null);
     const [sidebarSearch, setSidebarSearch] = useState("");
     const [employees, setEmployees] = useState([]);
@@ -200,53 +205,71 @@ export default function KeuanganLpj() {
             employee_nip: item.employee_nip,
             is_external: item.is_external,
             nomor_spd: item.nomor_spd ?? "",
+            nama_hotel: item.nama_hotel ?? "",
+            nomor_kamar: item.nomor_kamar ?? "",
             uang_transport_bus: {
                 checked: item.uang_transport_bus != null,
                 berangkat: item.uang_transport_bus_berangkat ?? 0,
                 pulang: item.uang_transport_bus_pulang ?? 0,
+                keterangan: item.uang_transport_bus_keterangan ?? "",
             },
             uang_transport_taxi: {
                 checked: item.uang_transport_taxi != null,
                 berangkat: item.uang_transport_taxi_berangkat ?? 0,
                 pulang: item.uang_transport_taxi_pulang ?? 0,
+                keterangan: item.uang_transport_taxi_keterangan ?? "",
             },
             uang_transport_pesawat: {
                 checked: item.uang_transport_pesawat != null,
                 berangkat: item.uang_transport_pesawat_berangkat ?? 0,
                 pulang: item.uang_transport_pesawat_pulang ?? 0,
+                keterangan: item.uang_transport_pesawat_keterangan ?? "",
+            },
+            uang_transport_umum: {
+                checked: item.uang_transport_umum != null,
+                berangkat: item.uang_transport_umum_berangkat ?? 0,
+                pulang: item.uang_transport_umum_pulang ?? 0,
+                keterangan: item.uang_transport_umum_keterangan ?? "",
             },
             uang_transport_bbm: {
                 checked: item.uang_transport_bbm != null,
                 value: item.uang_transport_bbm ?? 0,
+                keterangan: item.uang_transport_bbm_keterangan ?? "",
             },
             uang_transport_sewa_mobil: {
                 checked: item.uang_transport_sewa_mobil != null,
                 per_hari: item.uang_transport_sewa_mobil_harian ?? 0,
                 hari: item.uang_transport_sewa_mobil_hari ?? 0,
+                keterangan: item.uang_transport_sewa_mobil_keterangan ?? "",
             },
             uang_transport_lokal: {
                 checked: item.uang_transport_lokal != null,
                 per_hari: item.uang_transport_lokal_harian ?? 0,
                 hari: item.uang_transport_lokal_hari ?? 0,
+                keterangan: item.uang_transport_lokal_keterangan ?? "",
             },
             uang_harian: {
                 checked: item.uang_harian != null,
                 per_hari: item.uang_harian_per_hari ?? (autoRate > 0 ? autoRate : (item.uang_harian ?? 0)),
                 hari: item.uang_harian_hari ?? (item.uang_harian && autoRate > 0 ? Math.round(item.uang_harian / autoRate) : 0),
+                keterangan: item.uang_harian_keterangan ?? "",
             },
             uang_penginapan: {
                 checked: item.uang_penginapan != null,
                 per_hari: item.uang_penginapan_harian ?? 0,
                 hari: item.uang_penginapan_hari ?? 0,
+                keterangan: item.uang_penginapan_keterangan ?? "",
             },
             uang_fullboard: {
                 checked: item.uang_fullboard != null,
                 value: item.uang_fullboard ?? 0,
+                keterangan: item.uang_fullboard_keterangan ?? "",
             },
             uang_harian_fullboard: {
                 checked: item.uang_harian_fullboard != null,
                 per_hari: item.uang_harian_fullboard_per_hari ?? 0,
                 hari: item.uang_harian_fullboard_hari ?? 0,
+                keterangan: item.uang_harian_fullboard_keterangan ?? "",
             },
         };
     };
@@ -259,6 +282,7 @@ export default function KeuanganLpj() {
         setLpjData(null);
         setLpjStatus("draft");
         setKeterangan("");
+        setMak(st.mak ?? "");
         setBendaharaId(null);
         setFilterKey("all");
         try {
@@ -267,6 +291,7 @@ export default function KeuanganLpj() {
             setLpjData(json.lpj);
             setLpjStatus(json.lpj?.status ?? "draft");
             setKeterangan(json.lpj?.keterangan ?? "");
+            setMak(json.surat_tugas?.mak ?? st.mak ?? "");
             setBendaharaId(json.lpj?.bendahara_id ?? null);
             const lokasi = (json.surat_tugas ?? st)?.lokasi_tugas ?? "";
             if (json.lpj?.items?.length) {
@@ -533,13 +558,17 @@ export default function KeuanganLpj() {
     const handleSave = async () => {
         if (!selectedSt) return;
         const payload = {
-            status: "final", keterangan: keterangan || null,
+            status: "final",
+            keterangan: keterangan || null,
+            mak: mak || null,
             bendahara_id: bendaharaId || null,
             items: Object.values(items).map((item) => {
                 const row = {
                     employee_id: item.employee_id, employee_name: item.employee_name,
                     employee_nip: item.employee_nip, is_external: item.is_external,
                     nomor_spd: item.nomor_spd || null,
+                    nama_hotel: item.nama_hotel || null,
+                    nomor_kamar: item.nomor_kamar || null,
                 };
                 COMPONENTS.forEach(c => {
                     const data = item[c.key];
@@ -547,12 +576,13 @@ export default function KeuanganLpj() {
                         row[c.key] = null;
                         return;
                     }
+                    row[c.key + "_keterangan"] = data.keterangan || null;
+
                     if (c.type === "departure_return") {
                         row[c.key + "_berangkat"] = data.berangkat || null;
                         row[c.key + "_pulang"]    = data.pulang || null;
                         row[c.key] = (fmt(data.berangkat) + fmt(data.pulang)) || null;
                     } else if (c.type === "rate_days" || c.type === "daily") {
-                        const suffix = c.key === "uang_harian" ? "" : (c.key === "uang_penginapan" ? "" : "");
                         if (c.key === "uang_transport_sewa_mobil") {
                             row[c.key + "_harian"] = data.per_hari || null;
                             row[c.key + "_hari"]   = data.hari || null;
@@ -644,12 +674,24 @@ export default function KeuanganLpj() {
 
     const getMenuItems = (record) => {
         const isManual = record.lpj_status === 'manual';
+        const hasLpj = record.lpj_status === 'final' || record.lpj_status === 'draft' || isManual;
         return [
-            { key: "input", icon: <DollarOutlined />, label: "Input Biaya", onClick: () => fetchLpjDetail(record) },
-            { key: "edit", icon: <EditOutlined />, label: "Edit Data LPJ", disabled: !record.lpj_status || isManual, onClick: () => fetchLpjDetail(record) },
+            {
+                key: "input",
+                icon: hasLpj ? <InfoCircleOutlined style={{ color: "#1e293b" }} /> : <DollarOutlined style={{ color: "#1e293b" }} />,
+                label: hasLpj ? "Lihat Detail" : "Input Biaya Perjalanan Dinas",
+                onClick: () => fetchLpjDetail(record),
+            },
+            {
+                key: "edit",
+                icon: <EditOutlined style={{ color: "#1e293b" }} />,
+                label: "Edit Rincian Data LPJ",
+                disabled: !record.lpj_status || isManual,
+                onClick: () => fetchLpjDetail(record),
+            },
             { type: "divider" },
-            { key: "manual", icon: <CheckCircleFilled />, label: "LPJ Manual", disabled: isManual, onClick: () => handleMarkManual(record) },
-            { key: "exclude", icon: <StopOutlined />, label: "Hapus dari Daftar", danger: true, onClick: () => handleExclude(record) },
+            { key: "manual", icon: <CheckCircleFilled style={{ color: "#1e293b" }} />, label: "Tandai LPJ Manual", disabled: isManual, onClick: () => handleMarkManual(record) },
+            { key: "exclude", icon: <StopOutlined style={{ color: "#ef4444" }} />, label: <span style={{ color: "#ef4444" }}>Hapus dari Daftar LPJ</span>, onClick: () => handleExclude(record) },
         ];
     };
 
@@ -670,6 +712,14 @@ export default function KeuanganLpj() {
                     </div>
                 );
             },
+        },
+        {
+            title: "Kode MAK / Akun", key: "mak", width: 160,
+            render: (_, r) => (
+                <Tag color="blue" style={{ fontWeight: 600, fontSize: "12px", borderRadius: "4px" }}>
+                    {r.mak || "Belum ada MAK"}
+                </Tag>
+            ),
         },
         {
             title: "Info Perjalanan", key: "periode", width: 240,
@@ -703,7 +753,7 @@ export default function KeuanganLpj() {
             title: "Aksi", key: "aksi", width: 70, align: "center",
             render: (_, r) => (
                 <Dropdown menu={{ items: getMenuItems(r), className: "klpj-dropdown-menu" }} trigger={["click"]} placement="bottomRight">
-                    <Button className="klpj-action-btn" icon={<MoreOutlined style={{ fontSize: 18 }} />} />
+                    <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#1e293b", fontSize: 16 }} />} />
                 </Dropdown>
             ),
         },
@@ -712,9 +762,10 @@ export default function KeuanganLpj() {
     const renderSubInputs = (empKey, compDef, compVal) => {
         const lockedRegion = isLockedRegion(selectedSt?.lokasi_tugas);
 
+        let content = null;
         if (compDef.type === "departure_return") {
             const total = fmt(compVal.berangkat) + fmt(compVal.pulang);
-            return (
+            content = (
                 <div className="klpj-sub-inputs">
                     <div className="klpj-sub-field">
                         <span className="klpj-sub-field-label">Berangkat</span>
@@ -743,12 +794,10 @@ export default function KeuanganLpj() {
                     </div>
                 </div>
             );
-        }
-
-        if (compDef.type === "daily" && (compDef.key === "uang_harian" || compDef.key === "uang_harian_fullboard")) {
+        } else if (compDef.type === "daily" && (compDef.key === "uang_harian" || compDef.key === "uang_harian_fullboard")) {
             const total = fmt(compVal.per_hari) * fmt(compVal.hari);
             const isUangHarian = compDef.key === "uang_harian";
-            return (
+            content = (
                 <div className="klpj-sub-inputs">
                     <div className="klpj-sub-field">
                         <span className="klpj-sub-field-label">
@@ -779,13 +828,11 @@ export default function KeuanganLpj() {
                     </div>
                 </div>
             );
-        }
-
-        if (compDef.type === "rate_days") {
+        } else if (compDef.type === "rate_days") {
             const rateLabel = compDef.key === "uang_penginapan" ? "Tarif / Malam" : "Tarif Harian";
             const daysLabel = compDef.key === "uang_penginapan" ? "Jumlah Malam" : "Jumlah Hari";
             const total = fmt(compVal.per_hari) * fmt(compVal.hari);
-            return (
+            content = (
                 <div className="klpj-sub-inputs">
                     <div className="klpj-sub-field">
                         <span className="klpj-sub-field-label">{rateLabel}</span>
@@ -812,19 +859,49 @@ export default function KeuanganLpj() {
                     </div>
                 </div>
             );
+        } else {
+            content = (
+                <div className="klpj-sub-inputs">
+                    <div className="klpj-sub-field">
+                        <span className="klpj-sub-field-label">Nominal</span>
+                        <InputNumber
+                            value={compVal.value}
+                            formatter={v => `Rp ${String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`}
+                            parser={v => Number(v.replace(/Rp\s?|[.]/g, ""))}
+                            onChange={val => updateSubValue(empKey, compDef.key, "value", val)}
+                            min={0} placeholder="0"
+                        />
+                    </div>
+                </div>
+            );
         }
 
-        // simple (BBM)
         return (
-            <div className="klpj-sub-inputs">
-                <div className="klpj-sub-field">
-                    <span className="klpj-sub-field-label">Nominal</span>
-                    <InputNumber
-                        value={compVal.value}
-                        formatter={v => `Rp ${String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`}
-                        parser={v => Number(v.replace(/Rp\s?|[.]/g, ""))}
-                        onChange={val => updateSubValue(empKey, compDef.key, "value", val)}
-                        min={0} placeholder="0"
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                {compDef.key === "uang_penginapan" && (
+                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <Input
+                            style={{ flex: 2, borderRadius: '6px' }}
+                            placeholder="Nama Hotel / Penginapan (contoh: Hotel XXI)"
+                            value={items[empKey]?.nama_hotel || ""}
+                            onChange={e => updateItemProperty(empKey, "nama_hotel", e.target.value)}
+                        />
+                        <Input
+                            style={{ flex: 1, borderRadius: '6px' }}
+                            placeholder="No. Kamar (contoh: 302)"
+                            value={items[empKey]?.nomor_kamar || ""}
+                            onChange={e => updateItemProperty(empKey, "nomor_kamar", e.target.value)}
+                        />
+                    </div>
+                )}
+                {content}
+                <div style={{ marginTop: '2px', width: '100%' }}>
+                    <Input
+                        size="small"
+                        placeholder="Keterangan / Catatan Biaya (opsional, muncul di PDF)"
+                        value={compVal.keterangan || ""}
+                        onChange={e => updateSubValue(empKey, compDef.key, "keterangan", e.target.value)}
+                        style={{ borderRadius: '6px' }}
                     />
                 </div>
             </div>
@@ -838,6 +915,13 @@ export default function KeuanganLpj() {
                 <div>
                     <Title level={3} className="module-title">Keuangan — LPJ</Title>
                     <span className="module-subtitle">Kelola pertanggungjawaban biaya perjalanan dinas secara terpadu.</span>
+                    <div style={{ marginTop: 6 }}>
+                        {isAdmin ? (
+                            <Tag color="blue" icon={<FileProtectOutlined />}>Mode Admin: Menampilkan Seluruh Surat Tugas Pegawai</Tag>
+                        ) : (
+                            <Tag color="green" icon={<UserOutlined />}>Mode Pegawai: Menampilkan Surat Tugas di mana Anda tertagging</Tag>
+                        )}
+                    </div>
                 </div>
                 <Button icon={<ReloadOutlined />} onClick={() => fetchSt(1)}>Segarkan</Button>
             </div>
@@ -915,6 +999,18 @@ export default function KeuanganLpj() {
                                     <span className="klpj-trip-duration" style={{ marginLeft: 6 }}>
                                         {inclusiveDays(selectedSt?.tanggal_mulai, selectedSt?.tanggal_selesai)} Hari
                                     </span>
+                                </div>
+                            </div>
+                            <div className="klpj-info-item">
+                                <span className="klpj-info-label">Kode MAK / Akun</span>
+                                <div className="klpj-info-value" style={{ marginTop: 2 }}>
+                                    <Input
+                                        style={{ width: '100%', minWidth: 170, borderRadius: '6px' }}
+                                        placeholder="Contoh: 524111.001"
+                                        value={mak}
+                                        onChange={(e) => setMak(e.target.value)}
+                                        size="small"
+                                    />
                                 </div>
                             </div>
                             <div className="klpj-info-item">

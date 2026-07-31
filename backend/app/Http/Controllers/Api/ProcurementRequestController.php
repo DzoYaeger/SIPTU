@@ -486,14 +486,7 @@ class ProcurementRequestController extends Controller
 
             foreach ($req->items as $item) {
                 $pdtt = $item->pdttItem;
-                $specStr = !empty($pdtt->satuan) ? "({$pdtt->satuan})" : null;
-                $brandStr = !empty($pdtt->brand) ? "- {$pdtt->brand}" : null;
-                $nameParts = array_filter([
-                    $pdtt->item_name ?? 'Unknown Item',
-                    $brandStr,
-                    $specStr,
-                ]);
-                $name = implode(' ', $nameParts);
+                $name = self::formatPdttItemFullName($pdtt);
                 if (!in_array($name, $itemNames)) {
                     $itemNames[] = $name;
                 }
@@ -568,15 +561,23 @@ class ProcurementRequestController extends Controller
         ]);
     }
 
+    public static function formatPdttItemFullName($pdtt): string
+    {
+        if (!$pdtt) return 'Unknown Item';
+        $parts = [];
+        if (!empty($pdtt->item_name)) $parts[] = trim($pdtt->item_name);
+        if (!empty($pdtt->brand)) $parts[] = trim($pdtt->brand);
+        if (isset($pdtt->jumlah) && $pdtt->jumlah !== '' && $pdtt->jumlah !== null) $parts[] = trim($pdtt->jumlah);
+        if (!empty($pdtt->satuan)) $parts[] = trim($pdtt->satuan);
+        return !empty($parts) ? implode(' ', $parts) : 'Unknown Item';
+    }
+
     private function buildChangeLog($existingItems, array $newItemsPayload, $user, bool $isAdmin): array
     {
         $oldMap = [];
         foreach ($existingItems as $ci) {
             $pdttItem = $ci->pdttItem;
-            $name = $pdttItem ? $pdttItem->item_name : ("Item #" . $ci->pdtt_item_id);
-            if ($pdttItem && !empty($pdttItem->satuan)) {
-                $name .= " ({$pdttItem->satuan})";
-            }
+            $name = $pdttItem ? self::formatPdttItemFullName($pdttItem) : ("Item #" . $ci->pdtt_item_id);
             $oldMap[$ci->pdtt_item_id] = [
                 'pdtt_item_id' => $ci->pdtt_item_id,
                 'item_name' => $name,
@@ -589,10 +590,7 @@ class ProcurementRequestController extends Controller
             $id = (int) $ni['item_id'];
             $qty = (int) $ni['jumlah'];
             $pdttItem = PdttItem::find($id);
-            $name = $pdttItem ? $pdttItem->item_name : ("Item #" . $id);
-            if ($pdttItem && !empty($pdttItem->satuan)) {
-                $name .= " ({$pdttItem->satuan})";
-            }
+            $name = $pdttItem ? self::formatPdttItemFullName($pdttItem) : ("Item #" . $id);
             $newMap[$id] = [
                 'pdtt_item_id' => $id,
                 'item_name' => $name,

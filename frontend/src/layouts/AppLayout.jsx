@@ -37,6 +37,8 @@ import {
   ArrowRightOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  LeftOutlined,
+  RightOutlined,
   DownOutlined,
   SyncOutlined,
   ClockCircleOutlined,
@@ -54,6 +56,7 @@ import BmnPermintaanPersediaan from "../views/BmnPermintaanPersediaan.jsx";
 import BmnPeminjamanAset from "../views/BmnPeminjamanAset.jsx";
 import BmnPeminjamanAsetForm from "../views/BmnPeminjamanAsetForm.jsx";
 import BmnUnifiedModule from "../views/BmnUnifiedModule.jsx";
+import SimkeuUnifiedModule from "../views/SimkeuUnifiedModule.jsx";
 import BmnPermintaanPersediaanForm from "../views/BmnPermintaanPersediaanForm.jsx";
 import BmnPermintaanPersediaanDetail from "../views/BmnPermintaanPersediaanDetail.jsx";
 import BmnLaporan from "../views/BmnLaporan.jsx";
@@ -96,6 +99,9 @@ import LayananMandiriSliderEditor from "../views/LayananMandiriSliderEditor.jsx"
 import AdminQueueControl from "../views/AdminQueueControl.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import PengumumanRispeg from "../views/PengumumanRispeg.jsx";
+import PengadaanPbj from "../views/PengadaanPbj.jsx";
+import KearsipanArsipVital from "../views/KearsipanArsipVital.jsx";
+import PelatihanPegawai from "../views/PelatihanPegawai.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import "./AppLayout.css";
 import MobileAppShell from "./MobileAppShell.jsx";
@@ -104,21 +110,41 @@ const { Title, Paragraph } = Typography;
 
 const MODULE_ORDER = [
   "dashboard",
+  "operator-dashboard",
+  "validator-dashboard",
   "layanan-mandiri",
+  "riwayat-layanan",
   "kepegawaian",
   "rispeg",
   "kearsipan",
   "bmn",
-  "pengadaan-pdtt",
   "keuangan",
+  "perjadin",
+  "pengadaan-pdtt",
   "it-helpdesk",
+  "penyimpanan-cloud",
+  "siamparan",
+  "antrian-kontrol",
   "admin-user-management",
   "admin-notification-settings",
   "admin-news-posts",
 ];
 const CHILD_ORDER = {
-  kepegawaian: ["kepegawaian-data-pegawai", "kepegawaian-kgb", "kepegawaian-kalender", "kepegawaian-surat-tugas"],
-  rispeg: ["rispeg-ruh", "rispeg-dashboard", "rispeg-izin-keluar"],
+  kepegawaian: [
+    "kepegawaian-data-pegawai",
+    "kepegawaian-kgb",
+    "kepegawaian-kalender",
+    "kepegawaian-surat-tugas",
+    "kepegawaian-bangkom",
+    "zoom-generator",
+  ],
+  rispeg: [
+    "rispeg-ruh",
+    "rispeg-dashboard",
+    "rispeg-izin-keluar",
+    "rispeg-pengaturan-izin-keluar",
+    "rispeg-pengumuman",
+  ],
   kearsipan: [
     "kearsipan-peminjaman",
     "kearsipan-pencatatan-surat",
@@ -134,14 +160,29 @@ const CHILD_ORDER = {
     "bmn-pemeliharaan-keluhan",
     "bmn-laporan",
   ],
+  keuangan: [
+    "keuangan-anggaran",
+    "keuangan-realisasi-anggaran",
+    "keuangan-revisi",
+    "keuangan-invoice",
+    "keuangan-lpj",
+    "keuangan-pejabat",
+  ],
+  perjadin: [
+    "perjadin-st",
+    "perjadin-lpj",
+    "perjadin-monitoring",
+  ],
   "pengadaan-pdtt": [
-    "pengadaan-pbj",
     "pengadaan-pdtt-katalog",
     "pengadaan-pdtt-rekapan",
-    "pengelola-pegawai-pdtt"
+    "pengadaan-pdtt-pengajuan-pdtt",
+    "pengadaan-pbj",
+    "pengelola-pegawai-pdtt",
   ],
-  "keuangan": ["keuangan-lpj", "keuangan-pejabat", "keuangan-revisi"],
   "it-helpdesk": ["it-helpdesk-pelaporan", "it-helpdesk-rekapan"],
+  "penyimpanan-cloud": ["penyimpanan-cloud"],
+  "layanan-mandiri": ["layanan-mandiri", "riwayat-layanan", "pengaturan-slider"],
 };
 
 function normalizeModules(nodes, parentSlug = null) {
@@ -184,13 +225,16 @@ function mapSlugToPath(slug) {
     "kepegawaian-kgb": "/app/kepegawaian-kgb",
     "kepegawaian-kalender": "/app/kepegawaian-kalender",
     "kepegawaian-surat-tugas": "/app/kepegawaian-surat-tugas",
+    "kepegawaian-bangkom": "/app/kepegawaian-bangkom",
+    "zoom-generator": "/app/zoom-generator",
     "rispeg-ruh": "/app/rispeg-ruh",
     "rispeg-dashboard": "/app/rispeg-dashboard",
     "rispeg-izin-keluar": "/app/rispeg-izin-keluar",
     "rispeg-pengaturan-izin-keluar": "/app/rispeg-pengaturan-izin-keluar",
+    "rispeg-pengumuman": "/app/rispeg-pengumuman",
     "kearsipan-peminjaman": "/app/kearsipan-peminjaman",
-    "kearsipan-pencatatan-surat": "/kearsipan-pencatatan-surat",
-    "kearsipan-arsip-vital": "/kearsipan-arsip-vital",
+    "kearsipan-pencatatan-surat": "/app/kearsipan-pencatatan-surat",
+    "kearsipan-arsip-vital": "/app/kearsipan-arsip-vital",
     "kearsipan-manajemen-up-uk": "/app/kearsipan-manajemen-up-uk",
     "kearsipan-laporan": "/app/kearsipan-laporan",
     "bmn-data-aset-tetap": "/app/bmn-data-aset-tetap",
@@ -199,9 +243,10 @@ function mapSlugToPath(slug) {
     "bmn-peminjaman-aset": "/app/bmn-peminjaman-aset",
     "bmn-pemeliharaan-keluhan": "/app/bmn-pemeliharaan-keluhan",
     "bmn-laporan": "/app/bmn-laporan",
-    "pengadaan-pbj": "/pengadaan-pbj",
+    "pengadaan-pbj": "/app/pengadaan-pbj",
     "pengadaan-pdtt-katalog": "/app/pengadaan-pdtt-katalog",
     "pengadaan-pdtt-rekapan": "/app/pengadaan-pdtt-rekapan",
+    "pengadaan-pdtt-pengajuan-pdtt": "/app/pengadaan-pdtt-rekapan",
     "pengelola-pegawai-pdtt": "/app/pengelola-pegawai-pdtt",
     "keuangan-lpj": "/app/keuangan-lpj",
     "keuangan-pejabat": "/app/keuangan-pejabat",
@@ -209,6 +254,9 @@ function mapSlugToPath(slug) {
     "keuangan-anggaran": "/app/keuangan-anggaran",
     "keuangan-invoice": "/app/keuangan-invoice",
     "keuangan-realisasi-anggaran": "/app/keuangan-realisasi-anggaran",
+    "perjadin-st": "/app/kepegawaian-surat-tugas",
+    "perjadin-lpj": "/app/keuangan-lpj",
+    "perjadin-monitoring": "/app/kepegawaian-surat-tugas",
     "it-helpdesk-pelaporan": "/app/it-helpdesk-pelaporan",
     "it-helpdesk-rekapan": "/app/it-helpdesk-rekapan",
     "admin-user-management": "/app/admin-user-management",
@@ -219,12 +267,14 @@ function mapSlugToPath(slug) {
     "pengaturan-slider": "/app/pengaturan-slider",
     "antrian-kontrol": "/app/antrian-kontrol",
     "penyimpanan-cloud": "/app/penyimpanan-cloud",
+    "pelatihan-pegawai": "/app/kepegawaian-bangkom",
+    "kepegawaian-pelatihan": "/app/kepegawaian-bangkom",
+    "simkeu": "/app/simkeu",
   };
   return routes[slug] ?? null;
 }
 
 function resolveInitialAppPath(accessibleModules, isAdminUser, currentRole) {
-  // Arahkan ke dashboard masing-masing sesuai role
   if (currentRole === "admin" || (!currentRole && isAdminUser)) {
     return "/app/dashboard";
   }
@@ -259,6 +309,85 @@ function resolveInitialAppPath(accessibleModules, isAdminUser, currentRole) {
   return "/app/account-settings";
 }
 
+function AestheticHeaderWidget() {
+  const [timeStr, setTimeStr] = useState("");
+  const [dateStr, setDateStr] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = dayjs();
+      setTimeStr(now.format("HH:mm:ss [WITA]"));
+      setDateStr(now.format("dddd, D MMMM YYYY"));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const [weather, setWeather] = useState({
+    temp: 29,
+    text: "Cerah Berawan",
+    icon: "⛅",
+  });
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch(
+          "https://api.open-meteo.com/v1/forecast?latitude=-2.9972&longitude=120.1985&current_weather=true"
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.current_weather) {
+            const temp = Math.round(data.current_weather.temperature);
+            const code = data.current_weather.weathercode;
+            let text = "Cerah";
+            let icon = "☀️";
+            if (code >= 1 && code <= 3) {
+              text = "Berawan";
+              icon = "⛅";
+            } else if (code >= 45 && code <= 48) {
+              text = "Berkabut";
+              icon = "🌫️";
+            } else if (code >= 51 && code <= 67) {
+              text = "Hujan Ringan";
+              icon = "🌧️";
+            } else if (code >= 80 && code <= 99) {
+              text = "Hujan Petir";
+              icon = "⛈️";
+            }
+            setWeather({ temp, text, icon });
+          }
+        }
+      } catch (e) {
+        console.warn("Gagal mengambil data cuaca:", e);
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 600000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="aesthetic-header-widget">
+      <div className="widget-item weather-box">
+        <span className="location-name">Palopo</span>
+        <span className="weather-temp">{weather.temp}°C</span>
+        <span className="weather-badge">{weather.icon} {weather.text}</span>
+      </div>
+
+      <div className="widget-divider" />
+
+      <div className="widget-item time-box">
+        <ClockCircleOutlined className="clock-icon" />
+        <span className="clock-time">{timeStr}</span>
+        <span className="clock-date">{dateStr}</span>
+      </div>
+    </div>
+  );
+}
+
 function AppLayout() {
   const infoPopup = useInfoPopup();
   const {
@@ -286,7 +415,7 @@ function AppLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isAdminUser = user?.base_role === "admin";
+  const isAdminUser = currentRole === "admin";
   const initialAppPath = useMemo(
     () => resolveInitialAppPath(accessibleModules, isAdminUser, currentRole),
     [accessibleModules, isAdminUser, currentRole],
@@ -347,18 +476,15 @@ function AppLayout() {
     addChild(kepegawaianModule, "kepegawaian-kgb", "Kenaikan Gaji Berkala");
     addChild(kepegawaianModule, "kepegawaian-kalender", "Kalender Kegiatan");
     addChild(kepegawaianModule, "kepegawaian-surat-tugas", "Surat Tugas");
+    addChild(kepegawaianModule, "kepegawaian-bangkom", "Pengembangan Kompetensi");
     addChild(kepegawaianModule, "zoom-generator", "Zoom Generator");
 
-    // New Rispeg Module
     const rispegModule = createModule("rispeg", "RISPEG");
     addChild(rispegModule, "rispeg-ruh", "Input Data RiSPEG");
     addChild(rispegModule, "rispeg-dashboard", "Monitoring RISPEG");
     addChild(rispegModule, "rispeg-izin-keluar", "Monitoring Izin Keluar");
-    addChild(
-      rispegModule,
-      "rispeg-pengaturan-izin-keluar",
-      "Pengaturan Izin Keluar",
-    );
+    addChild(rispegModule, "rispeg-pengaturan-izin-keluar", "Pengaturan Izin Keluar");
+    addChild(rispegModule, "rispeg-pengumuman", "Pengumuman RISPEG");
 
     const kearsipanModule = createModule("kearsipan", "Kearsipan");
     addChild(kearsipanModule, "kearsipan-peminjaman", "Peminjaman Arsip");
@@ -368,7 +494,6 @@ function AppLayout() {
     addChild(kearsipanModule, "kearsipan-laporan", "Laporan Peminjaman");
 
     const bmnModule = createModule("bmn", "Barang Milik Negara");
-    // ... existing bmn modules ...
     addChild(bmnModule, "bmn-data-aset-tetap", "Data Aset Tetap");
     addChild(bmnModule, "bmn-data-persediaan", "Data Persediaan");
     addChild(bmnModule, "bmn-permintaan-persediaan", "Permintaan Persediaan");
@@ -376,73 +501,35 @@ function AppLayout() {
     addChild(bmnModule, "bmn-pemeliharaan-keluhan", "Pemeliharaan/Keluhan");
     addChild(bmnModule, "bmn-laporan", "Laporan BMN");
 
-    const itHelpdeskModule = createModule("it-helpdesk", "IT Helpdesk");
-    addChild(itHelpdeskModule, "it-helpdesk-pelaporan", "Pelaporan Keluhan");
-    addChild(itHelpdeskModule, "it-helpdesk-rekapan", "Rekapan Laporan");
+    const keuanganModule = createModule("keuangan", "Keuangan");
+    addChild(keuanganModule, "keuangan-anggaran", "Perencanaan Anggaran");
+    addChild(keuanganModule, "keuangan-realisasi-anggaran", "Realisasi Anggaran");
+    addChild(keuanganModule, "keuangan-revisi", "Revisi Anggaran");
+    addChild(keuanganModule, "keuangan-invoice", "Pembuatan Invoice");
+    addChild(keuanganModule, "keuangan-lpj", "Pembuatan LPJ");
+    addChild(keuanganModule, "keuangan-pejabat", "Pejabat Perbendaharaan");
 
-    const pdttModule = createModule("pengadaan-pdtt", "Pengadaan");
-    addChild(pdttModule, "pengadaan-pbj", "Proses Pengadaan PBJ");
+    const pdttModule = createModule("pengadaan-pdtt", "Pengadaan & PDTT");
+    addChild(pdttModule, "pengadaan-pbj", "Pengadaan Barang & Jasa (PBJ)");
     addChild(pdttModule, "pengadaan-pdtt-katalog", "Katalog Barang");
     addChild(pdttModule, "pengadaan-pdtt-rekapan", "Rekapan Pengajuan");
     addChild(pdttModule, "pengelola-pegawai-pdtt", "Jumlah Hari Pegawai");
 
-    const keuanganModule = createModule("keuangan", "Keuangan");
-    addChild(keuanganModule, "keuangan-invoice", "Pembuatan Invoice");
-    addChild(keuanganModule, "keuangan-lpj", "Pembuatan LPJ");
-    addChild(keuanganModule, "keuangan-pejabat", "Pejabat Perbendaharaan");
-    addChild(keuanganModule, "keuangan-revisi", "Revisi Anggaran");
+    const itHelpdeskModule = createModule("it-helpdesk", "IT Helpdesk");
+    addChild(itHelpdeskModule, "it-helpdesk-pelaporan", "Pelaporan Keluhan");
+    addChild(itHelpdeskModule, "it-helpdesk-rekapan", "Rekapan Laporan");
+
+    const cloudModule = createModule("penyimpanan-cloud", "Penyimpanan Cloud");
+    addChild(cloudModule, "penyimpanan-cloud", "Storage Cloud Drive");
 
     createModule("layanan-mandiri", "Layanan Mandiri");
     createModule("riwayat-layanan", "Riwayat Layanan");
-    createModule("penyimpanan-cloud", "Penyimpanan Cloud");
-    
+
     createModule("antrian-kontrol", "Manajemen UPP");
 
     return normalizeModules(baseModules);
   }, [modulesTree]);
 
-  const SLUG_ICONS = {
-    "kearsipan-peminjaman": <FileTextOutlined />,
-    "kearsipan-pencatatan-surat": <FormOutlined />,
-    "kearsipan-arsip-vital": <SafetyCertificateOutlined />,
-    "kearsipan-manajemen-up-uk": <FolderOpenOutlined />,
-    "kearsipan-laporan": <FileTextOutlined />,
-    bmn: <AppstoreOutlined />,
-    "bmn-data-aset-tetap": <DesktopOutlined />,
-    "bmn-data-persediaan": <CodeSandboxOutlined />,
-    "bmn-permintaan-persediaan": <ShoppingCartOutlined />,
-    "bmn-peminjaman-aset": <KeyOutlined />,
-    "bmn-pemeliharaan-keluhan": <AlertOutlined />,
-    "bmn-laporan": <FileTextOutlined />,
-    "pengadaan-pdtt": <ShoppingCartOutlined />,
-    "pengadaan-pbj": <AuditOutlined />,
-    "pengadaan-pdtt-katalog": <AppstoreOutlined />,
-    "pengadaan-pdtt-rekapan": <FileTextOutlined />,
-    "pengelola-pegawai-pdtt": <TeamOutlined />,
-    "it-helpdesk": <CustomerServiceOutlined />,
-    "it-helpdesk-pelaporan": <AlertOutlined />,
-    "it-helpdesk-rekapan": <FileTextOutlined />,
-    "admin-user-management": <TeamOutlined />,
-    "admin-notification-settings": <BellOutlined />,
-    "admin-news-posts": <FileTextOutlined />,
-    camera: <CameraOutlined />,
-    rispeg: <AuditOutlined />,
-    "rispeg-ruh": <FormOutlined />,
-    "rispeg-dashboard": <DashboardOutlined />,
-    "rispeg-izin-keluar": <ExportOutlined />,
-    "rispeg-pengaturan-izin-keluar": <SettingOutlined />,
-    "kepegawaian-surat-tugas": <FileProtectOutlined />,
-    "zoom-generator": <VideoCameraOutlined />,
-    keuangan: <DollarOutlined />,
-    "keuangan-lpj": <FileProtectOutlined />,
-    "keuangan-pejabat": <TeamOutlined />,
-    "keuangan-revisi": <FormOutlined />,
-    "antrian-ulpk": <DesktopOutlined />,
-    "antrian-kontrol": <DesktopOutlined />,
-    "penyimpanan-cloud": <FolderOpenOutlined />,
-  };
-
-  /* ── Role switching ── */
   const roleItems = useMemo(() => {
     const roles = Array.from(new Set(allowedRoles ?? []))
       .filter(Boolean)
@@ -526,8 +613,6 @@ function AppLayout() {
           `Peran aktif berubah menjadi ${roleLabelFn(currentRole)}.`,
         );
 
-        // Paksa refresh ke halaman utama aplikasi agar seluruh state & modul sinkron
-        // Gunakan window.location.origin + initialAppPath 
         window.location.href = initialAppPath;
       }, 300);
       return () => clearTimeout(timer);
@@ -565,38 +650,21 @@ function AppLayout() {
             />
             <Route
               path="dashboard"
-              element={isAdminUser ? <AdminDashboard /> : <NotFound />}
+              element={isAdminUser ? <AdminDashboard /> : <Navigate to={initialAppPath} replace />}
             />
             <Route
               path="operator-dashboard"
               element={
-                <ProtectedRoute
-                  role="operator"
-                  fallback={
-                    <Card className="op-dashboard__guard" variant="borderless">
-                      <div className="op-guard-content">
-                        <div className="op-guard-icon">
-                          <SafetyOutlined />
-                        </div>
-                        <Title level={4}>Akses Terbatas</Title>
-                        <Paragraph>
-                          Dashboard operator hanya tersedia untuk pengguna
-                          dengan role operator.
-                        </Paragraph>
-                        <Button
-                          type="primary"
-                          size="large"
-                          icon={<ArrowRightOutlined />}
-                          onClick={() => navigate("/app/layanan-mandiri")}
-                          className="op-guard-btn"
-                        >
-                          Buka Layanan Mandiri
-                        </Button>
-                      </div>
-                    </Card>
-                  }
-                >
+                <ProtectedRoute role="operator">
                   <OperatorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="validator-dashboard"
+              element={
+                <ProtectedRoute role="validator">
+                  <ValidatorDashboard />
                 </ProtectedRoute>
               }
             />
@@ -633,6 +701,14 @@ function AppLayout() {
               }
             />
             <Route
+              path="kepegawaian-bangkom"
+              element={
+                <ProtectedRoute moduleSlug="kepegawaian-bangkom">
+                  <PelatihanPegawai />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="zoom-generator"
               element={
                 <ProtectedRoute moduleSlug="zoom-generator">
@@ -640,8 +716,6 @@ function AppLayout() {
                 </ProtectedRoute>
               }
             />
-
-            {/* Split Rispeg routes */}
             <Route
               path="rispeg-ruh"
               element={
@@ -674,7 +748,14 @@ function AppLayout() {
                 </ProtectedRoute>
               }
             />
-            {/* Fallback for old route temporarily or redirect? */}
+            <Route
+              path="rispeg-pengumuman"
+              element={
+                <ProtectedRoute moduleSlug="rispeg-pengumuman">
+                  <PengumumanRispeg />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="kepegawaian-rispeg"
               element={<Navigate to="/app/rispeg-ruh" replace />}
@@ -683,7 +764,6 @@ function AppLayout() {
               path="rispeg-monitoring"
               element={<Navigate to="/app/rispeg-dashboard" replace />}
             />
-
             <Route
               path="keuangan-lpj"
               element={
@@ -741,48 +821,34 @@ function AppLayout() {
               }
             />
             <Route
+              path="kearsipan-pencatatan-surat"
+              element={
+                <ProtectedRoute moduleSlug="kearsipan-pencatatan-surat">
+                  <KearsipanPencatatanSurat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="kearsipan-arsip-vital"
+              element={
+                <ProtectedRoute moduleSlug="kearsipan-arsip-vital">
+                  <KearsipanArsipVital />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="kearsipan-manajemen-up-uk"
+              element={
+                <ProtectedRoute moduleSlug="kearsipan-manajemen-up-uk">
+                  <KearsipanManajemenUpUk />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="kearsipan-laporan"
               element={
                 <ProtectedRoute moduleSlug="kearsipan-laporan">
                   <LaporanPeminjaman />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin-notification-settings"
-              element={
-                isAdminUser ? <AdminNotificationSettings /> : <NotFound />
-              }
-            />
-            <Route
-              path="admin-news-posts"
-              element={isAdminUser ? <AdminNewsPosts /> : <NotFound />}
-            />
-            <Route
-              path="admin-user-management"
-              element={isAdminUser ? <AdminUserManagement /> : <NotFound />}
-            />
-            <Route
-              path="kearsipan-manajemen-up-uk"
-              element={
-                <ProtectedRoute moduleSlug="kearsipan-manajemen-up-uk">
-                  <KearsipanManajemenUpUk />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="kearsipan-manajemen-up-uk"
-              element={
-                <ProtectedRoute moduleSlug="kearsipan-manajemen-up-uk">
-                  <KearsipanManajemenUpUk />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="validator-dashboard"
-              element={
-                <ProtectedRoute role="validator">
-                  <ValidatorDashboard />
                 </ProtectedRoute>
               }
             />
@@ -803,34 +869,10 @@ function AppLayout() {
               }
             />
             <Route
-              path="bmn-peminjaman-aset/new"
-              element={
-                <ProtectedRoute moduleSlug="bmn-peminjaman-aset">
-                  <BmnPeminjamanAsetForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="bmn-peminjaman-aset"
               element={
                 <ProtectedRoute moduleSlug="bmn-peminjaman-aset">
                   <BmnPeminjamanAset />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="bmn-permintaan-persediaan/new"
-              element={
-                <ProtectedRoute moduleSlug="bmn-permintaan-persediaan">
-                  <BmnPermintaanPersediaanForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="bmn-permintaan-persediaan/:id"
-              element={
-                <ProtectedRoute moduleSlug="bmn-permintaan-persediaan">
-                  <BmnPermintaanPersediaanDetail />
                 </ProtectedRoute>
               }
             />
@@ -859,9 +901,17 @@ function AppLayout() {
               }
             />
             <Route
+              path="pengadaan-pbj"
+              element={
+                <ProtectedRoute moduleSlug="pengadaan-pbj">
+                  <PengadaanPbj />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="pengadaan-pdtt-katalog"
               element={
-                <ProtectedRoute moduleSlug="pengadaan-pdtt">
+                <ProtectedRoute moduleSlug="pengadaan-pdtt-katalog">
                   <PengadaanPdtt />
                 </ProtectedRoute>
               }
@@ -869,7 +919,7 @@ function AppLayout() {
             <Route
               path="pengadaan-pdtt-rekapan"
               element={
-                <ProtectedRoute moduleSlug="pengadaan-pdtt">
+                <ProtectedRoute moduleSlug="pengadaan-pdtt-rekapan">
                   <AdminPengajuanPdtt />
                 </ProtectedRoute>
               }
@@ -877,7 +927,7 @@ function AppLayout() {
             <Route
               path="pengelola-pegawai-pdtt"
               element={
-                <ProtectedRoute moduleSlug="pengadaan-pdtt">
+                <ProtectedRoute moduleSlug="pengelola-pegawai-pdtt">
                   <PengelolaPegawaiPdtt />
                 </ProtectedRoute>
               }
@@ -892,12 +942,19 @@ function AppLayout() {
             />
             <Route
               path="antrian-kontrol"
-              element={<Navigate to="/app/antrian-kontrol" replace />}
+              element={<AdminQueueControl />}
             />
             <Route path="layanan-mandiri" element={<LayananMandiri />} />
             <Route path="berita/:slug" element={<NewsDetail />} />
             <Route path="riwayat-layanan" element={<RiwayatLayanan />} />
-            <Route path="penyimpanan-cloud" element={<Navigate to="/app/penyimpanan-cloud" replace />} />
+            <Route
+              path="penyimpanan-cloud"
+              element={
+                <ProtectedRoute moduleSlug="penyimpanan-cloud">
+                  <PenyimpananCloud />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="it-helpdesk-pelaporan"
               element={
@@ -905,6 +962,28 @@ function AppLayout() {
                   <ItHelpdeskDaftarLaporan />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="it-helpdesk-rekapan"
+              element={
+                <ProtectedRoute moduleSlug="it-helpdesk-rekapan">
+                  <ItHelpdeskDaftarLaporan />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin-notification-settings"
+              element={
+                isAdminUser ? <AdminNotificationSettings /> : <NotFound />
+              }
+            />
+            <Route
+              path="admin-news-posts"
+              element={isAdminUser ? <AdminNewsPosts /> : <NotFound />}
+            />
+            <Route
+              path="admin-user-management"
+              element={isAdminUser ? <AdminUserManagement /> : <NotFound />}
             />
             <Route path="account-settings" element={<AccountSettings />} />
             <Route path="*" element={<NotFound />} />
@@ -967,78 +1046,80 @@ function AppLayout() {
   }, [fetchBadgeCounts]);
 
   return (
-    <Layout className="app-layout-sidebar-root">
-      <SidebarMenu
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        activeKey={navActiveKey}
-        onMenuClick={handleMenuClick}
-        modules={modifiedModulesTree}
-        allowedSlugs={accessibleModules}
-        isAdmin={isAdminUser && currentRole === "admin"}
-        extraItems={[]}
-        badgeCounts={badgeCounts}
-      />
-
-      <Layout className="app-main-layout">
-        <Header className="app-top-header">
-          <div className="header-left" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Button
-              type="text"
-              icon={sidebarCollapsed ? <MenuUnfoldOutlined style={{ fontSize: 18, color: '#0F5B99' }} /> : <MenuFoldOutlined style={{ fontSize: 18, color: '#0F5B99' }} />}
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? "Buka Sidebar Menu" : "Tutup Sidebar Menu"}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 8 }}
+    <Layout className="app-layout-sidebar-root" style={{ minHeight: "100vh" }}>
+      {/* Top Navbar Header - Clean White Header */}
+      <Header
+        className="app-top-header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          width: "100%",
+          padding: "0 16px",
+          height: 48,
+          lineHeight: "normal",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "#ffffff",
+          borderBottom: "1px solid #e2e8f0"
+        }}
+      >
+        <div className="header-left" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Logo SIPTU (/logo/logo-samping.png) */}
+          <div className="header-logo" style={{ display: "flex", alignItems: "center", width: 175, flexShrink: 0 }}>
+            <img
+              src="/logo/logo-samping.png"
+              alt="SIPTU Logo"
+              style={{ height: 32, maxWidth: 160, objectFit: "contain" }}
             />
-            <div className="header-sync-container" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                className="header-sync-tag"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#475569",
-                  background: "#f8fafc",
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <SyncOutlined style={{ color: "#0F5B99" }} />
-                <span style={{ fontSize: 11.5, color: "#64748b" }}>sync with</span>
-                <Tag color="blue" style={{ margin: 0, fontWeight: 700, borderRadius: 4, fontSize: 10.5 }}>
-                  SELARAS
-                </Tag>
-                <Tag color="cyan" style={{ margin: 0, fontWeight: 700, borderRadius: 4, fontSize: 10.5 }}>
-                  SIAMPARAN
-                </Tag>
-              </div>
-
-              {/* Real-time Digital Server Clock */}
-              <div
-                className="header-server-clock"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#0F5B99",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "#eff6ff",
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                  border: "1px solid #bfdbfe",
-                }}
-              >
-                <ClockCircleOutlined />
-                <span>{serverTime}</span>
-              </div>
-            </div>
           </div>
 
-          <div className="header-right">
+          {/* Toggle Sidebar Arrow Button - Smooth & Fixed in Navbar Header */}
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? "Buka Sidebar Menu" : "Tutup Sidebar Menu"}
+            aria-label={sidebarCollapsed ? "Buka Sidebar Menu" : "Tutup Sidebar Menu"}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: "50%",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              boxShadow: "0 2px 6px rgba(15, 23, 42, 0.12)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              outline: "none",
+              padding: 0,
+              flexShrink: 0,
+              transition: "all 0.2s ease"
+            }}
+          >
+            {sidebarCollapsed ? (
+              <RightOutlined style={{ fontSize: 11, color: "#0F5B99" }} />
+            ) : (
+              <LeftOutlined style={{ fontSize: 11, color: "#0F5B99" }} />
+            )}
+          </button>
+
+          <AestheticHeaderWidget />
+        </div>
+
+        {/* Main Header Content Bar (Profile & Settings) */}
+        <div
+          className="header-main-bar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            flex: 1,
+            padding: "0 16px"
+          }}
+        >
+          <div className="header-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {extraMenuItems.length > 0 && (
               <Dropdown
                 menu={{ items: extraMenuItems, onClick: handleMenuClick }}
@@ -1061,7 +1142,22 @@ function AppLayout() {
               </div>
             </Dropdown>
           </div>
-        </Header>
+        </div>
+      </Header>
+
+      {/* Main Container below Header: Sidebar + Content */}
+      <Layout className="app-main-layout" style={{ display: "flex", flexDirection: "row", minHeight: "calc(100vh - 48px)" }}>
+        <SidebarMenu
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          activeKey={navActiveKey}
+          onMenuClick={handleMenuClick}
+          modules={modifiedModulesTree}
+          allowedSlugs={accessibleModules}
+          isAdmin={isAdminUser && currentRole === "admin"}
+          extraItems={[]}
+          badgeCounts={badgeCounts}
+        />
 
         <Content className="app-content">
           <div className="page-shell">

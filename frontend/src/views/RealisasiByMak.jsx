@@ -1,14 +1,85 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Typography, Table, Button, Space, Tooltip, App as AntdApp, Modal, Spin, Input, DatePicker, Dropdown } from 'antd';
+import { Typography, Table, Button, Space, App as AntdApp, Modal, Input, Progress, Dropdown, Card } from 'antd';
 import { buildMessageAdapter } from '../utils/notify.js';
-import { EyeOutlined, SearchOutlined, MoreOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined, MoreOutlined, ShoppingOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
-import dayjs from 'dayjs';
 
-// const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+const { Text, Title, Paragraph } = Typography;
+
+const formatCurrency = (val) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(val ?? 0);
+
+// Resizable Header Title Component (Excel-like drag resizing)
+const ResizableTitle = (props) => {
+  const { onResize, width, children, ...restProps } = props;
+
+  if (!width || !onResize) {
+    return <th {...restProps}>{children}</th>;
+  }
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const onMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      onResize(Math.max(65, startWidth + deltaX));
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  return (
+    <th
+      {...restProps}
+      style={{
+        ...restProps.style,
+        position: 'relative',
+        userSelect: 'none',
+      }}
+    >
+      {children}
+      <div
+        onMouseDown={handleMouseDown}
+        onClick={(e) => e.stopPropagation()}
+        title="Geser untuk mengatur lebar kolom"
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '8px',
+          cursor: 'col-resize',
+          zIndex: 10,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ width: '2px', height: '55%', background: '#cbd5e1', borderRadius: '1px' }} />
+      </div>
+    </th>
+  );
+};
 
 const getColumnSearchProps = (dataIndex, searchInput) => ({
-  filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close, filterDropdownProps }) => (
+  filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
     <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
       <Input
         ref={searchInput}
@@ -16,7 +87,7 @@ const getColumnSearchProps = (dataIndex, searchInput) => ({
         value={selectedKeys[0]}
         onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
         onPressEnter={() => confirm()}
-        style={{ marginBottom: 8, display: 'block' }}
+        style={{ marginBottom: 8, display: 'block', fontSize: '12px' }}
       />
       <Space>
         <Button
@@ -24,81 +95,58 @@ const getColumnSearchProps = (dataIndex, searchInput) => ({
           onClick={() => confirm()}
           icon={<SearchOutlined />}
           size="small"
-          style={{ width: 90 }}
+          style={{ width: 80, fontSize: '12px' }}
         >
           Cari
         </Button>
-        <Button
-          onClick={() => clearFilters && clearFilters()}
-          size="small"
-          style={{ width: 90 }}
-        >
+        <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 80, fontSize: '12px' }}>
           Reset
         </Button>
-        <Button
-          type="link"
-          size="small"
-          onClick={() => {
-            confirm({ closeDropdown: false });
-          }}
-        >
-          Filter
-        </Button>
-        <Button
-          type="link"
-          size="small"
-          onClick={() => {
-            close();
-          }}
-        >
+        <Button type="link" size="small" onClick={() => close()} style={{ fontSize: '12px' }}>
           Tutup
         </Button>
       </Space>
     </div>
   ),
   filterIcon: (filtered) => (
-    <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
+    <SearchOutlined style={{ color: filtered ? '#0F5B99' : undefined, fontSize: '12px' }} />
   ),
   onFilter: (value, record) =>
-    record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()),
-  filterDropdownProps: {
-    onOpenChange: (visible) => {
-      if (visible) {
-        setTimeout(() => searchInput.current?.select(), 100);
-      }
-    },
-  },
-});
-
-const normalizeRealisasi = (item) => ({
-  id: item.mak, // Using MAK as ID for simplicity
-  mak: item.mak,
-  description: item.deskripsi,
-  totalRealisasi: item.total_realisasi,
+    record[dataIndex] ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()) : false,
 });
 
 const RealisasiByMak = () => {
   const { apiFetch } = useAuth();
   const { message } = AntdApp.useApp();
   const notification = buildMessageAdapter(message);
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedDetailData, setSelectedDetailData] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false); // New state for detail modal loading
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const [colWidths, setColWidths] = useState({
+    mak: 225,
+    deskripsi: 260,
+    anggaran: 140,
+    realisasi_pembelian: 130,
+    realisasi_perjadin: 130,
+    total_realisasi: 140,
+    percentage: 120,
+    action: 60,
+  });
+
   const searchInput = useRef(null);
 
   const fetchRealisasiByMak = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      const response = await apiFetch(`/realisasi-mak?${params.toString()}`);
+      const response = await apiFetch('/realisasi-mak');
       if (!response.ok) {
-        throw new Error('Gagal memuat data realisasi MAK.');
+        throw new Error('Gagal memuat data realisasi per MAK.');
       }
       const payload = await response.json();
-      setData((payload ?? []).map(normalizeRealisasi));
-
+      setData(payload ?? []);
     } catch (error) {
       console.error(error);
       notification.error({
@@ -114,167 +162,200 @@ const RealisasiByMak = () => {
     fetchRealisasiByMak();
   }, [fetchRealisasiByMak]);
 
-  const handleDetailClick = useCallback(async (record) => { // Make it async
-    setSelectedDetailData(record);
-    setDetailModalOpen(true);
-    setDetailLoading(true); // Start loading for detail data
-    try {
-      // Assume an API endpoint for detailed transactions for a given MAK
-      const response = await apiFetch(`/realisasi-mak/${record.mak}/transactions`);
-      if (!response.ok) {
-        throw new Error('Gagal memuat detail realisasi MAK.');
-      }
-      const payload = await response.json();
-      // Assuming payload contains an array of transactions for this MAK
-      setSelectedDetailData(prev => ({ ...prev, transactions: payload })); // Add transactions to selectedDetailData
-    } catch (error) {
-      console.error(error);
-      notification.error({
-        message: 'Gagal memuat detail realisasi',
-        description: error.message,
-      });
-      setSelectedDetailData(prev => ({ ...prev, transactions: [] })); // Set empty array on error
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [apiFetch, notification]);
+  const handleOpenDetail = (record) => {
+    setSelectedRecord(record);
+    setModalOpen(true);
+  };
 
-  const handleCloseDetailModal = useCallback(() => {
-    setDetailModalOpen(false);
-    setSelectedDetailData(null);
-  }, []);
-
-  const columns = useMemo(() => [
-    {
-      title: 'MAK',
-      dataIndex: 'mak',
-      key: 'mak',
-      sorter: (a, b) => a.mak.localeCompare(b.mak),
-      render: (text) => <Typography.Text code>{text}</Typography.Text>,
-      ...getColumnSearchProps('mak', searchInput),
-    },
-    {
-      title: 'Deskripsi',
-      dataIndex: 'description',
-      key: 'description',
-      sorter: (a, b) => a.description.localeCompare(b.description),
-      ...getColumnSearchProps('description', searchInput),
-    },
-    {
-      title: 'Total Realisasi',
-      dataIndex: 'totalRealisasi',
-      key: 'totalRealisasi',
-      align: 'right',
-      sorter: (a, b) => a.totalRealisasi - b.totalRealisasi,
-      render: (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value),
-    },
-    {
-      title: 'Aksi',
-      key: 'aksi',
-      width: 80,
-      align: 'center',
-      render: (_, record) => {
-        const items = [
-          {
-            key: 'detail',
-            label: 'Lihat Detail',
-            icon: <EyeOutlined style={{ color: '#1890ff' }} />,
-            onClick: () => handleDetailClick(record)
-          }
-        ];
-        return (
-          <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        );
+  const rawColumns = useMemo(
+    () => [
+      {
+        title: 'Kode MAK',
+        dataIndex: 'mak',
+        key: 'mak',
+        width: colWidths.mak,
+        sorter: (a, b) => a.mak.localeCompare(b.mak),
+        render: (text) => <Text code style={{ fontWeight: 600, fontSize: '11.5px', whiteSpace: 'nowrap', display: 'inline-block' }}>{text}</Text>,
+        ...getColumnSearchProps('mak', searchInput),
       },
-    },
-  ], [handleDetailClick]);
+      {
+        title: 'Deskripsi Uraian MAK',
+        dataIndex: 'deskripsi',
+        key: 'deskripsi',
+        width: colWidths.deskripsi,
+        ellipsis: true,
+        render: (text) => <span style={{ fontSize: '12px', color: '#334155' }}>{text}</span>,
+        ...getColumnSearchProps('deskripsi', searchInput),
+      },
+      {
+        title: 'Pagu Anggaran',
+        dataIndex: 'anggaran',
+        key: 'anggaran',
+        align: 'right',
+        width: colWidths.anggaran,
+        sorter: (a, b) => a.anggaran - b.anggaran,
+        render: (v) => <Text style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{formatCurrency(v)}</Text>,
+      },
+      {
+        title: 'Realisasi Pembelian',
+        dataIndex: 'realisasi_pembelian',
+        key: 'realisasi_pembelian',
+        align: 'right',
+        width: colWidths.realisasi_pembelian,
+        render: (v) => <Text style={{ color: '#2563eb', fontSize: '12px', whiteSpace: 'nowrap' }}>{formatCurrency(v)}</Text>,
+      },
+      {
+        title: 'Realisasi Perjadin',
+        dataIndex: 'realisasi_perjadin',
+        key: 'realisasi_perjadin',
+        align: 'right',
+        width: colWidths.realisasi_perjadin,
+        render: (v) => <Text style={{ color: '#7c3aed', fontSize: '12px', whiteSpace: 'nowrap' }}>{formatCurrency(v)}</Text>,
+      },
+      {
+        title: 'Total Realisasi',
+        dataIndex: 'total_realisasi',
+        key: 'total_realisasi',
+        align: 'right',
+        width: colWidths.total_realisasi,
+        sorter: (a, b) => a.total_realisasi - b.total_realisasi,
+        render: (v) => (
+          <Text strong style={{ color: '#0F5B99', fontSize: '12px', whiteSpace: 'nowrap' }}>
+            {formatCurrency(v)}
+          </Text>
+        ),
+      },
+      {
+        title: 'Persentase',
+        key: 'percentage',
+        width: colWidths.percentage,
+        render: (_, r) => {
+          const percent = r.anggaran > 0 ? Math.min(100, Math.round((r.total_realisasi / r.anggaran) * 100)) : 0;
+          return <Progress percent={percent} size="small" status={percent > 90 ? 'exception' : 'active'} style={{ fontSize: '11px' }} />;
+        },
+      },
+      {
+        title: 'Aksi',
+        key: 'action',
+        align: 'center',
+        width: colWidths.action,
+        render: (_, record) => {
+          const items = [
+            {
+              key: 'detail',
+              label: <span style={{ fontSize: '12px' }}>Ringkasan MAK</span>,
+              icon: <EyeOutlined style={{ color: '#0F5B99', fontSize: '13px' }} />,
+              onClick: () => handleOpenDetail(record),
+            },
+          ];
+          return (
+            <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+              <Button type="text" size="small" icon={<MoreOutlined style={{ fontSize: '16px' }} />} />
+            </Dropdown>
+          );
+        },
+      },
+    ],
+    [colWidths]
+  );
+
+  const columns = useMemo(() => {
+    return rawColumns.map((col) => ({
+      ...col,
+      onHeaderCell: (column) => ({
+        width: colWidths[column.key] || column.width,
+        onResize: (newWidth) => {
+          setColWidths((prev) => ({
+            ...prev,
+            [column.key]: newWidth,
+          }));
+        },
+      }),
+    }));
+  }, [rawColumns, colWidths]);
 
   return (
-    <div>
-      <Typography.Title level={5}>Realisasi Anggaran Berdasarkan MAK</Typography.Title>
-      <Typography.Paragraph>Ringkasan realisasi anggaran per Mata Anggaran Kegiatan (MAK).</Typography.Paragraph>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Table
-        rowKey="id"
+        rowKey="mak"
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
+        }}
         columns={columns}
         dataSource={data}
         loading={loading}
         pagination={{ pageSize: 10, size: 'small' }}
-        scroll={{ x: true }}
+        scroll={{ x: '100%' }}
         size="small"
+        bordered
       />
 
+      {/* Modal Detail Ringkasan MAK */}
       <Modal
-        open={detailModalOpen}
-        title="Detail Realisasi Anggaran"
-        onCancel={handleCloseDetailModal}
-        footer={null}
-        centered
-        destroyOnHidden
-        width={600} // Adjust width as needed
+        open={modalOpen}
+        onCancel={() => {
+          setModalOpen(false);
+          setSelectedRecord(null);
+        }}
+        footer={[
+          <Button key="close" type="primary" size="small" onClick={() => setModalOpen(false)} style={{ fontSize: '12px' }}>
+            Tutup
+          </Button>,
+        ]}
+        title={<span style={{ fontSize: '14px', fontWeight: 600 }}>Ringkasan Realisasi MAK: {selectedRecord?.mak || ''}</span>}
+        width={520}
       >
-        {selectedDetailData && (
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Typography.Text><b>MAK:</b> {selectedDetailData.mak}</Typography.Text>
-            <Typography.Text><b>Deskripsi:</b> {selectedDetailData.description}</Typography.Text>
-            <Typography.Text><b>Total Realisasi:</b> {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(selectedDetailData.totalRealisasi)}</Typography.Text>
+        {selectedRecord && (
+          <Space direction="vertical" style={{ width: '100%', marginTop: 8 }} size="small">
+            <Card size="small" style={{ background: '#f8fafc', borderRadius: 6 }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>Deskripsi Uraian:</Text>
+              <Paragraph style={{ margin: 0, fontWeight: 600, fontSize: '12px' }}>{selectedRecord.deskripsi || '-'}</Paragraph>
+            </Card>
 
-            <Typography.Title level={5} style={{ marginTop: 16 }}>Detail Transaksi</Typography.Title>
-            {detailLoading ? (
-              <Spin />
-            ) : (
-              <Table
-                dataSource={selectedDetailData.transactions}
-                columns={[
-                  {
-                    title: 'Tanggal', dataIndex: 'tanggal', key: 'tanggal', sorter: (a, b) => dayjs(a.tanggal).unix() - dayjs(b.tanggal).unix(), render: (text) => dayjs(text).format('DD MMM YYYY'),
-                    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-                      <div style={{ padding: 8 }}>
-                        <DatePicker.RangePicker
-                          value={selectedKeys[0] ? [dayjs(selectedKeys[0][0]), dayjs(selectedKeys[0][1])] : null}
-                          onChange={(dates) => setSelectedKeys(dates ? [dates.map(d => d.format('YYYY-MM-DD'))] : [])}
-                          onPressEnter={() => confirm()}
-                          style={{ marginBottom: 8, display: 'block' }}
-                        />
-                        <Space>
-                          <Button
-                            type="primary"
-                            onClick={() => confirm()}
-                            icon={<SearchOutlined />}
-                            size="small"
-                            style={{ width: 90 }}
-                          >
-                            Filter
-                          </Button>
-                          <Button
-                            onClick={() => clearFilters && clearFilters()}
-                            size="small"
-                            style={{ width: 90 }}
-                          >
-                            Reset
-                          </Button>
-                        </Space>
-                      </div>
-                    ),
-                    filterIcon: (filtered) => (
-                      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-                    ),
-                    onFilter: (value, record) => {
-                      const recordDate = dayjs(record.tanggal);
-                      const [startDate, endDate] = value;
-                      return recordDate.isAfter(dayjs(startDate).subtract(1, 'day')) && recordDate.isBefore(dayjs(endDate).add(1, 'day'));
-                    },
-                  },
-                  { title: 'Deskripsi Transaksi', dataIndex: 'deskripsi', key: 'deskripsi', sorter: (a, b) => a.deskripsi.localeCompare(b.deskripsi), ...getColumnSearchProps('deskripsi', searchInput) },
-                  { title: 'Nilai', dataIndex: 'nilai', key: 'nilai', align: 'right', sorter: (a, b) => a.nilai - b.nilai, render: (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value) },
-                ]}
-                pagination={false}
-                size="small"
-                rowKey="id"
-                scroll={{ x: true }}
-              />
-            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff' }}>
+                <Text type="secondary" style={{ fontSize: '11px' }}>Pagu Anggaran</Text>
+                <Title level={5} style={{ margin: 0, color: '#0f172a', fontSize: '13px' }}>
+                  {formatCurrency(selectedRecord.anggaran)}
+                </Title>
+              </div>
+
+              <div style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 6, background: '#eff6ff' }}>
+                <Text type="secondary" style={{ fontSize: '11px', color: '#1e40af' }}>Total Realisasi</Text>
+                <Title level={5} style={{ margin: 0, color: '#0F5B99', fontSize: '13px' }}>
+                  {formatCurrency(selectedRecord.total_realisasi)}
+                </Title>
+              </div>
+
+              <div style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff' }}>
+                <Space size="xs">
+                  <ShoppingOutlined style={{ color: '#2563eb', fontSize: '12px' }} />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>Pembelian (Invoice)</Text>
+                </Space>
+                <Title level={5} style={{ margin: 0, color: '#2563eb', fontSize: '13px', marginTop: 2 }}>
+                  {formatCurrency(selectedRecord.realisasi_pembelian || 0)}
+                </Title>
+              </div>
+
+              <div style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff' }}>
+                <Space size="xs">
+                  <GlobalOutlined style={{ color: '#7c3aed', fontSize: '12px' }} />
+                  <Text type="secondary" style={{ fontSize: '11px' }}>Perjadin (LPJ/ST)</Text>
+                </Space>
+                <Title level={5} style={{ margin: 0, color: '#7c3aed', fontSize: '13px', marginTop: 2 }}>
+                  {formatCurrency(selectedRecord.realisasi_perjadin || 0)}
+                </Title>
+              </div>
+            </div>
+
+            <div style={{ padding: 10, border: '1px solid #e2e8f0', borderRadius: 6, background: '#f8fafc' }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>Sisa Anggaran Tersedia:</Text>
+              <Title level={5} style={{ margin: 0, fontSize: '14px', color: (selectedRecord.anggaran - selectedRecord.total_realisasi) < 0 ? '#ef4444' : '#10b981' }}>
+                {formatCurrency(selectedRecord.anggaran - selectedRecord.total_realisasi)}
+              </Title>
+            </div>
           </Space>
         )}
       </Modal>
@@ -283,5 +364,3 @@ const RealisasiByMak = () => {
 };
 
 export default RealisasiByMak;
-
-

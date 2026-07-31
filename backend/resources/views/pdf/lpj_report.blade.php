@@ -191,7 +191,7 @@
                             </table>
                         @endif
                     </td>
-                    <td style="vertical-align: top;">{{ $row['keterangan'] }}</td>
+                    <td style="vertical-align: middle; text-align: left;">{{ $row['keterangan'] }}</td>
                 </tr>
             @endforeach
 

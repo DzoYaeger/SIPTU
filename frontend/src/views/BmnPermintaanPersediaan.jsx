@@ -20,6 +20,7 @@ import {
   Drawer,
   Empty,
   Badge,
+  Dropdown,
 } from 'antd';
 import { buildMessageAdapter } from '../utils/notify.js';
 import {
@@ -35,6 +36,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import StatisticCard from '../components/StatisticCard.jsx';
@@ -267,12 +269,26 @@ const BmnPermintaanPersediaan = () => {
       }
     },
     {
-      title: '',
+      title: 'Aksi',
       key: 'actions',
-      width: 80,
-      render: (_, record) => (
-        <Button type="text" icon={<EyeOutlined style={{ color: '#1890ff' }} />} onClick={() => handleViewDetail(record)} />
-      )
+      width: 70,
+      align: 'center',
+      render: (_, record) => {
+        const items = [
+          {
+            key: 'detail',
+            label: 'Lihat Rincian Permintaan',
+            icon: <EyeOutlined style={{ color: '#1e293b' }} />,
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        return (
+          <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 

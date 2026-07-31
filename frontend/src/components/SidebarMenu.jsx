@@ -30,6 +30,7 @@ import {
   UserOutlined,
   CloudOutlined,
   HistoryOutlined,
+  HomeFilled,
   SafetyOutlined,
   CheckSquareOutlined,
   VideoCameraOutlined,
@@ -111,6 +112,12 @@ const SidebarMenu = ({
   const [openKeys, setOpenKeys] = useState([]);
 
   const renderFolderIcon = useCallback((slug) => {
+    if (slug === "layanan-mandiri") {
+      return <HomeFilled style={{ fontSize: 18, color: activeKey === slug ? '#0F5B99' : '#0284c7' }} />;
+    }
+    if (slug === "riwayat-layanan") {
+      return <HistoryOutlined style={{ fontSize: 18, color: activeKey === slug ? '#0F5B99' : '#0284c7' }} />;
+    }
     const isOpen = openKeys.includes(slug) || activeKey === slug || (activeKey && activeKey.startsWith(slug));
     return isOpen ? (
       <FolderOpenOutlined style={{ fontSize: 18, color: '#0F5B99' }} />
@@ -230,59 +237,8 @@ const SidebarMenu = ({
       width={210}
       collapsedWidth={0}
       className="app-sider"
-      style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 100 }}
+      style={{ position: 'sticky', top: 48, height: 'calc(100vh - 48px)', zIndex: 100 }}
     >
-      {/* Floating Toggle Button on Sidebar-Navbar Border */}
-      {onToggleCollapse && (
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="sidebar-border-toggle-btn"
-          title={collapsed ? "Perluas Sidebar Menu" : "Tutup Sidebar Menu"}
-          aria-label={collapsed ? "Perluas Sidebar Menu" : "Tutup Sidebar Menu"}
-          style={{
-            position: 'absolute',
-            right: collapsed ? -28 : -13,
-            top: 13,
-            width: 26,
-            height: 26,
-            borderRadius: '50%',
-            background: '#ffffff',
-            border: '1px solid #cbd5e1',
-            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.18)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 101,
-            outline: 'none',
-            padding: 0,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          <LeftOutlined
-            style={{
-              fontSize: 11,
-              color: '#334155',
-              transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          />
-        </button>
-      )}
-
-      <div className="brand" style={{ padding: '0 12px', display: 'flex', alignItems: 'center', height: 52, borderBottom: '1px solid #f1f5f9' }}>
-        {collapsed ? (
-          <span style={{ fontWeight: 800, fontSize: 16, color: '#0F5B99', letterSpacing: '-0.5px', margin: '0 auto' }}>SIPTU</span>
-        ) : (
-          <img
-            src="/logo/logo-samping.png"
-            alt="SIPTU Logo"
-            style={{ height: 32, maxWidth: 165, objectFit: 'contain' }}
-          />
-        )}
-      </div>
-
       <Menu
         mode="inline"
         selectedKeys={[activeKey]}

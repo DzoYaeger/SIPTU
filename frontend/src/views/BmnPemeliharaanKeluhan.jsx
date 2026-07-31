@@ -85,7 +85,7 @@ const statusLabel = {
 };
 
 export default function BmnPemeliharaanKeluhan() {
-  const { apiFetch, currentRole } = useAuth();
+  const { apiFetch, currentRole, user } = useAuth();
   const { message } = AntdApp.useApp();
   const [updateForm] = Form.useForm();
 
@@ -129,17 +129,26 @@ export default function BmnPemeliharaanKeluhan() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
 
-  const isAdminOrValidator =
-    currentRole === "admin" || currentRole === "validator";
+  const isAdminOrValidator = useMemo(() => {
+    return (
+      currentRole === "admin" ||
+      currentRole === "validator" ||
+      user?.base_role === "admin" ||
+      user?.base_role === "validator"
+    );
+  }, [currentRole, user?.base_role]);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("only_mine", "1");
+      if (!isAdminOrValidator || scopeFilter === "mine") {
+        params.set("only_mine", "1");
+      }
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (typeFilter !== "all") params.set("report_type", typeFilter);
       if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
@@ -155,7 +164,7 @@ export default function BmnPemeliharaanKeluhan() {
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, message, debouncedSearch, statusFilter, typeFilter]);
+  }, [apiFetch, message, debouncedSearch, statusFilter, typeFilter, scopeFilter, isAdminOrValidator]);
 
   useEffect(() => {
     fetchReports();
@@ -269,8 +278,8 @@ export default function BmnPemeliharaanKeluhan() {
           const items = [
             {
               key: "update",
-              label: "Update Status",
-              icon: <EditOutlined />,
+              label: "Update Status Laporan",
+              icon: <EditOutlined style={{ color: "#1e293b" }} />,
               onClick: () => openUpdateModal(record),
             },
           ];
@@ -281,7 +290,7 @@ export default function BmnPemeliharaanKeluhan() {
               trigger={["click"]}
               placement="bottomRight"
             >
-              <Button type="text" icon={<MoreOutlined />} />
+              <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#1e293b", fontSize: 16 }} />} />
             </Dropdown>
           );
         },
@@ -348,6 +357,17 @@ export default function BmnPemeliharaanKeluhan() {
 
       <Card className="content-card">
         <Space wrap style={{ width: "100%" }}>
+          {isAdminOrValidator && (
+            <Select
+              value={scopeFilter}
+              style={{ width: 180 }}
+              options={[
+                { label: "Semua Pelaporan", value: "all" },
+                { label: "Pelaporan Saya", value: "mine" },
+              ]}
+              onChange={setScopeFilter}
+            />
+          )}
           <Select
             value={typeFilter}
             style={{ width: 180 }}

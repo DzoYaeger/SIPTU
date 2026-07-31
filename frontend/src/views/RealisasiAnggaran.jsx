@@ -1,35 +1,48 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Tabs, Space, Typography } from 'antd';
+import { Tabs, Typography } from 'antd';
+import { CalendarOutlined, AuditOutlined } from '@ant-design/icons';
 import RealisasiByDate from './RealisasiByDate';
 import RealisasiByMak from './RealisasiByMak';
 
+const { Title, Paragraph } = Typography;
+
 const RealisasiAnggaran = () => {
+  const items = [
+    {
+      key: '1',
+      label: (
+        <span>
+          <CalendarOutlined /> Transaksi Realisasi (Tgl / ST / INV)
+        </span>
+      ),
+      children: <RealisasiByDate />,
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          <AuditOutlined /> Ringkasan Pagu & Realisasi per MAK
+        </span>
+      ),
+      children: <RealisasiByMak />,
+    },
+  ];
 
   return (
     <div className="module-section">
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={4} className="module-title">
+          <Title level={4} className="module-title">
             Realisasi Anggaran
-          </Typography.Title>
-          <Typography.Paragraph className="module-subtitle">
-            Rincian realisasi per tanggal atau kode MAK.
-          </Typography.Paragraph>
+          </Title>
+          <Paragraph className="module-subtitle">
+            Sinkronisasi data realisasi anggaran dari Invoice Belanja (Pembelian) dan LPJ Perjalanan Dinas (Perjadin).
+          </Paragraph>
         </div>
-        <Space size="small">
-          {/* The search input will now be within each table column */}
-        </Space>
       </div>
-      <div className="table-card">
-        <Tabs defaultActiveKey="1" style={{ width: '100%' }}>
-          <Tabs.TabPane tab="Berdasarkan Tanggal" key="1">
-            <RealisasiByDate />
-          </Tabs.TabPane>
-          <Tabs.TabPane tab="Berdasarkan MAK" key="2">
-            <RealisasiByMak />
-          </Tabs.TabPane>
-        </Tabs>
+
+      <div className="table-card" style={{ padding: 16 }}>
+        <Tabs defaultActiveKey="1" items={items} style={{ width: '100%' }} />
       </div>
     </div>
   );

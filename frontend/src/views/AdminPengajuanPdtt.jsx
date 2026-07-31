@@ -599,9 +599,14 @@ export default function AdminPengajuanPdtt() {
 
     const getItemDisplayName = (pdttItem) => {
         if (!pdttItem) return "-";
-        const name = pdttItem.item_name || "-";
-        const spec = getItemVolumeSpec(pdttItem);
-        return spec ? `${name} (${spec})` : name;
+        const parts = [];
+        if (pdttItem.item_name) parts.push(pdttItem.item_name.trim());
+        if (pdttItem.brand) parts.push(pdttItem.brand.trim());
+        if (pdttItem.jumlah !== undefined && pdttItem.jumlah !== null && pdttItem.jumlah !== "") {
+            parts.push(String(pdttItem.jumlah).trim());
+        }
+        if (pdttItem.satuan) parts.push(pdttItem.satuan.trim());
+        return parts.length > 0 ? parts.join(" ") : "-";
     };
 
     const handleOpenFulfillment = (record) => {

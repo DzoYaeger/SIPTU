@@ -113,13 +113,20 @@ class NextcloudStorageController extends Controller
             // Ensure the backup directory exists
             $this->ensureDirectoryExists($targetDir);
 
-            // Get directory listing
+            // Get directory listing with explicit oc:size request
             $url = $this->getWebdavUrl($targetDir);
+            $propfindXml = '<?xml version="1.0" encoding="utf-8" ?>'
+                . '<d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">'
+                . '<d:prop><d:getlastmodified/><d:getcontentlength/><d:getcontenttype/><d:resourcetype/><oc:size/></d:prop>'
+                . '</d:propfind>';
+
             $response = $this->httpClient()
                 ->withHeaders([
                     'X-Requested-With' => 'XMLHttpRequest',
+                    'Content-Type' => 'application/xml',
                     'Depth' => '1' // Get immediate children
                 ])
+                ->withBody($propfindXml, 'application/xml')
                 ->send('PROPFIND', $url);
 
             if (!$response->successful()) {
@@ -142,6 +149,7 @@ class NextcloudStorageController extends Controller
             if (@$dom->loadXML($xmlStr)) {
                 $xpath = new \DOMXPath($dom);
                 $xpath->registerNamespace('d', 'DAV:');
+                $xpath->registerNamespace('oc', 'http://owncloud.org/ns');
                 $responseNodes = $xpath->query('//d:response');
 
                 foreach ($responseNodes as $node) {
@@ -166,7 +174,15 @@ class NextcloudStorageController extends Controller
                         $lastModified = $lastModifiedNodes->length > 0 ? $lastModifiedNodes->item(0)->textContent : '';
                         
                         $sizeNodes = $xpath->query('d:getcontentlength', $prop);
-                        $size = $sizeNodes->length > 0 ? $sizeNodes->item(0)->textContent : '0';
+                        $ocSizeNodes = $xpath->query('*[local-name()="size"]', $prop);
+
+                        $size = 0;
+                        if ($sizeNodes->length > 0 && is_numeric($sizeNodes->item(0)->textContent)) {
+                            $size = (int)$sizeNodes->item(0)->textContent;
+                        }
+                        if ($size <= 0 && $ocSizeNodes->length > 0 && is_numeric($ocSizeNodes->item(0)->textContent)) {
+                            $size = (int)$ocSizeNodes->item(0)->textContent;
+                        }
                         
                         $contentTypeNodes = $xpath->query('d:getcontenttype', $prop);
                         $contentType = $contentTypeNodes->length > 0 ? $contentTypeNodes->item(0)->textContent : '';
@@ -181,7 +197,7 @@ class NextcloudStorageController extends Controller
                         $files[] = [
                             'name' => $name,
                             'path' => $relativePath,
-                            'size' => $isDir ? null : (int)$size,
+                            'size' => (int)$size,
                             'is_dir' => $isDir,
                             'last_modified' => $lastModified ? date('Y-m-d H:i:s', strtotime($lastModified)) : null,
                             'content_type' => $contentType,

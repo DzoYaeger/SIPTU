@@ -16,17 +16,11 @@ import {
   Row,
   Col,
   Divider,
-  Popconfirm,
-  Statistic,
-  Badge,
-  Descriptions,
-  Tabs,
   Empty,
   Dropdown,
 } from 'antd';
 import { buildMessageAdapter } from '../utils/notify.js';
 import {
-  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
@@ -38,12 +32,16 @@ import {
   FilterOutlined,
   ReloadOutlined,
   SearchOutlined,
-  BankOutlined,
   UserOutlined,
   FileProtectOutlined,
   SafetyCertificateOutlined,
   MoreOutlined,
   SaveOutlined,
+  TagOutlined,
+  CalendarOutlined,
+  CopyOutlined,
+  CheckOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import useDebounce from '../hooks/useDebounce.js';
@@ -99,7 +97,8 @@ const COMMON_TAX_TYPES = [
 ];
 
 export default function InvoiceBelanja() {
-  const { apiFetch } = useAuth();
+  const { apiFetch, user, currentRole } = useAuth();
+  const isAdmin = user?.base_role === 'admin' || currentRole === 'admin';
   const { message } = AntdApp.useApp();
   const notification = buildMessageAdapter(message);
   const [form] = Form.useForm();
@@ -114,6 +113,7 @@ export default function InvoiceBelanja() {
   const [viewInvoice, setViewInvoice] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTa, setSelectedTa] = useState('ALL');
+  const [copiedId, setCopiedId] = useState(null);
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   // Form values watching for live calculations
@@ -196,6 +196,13 @@ export default function InvoiceBelanja() {
     return { totalCount, totalGross, totalPajak, totalNet };
   }, [filteredData]);
 
+  const handleCopyText = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    message.success('Nomor invoice disalin ke clipboard');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleOpenModal = (record = null) => {
     const ppkDefaultName = pejabatSetting?.ppk?.name || 'DODDY PRAYUDI, A.Md';
     const ppkDefaultNip = pejabatSetting?.ppk?.nip ? `NIP. ${pejabatSetting.ppk.nip}` : '-';
@@ -267,7 +274,6 @@ export default function InvoiceBelanja() {
     const calculatedTax = taxOption.rate > 0 ? Math.round((currentGross * taxOption.rate) / 100) : 0;
 
     const currentTaxes = form.getFieldValue('taxes') || [];
-    // Check if already exists
     const existingIndex = currentTaxes.findIndex(t => t?.jenis_pajak === taxOption.value);
     if (existingIndex >= 0) {
       currentTaxes[existingIndex] = {
@@ -283,7 +289,7 @@ export default function InvoiceBelanja() {
       });
     }
     form.setFieldsValue({ taxes: [...currentTaxes] });
-    message.success(`Berhasil menambahkan preset ${taxOption.label}`);
+    message.success(`Preset ${taxOption.label} diterapkan`);
   };
 
   const recalculateAllTaxesWithGross = (newGross) => {
@@ -316,7 +322,7 @@ export default function InvoiceBelanja() {
       });
 
       if (response.ok) {
-        notification.success(mode === 'create' ? 'Invoice berhasil dibuat' : 'Invoice berhasil diperbarui');
+        notification.success(mode === 'create' ? 'Invoice berhasil direkam' : 'Invoice berhasil diperbarui');
         setOpenModal(false);
         fetchInvoices();
       } else {
@@ -371,22 +377,41 @@ export default function InvoiceBelanja() {
 
   const columns = [
     {
-      title: 'Nomor Bukti / Invoice',
+      title: 'No. Invoice',
       dataIndex: 'invoice_no',
       key: 'invoice_no',
-      render: (text, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ color: '#1e40af', fontSize: 13 }}>{text || record.ticket_no}</Text>
-          <Text type="secondary" style={{ fontSize: 11 }}>TA: {record.tahun_anggaran}</Text>
-        </Space>
-      ),
+      width: 170,
+      render: (text, record) => {
+        const displayNo = text || record.ticket_no;
+        return (
+          <div className="inv-no-cell">
+            <div className="inv-no-text-row">
+              <span className="inv-no-code">{displayNo}</span>
+              <Tooltip title="Salin No. Invoice">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={copiedId === record.id ? <CheckOutlined style={{ color: '#10b981' }} /> : <CopyOutlined style={{ color: '#94a3b8' }} />}
+                  onClick={() => handleCopyText(displayNo, record.id)}
+                  style={{ width: 18, height: 18, padding: 0 }}
+                />
+              </Tooltip>
+            </div>
+            <div className="inv-no-meta">
+              <CalendarOutlined style={{ fontSize: 10, marginRight: 4 }} />
+              <span>TA {record.tahun_anggaran}</span>
+            </div>
+          </div>
+        );
+      },
     },
     {
-      title: 'MAK',
+      title: 'Kode MAK',
       dataIndex: 'mak',
       key: 'mak',
+      width: 150,
       render: (text) => (
-        <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 500 }}>
+        <Tag color="geekblue" className="inv-mak-badge">
           {text || '-'}
         </Tag>
       ),
@@ -398,62 +423,87 @@ export default function InvoiceBelanja() {
       ellipsis: true,
       render: (text) => (
         <Tooltip title={text}>
-          <Text style={{ fontSize: 13, color: '#334155' }}>{text}</Text>
+          <span className="inv-desc-text">{text}</span>
         </Tooltip>
       ),
     },
     {
-      title: 'Jumlah Nota (Gross)',
+      title: 'Nominal Gross',
       dataIndex: 'nilai_kotor',
       key: 'nilai_kotor',
       align: 'right',
-      render: (val) => <Text strong style={{ color: '#1e293b' }}>{formatCurrency(val)}</Text>,
+      width: 130,
+      render: (val) => <span className="inv-gross-val">{formatCurrency(val)}</span>,
     },
     {
-      title: 'Rincian Pajak',
+      title: 'Potongan Pajak',
       dataIndex: 'taxes',
       key: 'taxes',
+      width: 150,
       render: (taxes) => (
-        <Space direction="vertical" size={2}>
+        <div className="inv-tax-list">
           {taxes && taxes.length > 0 ? (
             taxes.map((t, idx) => (
-              <Tag key={idx} color="orange" className="tax-tag">
-                {t.jenis_pajak}: {formatCurrency(t.nilai_pajak)}
-              </Tag>
+              <span key={idx} className="inv-tax-chip">
+                {t.jenis_pajak}: <strong>{formatCurrency(t.nilai_pajak)}</strong>
+              </span>
             ))
           ) : (
-            <Tag color="default" className="tax-tag">Tanpa Pajak</Tag>
+            <span className="inv-tax-none">Tanpa Pajak</span>
           )}
-        </Space>
+        </div>
       ),
     },
     {
-      title: 'Jumlah Dibayarkan (Net)',
+      title: 'Net Dibayarkan',
       dataIndex: 'nilai_bersih',
       key: 'nilai_bersih',
       align: 'right',
+      width: 140,
       render: (val) => (
-        <Text strong style={{ color: '#059669', fontSize: 14 }}>
+        <div className="inv-net-badge">
           {formatCurrency(val)}
-        </Text>
+        </div>
       ),
     },
     {
-      title: 'Aksi & Cetak',
+      title: 'Dibuat Oleh',
+      key: 'creator',
+      width: 140,
+      render: (_, record) => (
+        <div className="inv-creator-cell">
+          <span className="inv-creator-name">
+            {record.creator?.name || record.penerima_name || 'Pegawai'}
+          </span>
+          <span className="inv-creator-sub">
+            {record.creator?.nip ? `NIP. ${record.creator.nip}` : (record.creator?.base_role || 'User')}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: 'Aksi',
       key: 'actions',
+      width: 55,
       align: 'center',
       render: (_, record) => {
         const actionMenuItems = [
           {
+            key: 'print',
+            icon: <PrinterOutlined style={{ color: '#0f172a' }} />,
+            label: 'Cetak Bukti Pembelian F4 (PDF)',
+            onClick: () => handlePrintPdfF4(record),
+          },
+          {
             key: 'view',
-            icon: <EyeOutlined style={{ color: '#2563eb' }} />,
-            label: <span style={{ color: '#2563eb', fontWeight: 500 }}>Pratinjau Detail</span>,
+            icon: <EyeOutlined style={{ color: '#0f172a' }} />,
+            label: 'Pratinjau Detail Invoice',
             onClick: () => handleOpenViewModal(record),
           },
           {
             key: 'edit',
-            icon: <EditOutlined style={{ color: '#d97706' }} />,
-            label: <span style={{ color: '#d97706', fontWeight: 500 }}>Edit Invoice</span>,
+            icon: <EditOutlined style={{ color: '#0f172a' }} />,
+            label: 'Edit Data Invoice',
             onClick: () => handleOpenModal(record),
           },
           {
@@ -461,15 +511,14 @@ export default function InvoiceBelanja() {
           },
           {
             key: 'delete',
-            icon: <DeleteOutlined style={{ color: '#dc2626' }} />,
-            label: <span style={{ color: '#dc2626', fontWeight: 500 }}>Hapus Invoice</span>,
-            danger: true,
+            icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+            label: <span style={{ color: '#ef4444' }}>Hapus Invoice</span>,
             onClick: () => {
               Modal.confirm({
-                title: 'Hapus Invoice?',
-                content: `Apakah Anda yakin ingin menghapus invoice ${record.invoice_no || record.ticket_no}?`,
-                okText: 'Ya, Hapus',
-                okType: 'danger',
+                title: 'Hapus Invoice Belanja?',
+                content: `Apakah Anda yakin ingin menghapus invoice "${record.invoice_no || record.ticket_no}"?`,
+                okText: 'Hapus',
+                okButtonProps: { danger: true },
                 cancelText: 'Batal',
                 onOk: () => handleDelete(record.id),
               });
@@ -478,139 +527,113 @@ export default function InvoiceBelanja() {
         ];
 
         return (
-          <Space size={6}>
-            <Tooltip title="Cetak Bukti Pembelian (Kertas F4 PDF)">
-              <Button
-                className="action-btn-print"
-                icon={<PrinterOutlined />}
-                size="small"
-                onClick={() => handlePrintPdfF4(record)}
-              />
-            </Tooltip>
-
-            <Dropdown menu={{ items: actionMenuItems }} trigger={['click']} placement="bottomRight">
-              <Tooltip title="Aksi Menu">
-                <Button
-                  size="small"
-                  icon={<MoreOutlined />}
-                  style={{ borderRadius: 8 }}
-                />
-              </Tooltip>
-            </Dropdown>
-          </Space>
+          <Dropdown menu={{ items: actionMenuItems, className: "inv-action-dropdown" }} trigger={['click']} placement="bottomRight">
+            <Button type="text" shape="circle" className="inv-action-btn" icon={<MoreOutlined style={{ color: '#475569', fontSize: 16 }} />} />
+          </Dropdown>
         );
       },
     },
   ];
 
   return (
-    <div className="invoice-container">
-      {/* Header Banner */}
-      <Card className="invoice-header-card">
+    <div style={{ padding: 4 }}>
+      {/* Standar Ant Design Header Card */}
+      <Card size="small" style={{ marginBottom: 16, borderRadius: 8 }}>
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} md={16}>
             <Space align="center" size="middle">
-              <div className="icon-avatar">
-                <FileTextOutlined style={{ fontSize: 26, color: '#2563eb' }} />
-              </div>
+              <FileTextOutlined style={{ fontSize: 24, color: '#1890ff' }} />
               <div>
-                <Title level={4} style={{ margin: 0, color: '#0f172a' }}>
-                  Pembuatan & Kelola Invoice Belanja
+                <Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+                  Invoice & Bukti Pembelian Belanja
                 </Title>
                 <Text type="secondary" style={{ fontSize: 13 }}>
-                  Manajemen Bukti Pembelian dengan Dukungan Multi-Pajak Dinamis & Cetak Format F4/Folio
+                  Kelola bukti pembelian belanja, perincian pemotongan pajak dinamis, dan cetak dokumen resmi F4/Folio.
                 </Text>
               </div>
             </Space>
           </Col>
           <Col xs={24} md={8} style={{ textAlign: 'right' }}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              size="large"
-              onClick={() => handleOpenModal()}
-              style={{
-                borderRadius: 12,
-                backgroundColor: '#2563eb',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                fontWeight: 600,
-              }}
-            >
-              + Buat Invoice Baru
-            </Button>
+            <Space align="center">
+              {isAdmin ? (
+                <Tag color="blue" icon={<SafetyCertificateOutlined />}>Mode Admin</Tag>
+              ) : (
+                <Tag color="green" icon={<UserOutlined />}>Mode Pegawai</Tag>
+              )}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleOpenModal()}
+                style={{ fontWeight: 500 }}
+              >
+                Buat Invoice Baru
+              </Button>
+            </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* Metric Cards Grid */}
-      <Row gutter={[16, 16]}>
+      {/* Standar Ant Design Metric Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="metric-card" bodyStyle={{ padding: 16 }}>
+          <Card size="small" style={{ borderRadius: 8 }}>
             <Row align="middle" justify="space-between">
               <Col>
-                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Total Invoice
-                </Text>
-                <Title level={3} style={{ margin: 0, color: '#0f172a' }}>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Invoice</Text>
+                <Title level={4} style={{ margin: '2px 0 0 0', color: '#262626' }}>
                   {metrics.totalCount} <span style={{ fontSize: 13, fontWeight: 400 }}>Nota</span>
                 </Title>
               </Col>
-              <Col className="metric-icon-wrapper metric-blue">
-                <FileProtectOutlined />
+              <Col>
+                <FileProtectOutlined style={{ fontSize: 26, color: '#1890ff' }} />
               </Col>
             </Row>
           </Card>
         </Col>
 
         <Col xs={24} sm={12} lg={6}>
-          <Card className="metric-card" bodyStyle={{ padding: 16 }}>
+          <Card size="small" style={{ borderRadius: 8 }}>
             <Row align="middle" justify="space-between">
               <Col>
-                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Total Nominal Gross
-                </Text>
-                <Title level={4} style={{ margin: 0, color: '#1e293b' }}>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Nominal Gross</Text>
+                <Title level={4} style={{ margin: '2px 0 0 0', color: '#262626' }}>
                   {formatCurrency(metrics.totalGross)}
                 </Title>
               </Col>
-              <Col className="metric-icon-wrapper metric-indigo">
-                <CalculatorOutlined />
+              <Col>
+                <CalculatorOutlined style={{ fontSize: 26, color: '#722ed1' }} />
               </Col>
             </Row>
           </Card>
         </Col>
 
         <Col xs={24} sm={12} lg={6}>
-          <Card className="metric-card" bodyStyle={{ padding: 16 }}>
+          <Card size="small" style={{ borderRadius: 8 }}>
             <Row align="middle" justify="space-between">
               <Col>
-                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Total Potongan Pajak
-                </Text>
-                <Title level={4} style={{ margin: 0, color: '#e11d48' }}>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Potongan Pajak</Text>
+                <Title level={4} style={{ margin: '2px 0 0 0', color: '#cf1322' }}>
                   {formatCurrency(metrics.totalPajak)}
                 </Title>
               </Col>
-              <Col className="metric-icon-wrapper metric-rose">
-                <DollarOutlined />
+              <Col>
+                <DollarOutlined style={{ fontSize: 26, color: '#ff4d4f' }} />
               </Col>
             </Row>
           </Card>
         </Col>
 
         <Col xs={24} sm={12} lg={6}>
-          <Card className="metric-card" bodyStyle={{ padding: 16 }}>
+          <Card size="small" style={{ borderRadius: 8, background: '#f6ffed', borderColor: '#b7eb8f' }}>
             <Row align="middle" justify="space-between">
               <Col>
-                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  Total Dibayarkan (Net)
-                </Text>
-                <Title level={4} style={{ margin: 0, color: '#059669' }}>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Dibayarkan (Net)</Text>
+                <Title level={4} style={{ margin: '2px 0 0 0', color: '#389e0d' }}>
                   {formatCurrency(metrics.totalNet)}
                 </Title>
               </Col>
-              <Col className="metric-icon-wrapper metric-emerald">
-                <SafetyCertificateOutlined />
+              <Col>
+                <SafetyCertificateOutlined style={{ fontSize: 26, color: '#52c41a' }} />
               </Col>
             </Row>
           </Card>
@@ -618,22 +641,20 @@ export default function InvoiceBelanja() {
       </Row>
 
       {/* Main Table & Filter Container */}
-      <Card className="invoice-table-card">
+      <Card size="small" style={{ borderRadius: 8 }}>
         <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={12}>
+          <Col xs={24} sm={12} md={10}>
             <Input
               placeholder="Cari nomor invoice, MAK, atau uraian belanja..."
-              prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               allowClear
-              size="middle"
-              style={{ borderRadius: 10 }}
             />
           </Col>
-          <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+          <Col xs={24} sm={12} md={14} style={{ textAlign: 'right' }}>
             <Space wrap align="center">
-              <Text style={{ fontSize: 13, color: '#64748b' }}>
+              <Text style={{ fontSize: 13, color: '#595959' }}>
                 <FilterOutlined /> Filter TA:
               </Text>
               <Select
@@ -652,7 +673,6 @@ export default function InvoiceBelanja() {
                   icon={<ReloadOutlined />}
                   onClick={fetchInvoices}
                   loading={loading}
-                  style={{ borderRadius: 8 }}
                 />
               </Tooltip>
             </Space>
@@ -660,7 +680,7 @@ export default function InvoiceBelanja() {
         </Row>
 
         <Table
-          className="invoice-table"
+          className="inv-data-table"
           columns={columns}
           dataSource={filteredData}
           rowKey="id"
@@ -669,7 +689,7 @@ export default function InvoiceBelanja() {
             pageSize: 10,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50'],
-            showTotal: (total) => `Total ${total} data invoice`,
+            showTotal: (total) => `Menampilkan total ${total} invoice`,
           }}
           locale={{
             emptyText: (
@@ -677,7 +697,7 @@ export default function InvoiceBelanja() {
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description="Belum ada data invoice belanja ditemukan"
               >
-                <Button type="primary" size="small" onClick={() => handleOpenModal()}>
+                <Button type="primary" size="small" className="inv-create-empty-btn" onClick={() => handleOpenModal()}>
                   + Buat Invoice Pertama
                 </Button>
               </Empty>
@@ -689,22 +709,25 @@ export default function InvoiceBelanja() {
       {/* 👁️ QUICK VIEW DETAIL MODAL */}
       <Modal
         title={
-          <Space>
-            <FileProtectOutlined style={{ color: '#2563eb' }} />
-            <span>Rincian Invoice & Bukti Pembelian</span>
-          </Space>
+          <div className="inv-modal-title-box">
+            <FileProtectOutlined className="inv-modal-title-icon" />
+            <div>
+              <div className="inv-modal-title-main">Rincian Invoice & Bukti Pembelian</div>
+              <div className="inv-modal-title-sub">{viewInvoice?.invoice_no || viewInvoice?.ticket_no}</div>
+            </div>
+          </div>
         }
         open={openViewModal}
         onCancel={() => setOpenViewModal(false)}
         footer={[
-          <Button key="close" onClick={() => setOpenViewModal(false)}>
+          <Button key="close" className="inv-modal-close-btn" onClick={() => setOpenViewModal(false)}>
             Tutup
           </Button>,
           <Button
             key="print"
             type="primary"
             icon={<PrinterOutlined />}
-            style={{ backgroundColor: '#059669', borderColor: '#059669' }}
+            className="inv-modal-print-btn"
             onClick={() => {
               if (viewInvoice) handlePrintPdfF4(viewInvoice);
             }}
@@ -713,78 +736,73 @@ export default function InvoiceBelanja() {
           </Button>,
         ]}
         width={720}
+        centered
         destroyOnClose
       >
         {viewInvoice && (
-          <div style={{ padding: '4px 0' }}>
+          <div className="inv-view-container">
             {/* Top Invoice Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div className="inv-view-header-bar">
               <div>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nomor Invoice</Text>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#1e40af' }}>{viewInvoice.invoice_no}</div>
+                <span className="inv-view-meta-label">Nomor Invoice</span>
+                <div className="inv-view-code">{viewInvoice.invoice_no || viewInvoice.ticket_no}</div>
               </div>
               <Space wrap>
-                <Tag color="blue" style={{ borderRadius: 6, padding: '2px 10px', fontSize: 12, fontWeight: 500 }}>
+                <Tag color="blue" className="inv-view-tag">
                   TA {viewInvoice.tahun_anggaran}
                 </Tag>
-                <Tag color="cyan" style={{ borderRadius: 6, padding: '2px 10px', fontSize: 12, fontWeight: 500 }}>
+                <Tag color="geekblue" className="inv-view-tag">
                   MAK: {viewInvoice.mak}
                 </Tag>
               </Space>
             </div>
 
             {/* Uraian Belanja */}
-            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 10, marginBottom: 16, border: '1px solid #e2e8f0' }}>
-              <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Uraian Pembayaran Belanja</Text>
-              <div style={{ fontSize: 14, color: '#1e293b', marginTop: 4, fontWeight: 500, lineHeight: 1.5 }}>
+            <div className="inv-view-desc-card">
+              <span className="inv-view-meta-label">Uraian Pembayaran Belanja</span>
+              <div className="inv-view-desc-body">
                 {viewInvoice.deskripsi}
               </div>
             </div>
 
-            {/* Clean Financial Summary Bar */}
-            <div style={{
-              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-              padding: '16px 20px',
-              borderRadius: 12,
-              border: '1px solid #86efac',
-              marginBottom: 16,
-            }}>
+            {/* Clean Financial Summary Box */}
+            <div className="inv-view-fin-card">
               <Row gutter={16} align="middle">
                 <Col span={8}>
-                  <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Jumlah Kotor</Text>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: '#334155' }}>
+                  <span className="inv-view-meta-label">Jumlah Gross</span>
+                  <div className="inv-view-fin-val">
                     {formatCurrency(viewInvoice.nilai_kotor)}
                   </div>
                 </Col>
                 <Col span={8}>
-                  <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Potongan Pajak</Text>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: '#dc2626' }}>
+                  <span className="inv-view-meta-label">Potongan Pajak</span>
+                  <div className="inv-view-fin-val text-rose">
                     - {formatCurrency((viewInvoice.taxes || []).reduce((acc, t) => acc + (Number(t.nilai_pajak) || 0), 0))}
                   </div>
                 </Col>
                 <Col span={8} style={{ textAlign: 'right' }}>
-                  <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Jumlah Net Dibayarkan</Text>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>
+                  <span className="inv-view-meta-label">Jumlah Net Dibayarkan</span>
+                  <div className="inv-view-fin-val text-emerald-large">
                     {formatCurrency(viewInvoice.nilai_bersih)}
                   </div>
                 </Col>
               </Row>
 
-              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px dashed #a7f3d0', fontSize: 12, color: '#047857', fontStyle: 'italic' }}>
+              <div className="inv-view-terbilang">
                 <strong>Terbilang:</strong> "{numberToTerbilang(viewInvoice.nilai_bersih)}"
               </div>
             </div>
 
             {/* Tax Details List */}
             {viewInvoice.taxes && viewInvoice.taxes.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
+              <div className="inv-view-tax-section">
+                <span className="inv-view-meta-label display-block margin-b-6">
                   Rincian Pemotongan Pajak:
-                </Text>
+                </span>
                 <Space wrap size={[8, 8]}>
                   {viewInvoice.taxes.map((t, idx) => (
-                    <Tag key={idx} color="orange" style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12 }}>
-                      <span style={{ fontWeight: 500 }}>{t.jenis_pajak}:</span> {formatCurrency(t.nilai_pajak)}
+                    <Tag key={idx} color="orange" className="inv-view-tax-tag">
+                      <strong>{t.jenis_pajak}:</strong> {formatCurrency(t.nilai_pajak)}
                     </Tag>
                   ))}
                 </Space>
@@ -792,24 +810,24 @@ export default function InvoiceBelanja() {
             )}
 
             {/* Pejabat Signatories */}
-            <div style={{ background: '#ffffff', padding: '14px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-              <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 10 }}>
+            <div className="inv-view-sign-card">
+              <span className="inv-view-meta-label display-block margin-b-10">
                 Pejabat & Penerima Dana
-              </Text>
+              </span>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>PPK:</Text>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{viewInvoice.ppk_name || '-'}</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>{viewInvoice.ppk_nip || '-'}</Text>
+                  <div className="inv-sign-role">PPK:</div>
+                  <div className="inv-sign-name">{viewInvoice.ppk_name || '-'}</div>
+                  <div className="inv-sign-sub">{viewInvoice.ppk_nip || '-'}</div>
                 </Col>
                 <Col span={8}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>Bendahara:</Text>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{viewInvoice.bendahara_name || '-'}</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>{viewInvoice.bendahara_nip || '-'}</Text>
+                  <div className="inv-sign-role">Bendahara:</div>
+                  <div className="inv-sign-name">{viewInvoice.bendahara_name || '-'}</div>
+                  <div className="inv-sign-sub">{viewInvoice.bendahara_nip || '-'}</div>
                 </Col>
                 <Col span={8}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>Penerima / Penyedia:</Text>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{viewInvoice.penerima_name || '-'}</div>
+                  <div className="inv-sign-role">Penerima / Penyedia:</div>
+                  <div className="inv-sign-name">{viewInvoice.penerima_name || '-'}</div>
                 </Col>
               </Row>
             </div>
@@ -820,277 +838,268 @@ export default function InvoiceBelanja() {
       {/* 📝 FORM MODAL PEMBUATAN / EDIT INVOICE */}
       <Modal
         title={
-          <div className="modal-form-header">
-            <CalculatorOutlined style={{ color: '#2563eb', fontSize: 20 }} />
-            <span style={{ fontWeight: 600, fontSize: 16 }}>
-              {mode === 'create' ? 'Buat Invoice & Bukti Pembelian Baru' : 'Edit Data Invoice Belanja'}
-            </span>
+          <div className="inv-modal-title-box">
+            <CalculatorOutlined className="inv-modal-title-icon" />
+            <div>
+              <div className="inv-modal-title-main">
+                {mode === 'create' ? 'Buat Invoice & Bukti Pembelian Baru' : 'Edit Data Invoice Belanja'}
+              </div>
+              <div className="inv-modal-title-sub">Form Perekaman Transaksi Belanja & Pajak Dinamis</div>
+            </div>
           </div>
         }
         open={openModal}
         onCancel={() => setOpenModal(false)}
         footer={null}
-        width={850}
+        width={860}
+        centered
         destroyOnClose
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          style={{ marginTop: 12 }}
+          className="inv-modal-form"
         >
           {/* 📌 SECTION 1: DATA UTAMA NOTA */}
-          <Divider orientation="left" style={{ borderColor: '#cbd5e1', marginTop: 0, marginBottom: 16 }}>
-            <Space>
-              <FileTextOutlined style={{ color: '#2563eb' }} />
-              <Text strong style={{ color: '#0f172a' }}>Data Utama Nota Belanja</Text>
-            </Space>
-          </Divider>
+          <div className="inv-form-section">
+            <div className="inv-form-section-title">
+              <FileTextOutlined className="inv-section-icon" />
+              <span>Data Utama Nota Belanja</span>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="tahun_anggaran"
-                label="Tahun Anggaran (TA)"
-                rules={[{ required: true, message: 'Wajib diisi' }]}
-              >
-                <InputNumber style={{ width: '100%' }} placeholder="2026" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="invoice_no"
-                label="Nomor Bukti / Invoice"
-                rules={[{ required: true, message: 'Wajib diisi' }]}
-              >
-                <Input placeholder="INV/2026/07/001" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="mak"
-                label="Mata Anggaran (MAK)"
-                rules={[{ required: true, message: 'Wajib diisi' }]}
-              >
-                <Input placeholder="521111 - Belanja Keperluan Kantor" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="deskripsi"
-            label="Uraian Pembayaran Belanja (Sesuai Kwitansi)"
-            rules={[{ required: true, message: 'Uraian belanja wajib diisi' }]}
-            extra="Uraian detail barang / jasa sebagaimana nota terlampir"
-          >
-            <Input.TextArea
-              rows={2}
-              placeholder="Contoh: Pembayaran Belanja Kertas HVS A4 80gr dan Alat Tulis Kantor..."
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="nilai_kotor"
-            label="Jumlah Nota / Kwitansi (Gross Total sebelum Pajak)"
-            rules={[{ required: true, message: 'Nilai kotor nota wajib diisi' }]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              size="large"
-              formatter={(val) => `Rp ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-              parser={(val) => val.replace(/Rp\s?|(\.*)/g, '')}
-              placeholder="0"
-              onChange={(val) => recalculateAllTaxesWithGross(val)}
-            />
-          </Form.Item>
-
-          {/* 📌 SECTION 2: PEMOTONGAN PAJAK */}
-          <Divider orientation="left" style={{ borderColor: '#cbd5e1', marginTop: 24, marginBottom: 16 }}>
-            <Space>
-              <DollarOutlined style={{ color: '#dc2626' }} />
-              <Text strong style={{ color: '#0f172a' }}>Rincian Pemotongan Pajak (Multi-Pajak Dinamis)</Text>
-            </Space>
-          </Divider>
-
-          <div style={{ marginBottom: 12 }}>
-            <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Preset Pajak Cepat:</Text>
-            <Space wrap align="center">
-              {COMMON_TAX_TYPES.map((taxOpt, i) => (
-                <div
-                  key={i}
-                  className="tax-preset-badge"
-                  onClick={() => applyQuickTaxPreset(taxOpt)}
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  name="tahun_anggaran"
+                  label="Tahun Anggaran (TA)"
+                  rules={[{ required: true, message: 'Wajib diisi' }]}
                 >
-                  + {taxOpt.label}
-                </div>
-              ))}
-            </Space>
+                  <InputNumber style={{ width: '100%' }} placeholder="2026" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  name="invoice_no"
+                  label="Nomor Bukti / Invoice"
+                  rules={[{ required: true, message: 'Wajib diisi' }]}
+                >
+                  <Input placeholder="INV/2026/07/001" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  name="mak"
+                  label="Mata Anggaran (MAK)"
+                  rules={[{ required: true, message: 'Wajib diisi' }]}
+                >
+                  <Input placeholder="521111 - Keperluan Kantor" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="deskripsi"
+              label="Uraian Pembayaran Belanja (Sesuai Kwitansi)"
+              rules={[{ required: true, message: 'Uraian belanja wajib diisi' }]}
+              extra="Uraian detail barang / jasa sebagaimana nota terlampir"
+            >
+              <Input.TextArea
+                rows={2}
+                placeholder="Contoh: Pembayaran Belanja Kertas HVS A4 80gr dan Alat Tulis Kantor..."
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="nilai_kotor"
+              label="Jumlah Nota / Kwitansi (Gross Total sebelum Pajak)"
+              rules={[{ required: true, message: 'Nilai kotor nota wajib diisi' }]}
+            >
+              <InputNumber
+                style={{ width: '100%' }}
+                size="large"
+                className="inv-gross-input"
+                formatter={(val) => `Rp ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                parser={(val) => val.replace(/Rp\s?|(\.*)/g, '')}
+                placeholder="0"
+                onChange={(val) => recalculateAllTaxesWithGross(val)}
+              />
+            </Form.Item>
           </div>
 
-          <Form.List name="taxes">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...restField }, index) => (
-                  <Card
-                    key={key}
-                    size="small"
-                    style={{
-                      marginBottom: 12,
-                      backgroundColor: '#f8fafc',
-                      borderRadius: 12,
-                      borderColor: '#cbd5e1',
-                    }}
+          {/* 📌 SECTION 2: PEMOTONGAN PAJAK */}
+          <div className="inv-form-section">
+            <div className="inv-form-section-title">
+              <DollarOutlined className="inv-section-icon text-rose" />
+              <span>Rincian Pemotongan Pajak (Multi-Pajak Dinamis)</span>
+            </div>
+
+            <div className="inv-presets-wrapper">
+              <span className="inv-preset-label"><ThunderboltOutlined /> Preset Pajak Cepat:</span>
+              <div className="inv-preset-chips">
+                {COMMON_TAX_TYPES.map((taxOpt, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="inv-preset-chip"
+                    onClick={() => applyQuickTaxPreset(taxOpt)}
                   >
-                    <Row gutter={12} align="middle">
-                      <Col span={10}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'jenis_pajak']}
-                          label={`Jenis Pajak Baris #${index + 1}`}
-                          rules={[{ required: true, message: 'Pilih jenis pajak' }]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Select
-                            placeholder="Pilih atau Ketik Jenis Pajak..."
-                            showSearch
-                            allowClear
-                            options={COMMON_TAX_TYPES}
-                            onChange={(val) => handleTaxTypeChange(val, name)}
-                          />
-                        </Form.Item>
-                      </Col>
-
-                      <Col span={11}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'nilai_pajak']}
-                          label="Nilai Potongan Pajak (Rp)"
-                          rules={[{ required: true, message: 'Isi nilai pajak' }]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={(val) => `Rp ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                            parser={(val) => val.replace(/Rp\s?|(\.*)/g, '')}
-                            placeholder="0"
-                          />
-                        </Form.Item>
-                      </Col>
-
-                      <Col span={3} style={{ textAlign: 'center', paddingTop: 22 }}>
-                        {fields.length > 1 && (
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined style={{ color: '#dc2626' }} />}
-                            onClick={() => remove(name)}
-                          />
-                        )}
-                      </Col>
-                    </Row>
-                  </Card>
+                    + {taxOpt.label}
+                  </button>
                 ))}
+              </div>
+            </div>
 
-                <Form.Item style={{ marginBottom: 0 }}>
-                  <Button
-                    type="dashed"
-                    onClick={() => add({ jenis_pajak: 'PPh Pasal 23', nilai_pajak: 0 })}
-                    block
-                    icon={<PlusOutlined />}
-                    style={{ borderRadius: 10, borderColor: '#2563eb', color: '#2563eb' }}
-                  >
-                    + Tambah Baris Pajak Baru
-                  </Button>
-                </Form.Item>
-              </>
-            )}
-          </Form.List>
+            <Form.List name="taxes">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }, index) => (
+                    <div key={key} className="inv-tax-row-card">
+                      <Row gutter={12} align="middle">
+                        <Col span={11}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'jenis_pajak']}
+                            label={`Jenis Pajak Baris #${index + 1}`}
+                            rules={[{ required: true, message: 'Pilih jenis pajak' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Select
+                              placeholder="Pilih atau Ketik Jenis Pajak..."
+                              showSearch
+                              allowClear
+                              options={COMMON_TAX_TYPES}
+                              onChange={(val) => handleTaxTypeChange(val, name)}
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={10}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'nilai_pajak']}
+                            label="Nilai Potongan (Rp)"
+                            rules={[{ required: true, message: 'Isi nilai pajak' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <InputNumber
+                              style={{ width: '100%' }}
+                              formatter={(val) => `Rp ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                              parser={(val) => val.replace(/Rp\s?|(\.*)/g, '')}
+                              placeholder="0"
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={3} style={{ textAlign: 'center', paddingTop: 22 }}>
+                          {fields.length > 1 && (
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
+                              className="inv-tax-remove-btn"
+                            />
+                          )}
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
+
+                  <Form.Item style={{ marginBottom: 0 }}>
+                    <Button
+                      type="dashed"
+                      onClick={() => add({ jenis_pajak: 'PPh Pasal 23', nilai_pajak: 0 })}
+                      block
+                      icon={<PlusOutlined />}
+                      className="inv-add-tax-btn"
+                    >
+                      + Tambah Baris Pajak Baru
+                    </Button>
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          </div>
 
           {/* 📌 SECTION 3: PEJABAT & PENERIMA */}
-          <Divider orientation="left" style={{ borderColor: '#cbd5e1', marginTop: 24, marginBottom: 16 }}>
-            <Space>
-              <UserOutlined style={{ color: '#2563eb' }} />
-              <Text strong style={{ color: '#0f172a' }}>Pejabat Perbendaharaan & Penerima Dana</Text>
-            </Space>
-          </Divider>
+          <div className="inv-form-section">
+            <div className="inv-form-section-title">
+              <UserOutlined className="inv-section-icon" />
+              <span>Pejabat Perbendaharaan & Penerima Dana</span>
+            </div>
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Card size="small" title="Pejabat Pembuat Komitmen (PPK)" style={{ borderRadius: 10 }}>
-                <Form.Item name="ppk_name" label="Nama PPK">
-                  <Input placeholder="DODDY PRAYUDI, A.Md" />
-                </Form.Item>
-                <Form.Item name="ppk_nip" label="NIP PPK" style={{ marginBottom: 0 }}>
-                  <Input placeholder="NIP. ..." />
-                </Form.Item>
-              </Card>
-            </Col>
+            <Row gutter={16}>
+              <Col span={8}>
+                <div className="inv-sign-box">
+                  <div className="inv-sign-box-title">Pejabat Pembuat Komitmen (PPK)</div>
+                  <Form.Item name="ppk_name" label="Nama PPK">
+                    <Input placeholder="DODDY PRAYUDI, A.Md" />
+                  </Form.Item>
+                  <Form.Item name="ppk_nip" label="NIP PPK" style={{ marginBottom: 0 }}>
+                    <Input placeholder="NIP. ..." />
+                  </Form.Item>
+                </div>
+              </Col>
 
-            <Col span={8}>
-              <Card size="small" title="Bendahara Pengeluaran" style={{ borderRadius: 10 }}>
-                <Form.Item name="bendahara_name" label="Nama Bendahara">
-                  <Input placeholder="NUR INDAH, S.Sos" />
-                </Form.Item>
-                <Form.Item name="bendahara_nip" label="NIP Bendahara" style={{ marginBottom: 0 }}>
-                  <Input placeholder="NIP. ..." />
-                </Form.Item>
-              </Card>
-            </Col>
+              <Col span={8}>
+                <div className="inv-sign-box">
+                  <div className="inv-sign-box-title">Bendahara Pengeluaran</div>
+                  <Form.Item name="bendahara_name" label="Nama Bendahara">
+                    <Input placeholder="NUR INDAH, S.Sos" />
+                  </Form.Item>
+                  <Form.Item name="bendahara_nip" label="NIP Bendahara" style={{ marginBottom: 0 }}>
+                    <Input placeholder="NIP. ..." />
+                  </Form.Item>
+                </div>
+              </Col>
 
-            <Col span={8}>
-              <Card size="small" title="Penyedia / Penerima Dana" style={{ borderRadius: 10 }}>
-                <Form.Item name="penerima_name" label="Nama Penerima / Penyedia" style={{ marginBottom: 0 }}>
-                  <Input placeholder="CV. Mandiri Jaya / Toko Utama" />
-                </Form.Item>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Live Summary Box */}
-          <div className="calculation-summary-box">
-            <Row justify="space-between" style={{ marginBottom: 6 }}>
-              <Text style={{ color: '#334155' }}>Total Nota Kotor (Gross):</Text>
-              <Text strong style={{ fontSize: 15 }}>{formatCurrency(nilaiKotorValue)}</Text>
+              <Col span={8}>
+                <div className="inv-sign-box">
+                  <div className="inv-sign-box-title">Penyedia / Penerima Dana</div>
+                  <Form.Item name="penerima_name" label="Nama Penerima / Penyedia" style={{ marginBottom: 0 }}>
+                    <Input placeholder="CV. Mandiri Jaya / Toko Utama" />
+                  </Form.Item>
+                </div>
+              </Col>
             </Row>
-            <Row justify="space-between" style={{ marginBottom: 6 }}>
-              <Text style={{ color: '#dc2626' }}>
-                Total Potongan Pajak ({taxesValue.length} rincian):
-              </Text>
-              <Text strong style={{ color: '#dc2626', fontSize: 15 }}>
-                - {formatCurrency(totalPajakCalc)}
-              </Text>
-            </Row>
-            <Divider style={{ margin: '10px 0' }} />
-            <Row justify="space-between" align="middle">
-              <Text strong style={{ fontSize: 15, color: '#065f46' }}>
-                Jumlah Yang Dibayarkan (Bersih / Net):
-              </Text>
-              <Text strong style={{ fontSize: 20, color: '#059669' }}>
-                {formatCurrency(nilaiBersihCalc)}
-              </Text>
-            </Row>
+          </div>
 
-            <div className="terbilang-box">
+          {/* Live Calculation Summary Box */}
+          <div className="inv-calc-box">
+            <div className="inv-calc-row">
+              <span>Total Nota Kotor (Gross):</span>
+              <strong>{formatCurrency(nilaiKotorValue)}</strong>
+            </div>
+            <div className="inv-calc-row text-rose">
+              <span>Total Potongan Pajak ({taxesValue.length} rincian):</span>
+              <strong>- {formatCurrency(totalPajakCalc)}</strong>
+            </div>
+            <Divider style={{ margin: '12px 0' }} />
+            <div className="inv-calc-row-net">
+              <span className="inv-net-title">Jumlah Diterima (Bersih / Net):</span>
+              <span className="inv-net-amount">{formatCurrency(nilaiBersihCalc)}</span>
+            </div>
+
+            <div className="inv-terbilang-box">
               <strong>Terbilang:</strong> "{terbilangCalc}"
             </div>
           </div>
 
-          <Form.Item style={{ marginTop: 20, textAlign: 'right', marginBottom: 0 }}>
-            <Space>
-              <Button onClick={() => setOpenModal(false)} style={{ borderRadius: 8 }}>
-                Batal
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={saving}
-                icon={<SaveOutlined />}
-                style={{ borderRadius: 10, backgroundColor: '#059669', borderColor: '#059669', paddingLeft: 24, paddingRight: 24 }}
-              >
-                Simpan & Rekam Invoice
-              </Button>
-            </Space>
-          </Form.Item>
+          <div className="inv-modal-footer">
+            <Button onClick={() => setOpenModal(false)} className="inv-btn-cancel">
+              Batal
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={saving}
+              icon={<SaveOutlined />}
+              className="inv-btn-submit"
+            >
+              Simpan & Rekam Invoice
+            </Button>
+          </div>
         </Form>
       </Modal>
     </div>

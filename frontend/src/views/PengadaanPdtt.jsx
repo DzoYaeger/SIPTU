@@ -62,9 +62,14 @@ const getItemVolumeSpec = (item) => {
 
 const getItemDisplayName = (item) => {
   if (!item) return "-";
-  const name = item.item_name || "-";
-  const spec = getItemVolumeSpec(item);
-  return spec ? `${name} (${spec})` : name;
+  const parts = [];
+  if (item.item_name) parts.push(item.item_name.trim());
+  if (item.brand) parts.push(item.brand.trim());
+  if (item.jumlah !== undefined && item.jumlah !== null && item.jumlah !== "") {
+    parts.push(String(item.jumlah).trim());
+  }
+  if (item.satuan) parts.push(item.satuan.trim());
+  return parts.length > 0 ? parts.join(" ") : "-";
 };
 
 export default function PengadaanPdtt() {

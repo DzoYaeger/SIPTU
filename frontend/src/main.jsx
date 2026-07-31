@@ -18,8 +18,16 @@ const theme = {
     colorBgLayout: '#F5EFE6',
     colorBgContainer: '#FFFFFF',
     colorText: '#1f2d3d',
-    borderRadius: 4,
-    fontSize: 13,
+    borderRadius: 6,
+    fontSize: 13, // Base compact size (13px)
+    fontSizeHeading1: 22,
+    fontSizeHeading2: 18,
+    fontSizeHeading3: 15,
+    fontSizeHeading4: 13,
+    fontSizeHeading5: 12,
+    fontSizeLG: 15,
+    fontSizeSM: 11,
+    fontSizeXL: 18,
     fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   components: {
@@ -29,36 +37,46 @@ const theme = {
       bodyBg: '#F5EFE6',
     },
     Menu: {
-      itemHeight: 32,
+      itemHeight: 34,
+      fontSize: 13,
     },
     Button: {
-      controlHeight: 28,
+      controlHeight: 32,
       fontSize: 13,
     },
     Table: {
       cellPaddingBlock: 6,
       cellPaddingInline: 8,
-      fontSize: 13,
+      fontSize: 12, // Table cell content <= 12px
     },
     Form: {
       itemMarginBottom: 10,
       labelFontSize: 12,
     },
     Input: {
-      controlHeight: 28,
+      controlHeight: 32,
       fontSize: 13,
     },
     Select: {
-      controlHeight: 28,
+      controlHeight: 32,
       fontSize: 13,
     },
     DatePicker: {
-      controlHeight: 28,
+      controlHeight: 32,
       fontSize: 13,
     },
     Modal: {
-      titleFontSize: 14,
+      titleFontSize: 15,
       padding: 16,
+    },
+    Card: {
+      headerFontSize: 15,
+    },
+    Tabs: {
+      titleFontSize: 13,
+    },
+    Tag: {
+      fontSize: 11,
     },
   },
 };

@@ -23,6 +23,7 @@ import {
   Tooltip,
   Typography,
   Upload,
+  Dropdown,
 } from 'antd';
 import { buildMessageAdapter } from '../utils/notify.js';
 import {
@@ -43,6 +44,7 @@ import {
   PlusCircleOutlined,
   PrinterOutlined,
   FileSearchOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import { bmnService } from '../services/bmnService.js';
@@ -759,43 +761,66 @@ const BmnDataPersediaan = () => {
         render: (value) => (value ? value : <Typography.Text type="secondary">-</Typography.Text>),
       },
       {
-        title: '',
+        title: 'Aksi',
         key: 'actions',
-        width: 220,
-        render: (_, record) => (
-          <Space size={4}>
-            <Tooltip title="Detail">
-              <Button type="text" icon={<EyeOutlined style={{ color: '#1890ff' }} />} onClick={() => handleViewDetail(record)} />
-            </Tooltip>
-            <Tooltip title="Update Stok">
-              <Button type="text" icon={<PlusCircleOutlined style={{ color: '#52c41a' }} />} onClick={() => handleOpenStockModal(record)} />
-            </Tooltip>
-            <Tooltip title="Lihat Kartu Stok">
-              <Button type="text" icon={<FileSearchOutlined style={{ color: '#1890ff' }} />} onClick={() => handleOpenStockCardPreview(record)} />
-            </Tooltip>
-            <Tooltip title="Cetak Kartu Stok">
-              <Button
-                type="text"
-                icon={<PrinterOutlined />}
-                onClick={() =>
-                  printStockCards(
-                    stockCardRows.filter((row) => row.inventoryId === Number(record.id)),
-                    `Kartu Stok ${record.namaBarang}`,
-                    {
-                      filterLabel: `Barang: ${record.namaBarang} (${record.kodeBarang})`,
-                    },
-                  )
-                }
-              />
-            </Tooltip>
-            <Tooltip title="Ubah">
-              <Button type="text" icon={<EditOutlined style={{ color: '#faad14' }} />} onClick={() => handleEdit(record)} />
-            </Tooltip>
-            <Tooltip title="Hapus">
-              <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
-            </Tooltip>
-          </Space>
-        ),
+        width: 70,
+        align: 'center',
+        render: (_, record) => {
+          const items = [
+            {
+              key: 'detail',
+              label: 'Lihat Detail Persediaan',
+              icon: <EyeOutlined style={{ color: '#1e293b' }} />,
+              onClick: () => handleViewDetail(record),
+            },
+            {
+              key: 'update_stok',
+              label: 'Update Stok Barang',
+              icon: <PlusCircleOutlined style={{ color: '#1e293b' }} />,
+              onClick: () => handleOpenStockModal(record),
+            },
+            {
+              key: 'kartu_stok',
+              label: 'Lihat Kartu Stok',
+              icon: <FileSearchOutlined style={{ color: '#1e293b' }} />,
+              onClick: () => handleOpenStockCardPreview(record),
+            },
+            {
+              key: 'cetak_kartu',
+              label: 'Cetak PDF Kartu Stok',
+              icon: <PrinterOutlined style={{ color: '#1e293b' }} />,
+              onClick: () =>
+                printStockCards(
+                  stockCardRows.filter((row) => row.inventoryId === Number(record.id)),
+                  `Kartu Stok ${record.namaBarang}`,
+                  {
+                    filterLabel: `Barang: ${record.namaBarang} (${record.kodeBarang})`,
+                  },
+                ),
+            },
+            {
+              key: 'edit',
+              label: 'Ubah Data Persediaan',
+              icon: <EditOutlined style={{ color: '#1e293b' }} />,
+              onClick: () => handleEdit(record),
+            },
+            {
+              type: 'divider',
+            },
+            {
+              key: 'delete',
+              label: <span style={{ color: '#ef4444' }}>Hapus Data</span>,
+              icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+              onClick: () => handleDelete(record),
+            },
+          ];
+
+          return (
+            <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+              <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+            </Dropdown>
+          );
+        },
       },
     ],
     [handleEdit, handleDelete, handleViewDetail, handleOpenStockModal, handleOpenStockCardPreview, stockCardRows, printStockCards],

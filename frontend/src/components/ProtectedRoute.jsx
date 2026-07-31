@@ -31,25 +31,20 @@ function ProtectedRoute({
     return null;
   }
 
-  // Admin has access to everything
-  if (user?.base_role === "admin" || currentRole === "admin") {
+  // Role admin aktif memiliki akses penuh ke semua modul
+  if (currentRole === "admin") {
     return children;
   }
 
-  // Check specific role requirement
-  if (role && currentRole !== role && user?.base_role !== role) {
+  // Cek jika role spesifik diperlukan (misal role="validator")
+  if (role && currentRole !== role) {
     return fallback;
   }
 
-  // Check module access if moduleSlug is provided
+  // Cek modul access jika moduleSlug diberikan
   if (moduleSlug) {
-    // Check if user has access to this module
     const hasModuleAccess = accessibleModules?.includes(moduleSlug);
-
-    // Also check using hasRole function for more granular permission
-    const hasPermission = hasRole
-      ? hasRole(currentRole, moduleSlug) || hasRole(user?.base_role, moduleSlug)
-      : false;
+    const hasPermission = hasRole ? hasRole(currentRole, moduleSlug) : false;
 
     if (!hasModuleAccess && !hasPermission) {
       return fallback;

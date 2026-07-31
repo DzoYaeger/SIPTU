@@ -22,11 +22,13 @@ import ProcurementProposalPage from "./pages/ProcurementProposalPage.jsx";
 import PengajuanPdttForm from "./pages/PengajuanPdttForm.jsx";
 import LayananMandiri from "./views/LayananMandiri.jsx";
 import BmnUnifiedModule from "./views/BmnUnifiedModule.jsx";
+import SimkeuUnifiedModule from "./views/SimkeuUnifiedModule.jsx";
 import PengumumanRispeg from "./views/PengumumanRispeg.jsx";
 import QueueTvDisplay from "./pages/QueueTvDisplay.jsx";
 import PublicQueueRegistration from "./pages/PublicQueueRegistration.jsx";
 import AdminQueueStandalone from "./views/AdminQueueStandalone.jsx";
 import PenyimpananCloud from "./views/PenyimpananCloud.jsx";
+import PelatihanPegawai from "./views/PelatihanPegawai.jsx";
 import PublicSharePage from "./views/PublicSharePage.jsx";
 import DriveEditor from "./views/DriveEditor.jsx";
 import NotFound from "./pages/NotFound.jsx";
@@ -324,6 +326,8 @@ function App() {
       />
       <Route path="/simba" element={<BmnUnifiedModule />} />
       <Route path="/app/simba" element={<BmnUnifiedModule />} />
+      <Route path="/simkeu" element={<SimkeuUnifiedModule />} />
+      <Route path="/app/simkeu" element={<SimkeuUnifiedModule />} />
       <Route path="/loan/:token" element={<PublicLoanPage />} />
       <Route
         path="/permintaan-persediaan/new"
@@ -366,6 +370,10 @@ function App() {
       <Route
         path="/app/penyimpanan-cloud"
         element={token ? <PenyimpananCloud /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/app/pelatihan-pegawai"
+        element={token ? <PelatihanPegawai /> : <Navigate to="/login" replace />}
       />
       <Route
         path="/app/drive/editor"

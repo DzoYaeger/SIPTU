@@ -49,7 +49,12 @@ class BmnMaintenanceReportController extends Controller
             });
         }
 
-        return response()->json($query->paginate(20));
+        if ($request->boolean('all')) {
+            return response()->json(['data' => $query->get()]);
+        }
+
+        $perPage = min(max((int) $request->query('per_page', 50), 1), 200);
+        return response()->json($query->paginate($perPage));
     }
 
     public function exportPdf(Request $request)
@@ -328,11 +333,15 @@ class BmnMaintenanceReportController extends Controller
 
     private function isAdminOrValidator($user): bool
     {
-        if (($user->base_role ?? null) === 'admin') {
+        if (!$user) {
+            return false;
+        }
+        $baseRole = $user->base_role ?? null;
+        if (in_array($baseRole, ['admin', 'validator'], true)) {
             return true;
         }
         $roles = is_array($user->available_roles ?? null) ? $user->available_roles : [];
-        return in_array('validator', $roles, true);
+        return in_array('admin', $roles, true) || in_array('validator', $roles, true);
     }
 
     private function sendNotification(BmnMaintenanceReport $report, FonnteService $fonnteService, string $status): void

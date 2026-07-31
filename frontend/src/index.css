@@ -14,16 +14,17 @@
   --ff-body:    "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
   --ff-mono:    SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
 
-  /* ── Typography Scale ── */
-  --fs-h1:       20px;   /* Page title — satu per halaman */
-  --fs-h2:       16px;   /* Section title */
-  --fs-h3:       14px;   /* Card title, modal title */
+  /* ── Typography Scale (SIPTU Compact Standard) ── */
+  --fs-h1:       22px;   /* Page title — H1 */
+  --fs-h2:       18px;   /* Section title — H2 */
+  --fs-h3:       15px;   /* Card title, modal title — H3 */
   --fs-h4:       13px;   /* Sub-section, drawer title */
   --fs-h5:       12px;   /* Label, badge */
-  --fs-body:     13px;   /* Konten umum */
-  --fs-sm:       12px;   /* Helper text */
-  --fs-xs:       11px;   /* Metadata, caption */
-  --fs-overline: 10px;   /* Tabel header, label uppercase */
+  --fs-body:     13px;   /* Konten umum (base body size) */
+  --fs-btn:      13px;   /* Button text */
+  --fs-sm:       12px;   /* Helper text, table cell content (12px) */
+  --fs-xs:       11px;   /* Metadata, caption, small badge */
+  --fs-overline: 11px;   /* Tabel header, label uppercase */
 
   /* ── Line Heights ── */
   --lh-heading: 1.25;
@@ -114,6 +115,7 @@ body {
   min-height: 100vh;
   background: var(--color-bg);
   font-family: var(--ff-body);
+  font-size: var(--fs-body);
   color: var(--color-text);
 }
 

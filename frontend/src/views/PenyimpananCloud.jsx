@@ -176,6 +176,7 @@ export default function PenyimpananCloud() {
   const [isUploadWidgetMinimized, setIsUploadWidgetMinimized] = useState(false);
   const [isDraggingOverPage, setIsDraggingOverPage] = useState(false);
   const dragCounter = useRef(0);
+  const folderInputRef = useRef(null);
 
   // Delete modal & progress states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -608,6 +609,73 @@ export default function PenyimpananCloud() {
     }
   }, [apiFetch]);
 
+  // Traverses HTML5 webkitGetAsEntry FileSystem items recursively (Folders & Files)
+  const getAllDropEntries = async (dataTransferItems) => {
+    const fileEntries = [];
+    const folderPaths = new Set();
+
+    const readEntry = async (entry, relativePath = "") => {
+      if (entry.isFile) {
+        return new Promise((resolve) => {
+          entry.file(
+            (file) => {
+              file.folderPath = relativePath;
+              file.fullRelativePath = relativePath ? `${relativePath}/${file.name}` : file.name;
+              fileEntries.push(file);
+              resolve();
+            },
+            (err) => {
+              console.warn("File read error:", err);
+              resolve();
+            }
+          );
+        });
+      } else if (entry.isDirectory) {
+        const currentDirPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+        folderPaths.add(currentDirPath);
+        const dirReader = entry.createReader();
+
+        const readAllEntriesInDir = async () => {
+          return new Promise((resolve) => {
+            dirReader.readEntries(async (entries) => {
+              if (entries.length === 0) {
+                resolve();
+              } else {
+                for (const childEntry of entries) {
+                  await readEntry(childEntry, currentDirPath);
+                }
+                await readAllEntriesInDir();
+                resolve();
+              }
+            }, (err) => {
+              console.warn("Directory read error:", err);
+              resolve();
+            });
+          });
+        };
+
+        await readAllEntriesInDir();
+      }
+    };
+
+    const initialEntries = [];
+    for (let i = 0; i < dataTransferItems.length; i++) {
+      const item = dataTransferItems[i];
+      if (item.kind === "file") {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : (item.getAsEntry ? item.getAsEntry() : null);
+        if (entry) {
+          initialEntries.push(entry);
+        }
+      }
+    }
+
+    for (const entry of initialEntries) {
+      await readEntry(entry, "");
+    }
+
+    return { fileEntries, folderPaths: Array.from(folderPaths) };
+  };
+
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -621,7 +689,8 @@ export default function PenyimpananCloud() {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current--;
-    if (dragCounter.current === 0) {
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
       setIsDraggingOverPage(false);
     }
   };
@@ -631,10 +700,11 @@ export default function PenyimpananCloud() {
     e.stopPropagation();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOverPage(false);
+    dragCounter.current = 0;
 
     const nip = user?.nip;
     if (!nip) {
@@ -642,7 +712,77 @@ export default function PenyimpananCloud() {
       return;
     }
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    const items = e.dataTransfer?.items;
+    if (items && items.length > 0) {
+      try {
+        const { fileEntries, folderPaths } = await getAllDropEntries(items);
+
+        if (fileEntries.length === 0 && folderPaths.length === 0) {
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const filesList = Array.from(e.dataTransfer.files);
+            filesList.forEach((rawFile) => {
+              handleCustomUpload({ file: rawFile });
+            });
+          }
+          return;
+        }
+
+        if (folderPaths.length > 0) {
+          andMessage.loading({ content: `Memproses ${folderPaths.length} folder dan ${fileEntries.length} berkas...`, key: "folder-drop-process", duration: 3 });
+        }
+
+        // 1. Ensure/create folder structure on backend
+        for (const folderRelPath of folderPaths) {
+          try {
+            const parts = folderRelPath.split("/");
+            const folderName = parts.pop();
+            const parentRelPath = parts.join("/");
+            let parentFullPath = currentPath;
+            if (parentRelPath) {
+              parentFullPath = currentPath
+                ? `${currentPath.replace(/\/+$/, "")}/${parentRelPath}`
+                : `/${parentRelPath}`;
+            }
+
+            await apiFetch("/nextcloud/folder", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                nip,
+                path: parentFullPath,
+                folder_name: folderName,
+              }),
+            });
+          } catch (err) {
+            console.warn("Folder pre-create notice:", err);
+          }
+        }
+
+        // 2. Upload all files maintaining their folder path
+        for (const fileObj of fileEntries) {
+          let uploadTargetPath = currentPath;
+          if (fileObj.folderPath) {
+            uploadTargetPath = currentPath
+              ? `${currentPath.replace(/\/+$/, "")}/${fileObj.folderPath}`
+              : `/${fileObj.folderPath}`;
+          }
+          handleCustomUpload({ file: fileObj, targetPath: uploadTargetPath });
+        }
+
+        if (folderPaths.length > 0) {
+          andMessage.success({ content: `Struktur folder berhasil dibuat & pengunggahan berkas dimulai!`, key: "folder-drop-process", duration: 4 });
+        }
+
+      } catch (err) {
+        console.error("Drop folder error:", err);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const filesList = Array.from(e.dataTransfer.files);
+          filesList.forEach((rawFile) => {
+            handleCustomUpload({ file: rawFile });
+          });
+        }
+      }
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const filesList = Array.from(e.dataTransfer.files);
       filesList.forEach((rawFile) => {
         handleCustomUpload({ file: rawFile });
@@ -1011,15 +1151,17 @@ export default function PenyimpananCloud() {
     }
   };
 
-  // Upload handler with real-time XHR progress supporting multiple files
-  const handleCustomUpload = async ({ file }) => {
+  // Upload handler with real-time XHR progress supporting multiple files & targetPath for folder uploads
+  const handleCustomUpload = async ({ file, targetPath }) => {
     const nip = user?.nip;
     if (!nip) {
       andMessage.warning("NIP pengguna tidak ditemukan.");
       return;
     }
 
+    const uploadPath = targetPath !== undefined ? targetPath : currentPath;
     const fileUid = file.uid || `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const displayName = file.fullRelativePath || file.name;
 
     setIsUploadWidgetVisible(true);
     setIsUploadWidgetMinimized(false);
@@ -1028,7 +1170,7 @@ export default function PenyimpananCloud() {
       ...prev,
       [fileUid]: {
         uid: fileUid,
-        name: file.name,
+        name: displayName,
         size: file.size,
         progress: 0,
         status: "uploading",
@@ -1038,7 +1180,7 @@ export default function PenyimpananCloud() {
     const xhr = new XMLHttpRequest();
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("path", currentPath);
+    formData.append("path", uploadPath);
     formData.append("nip", nip);
 
     xhr.upload.addEventListener("progress", (e) => {
@@ -1111,6 +1253,36 @@ export default function PenyimpananCloud() {
     xhr.send(formData);
   };
 
+  // Upload whole folder via directory file picker
+  const handleFolderSelectUpload = (e) => {
+    const filesList = Array.from(e.target.files || []);
+    if (filesList.length === 0) return;
+
+    andMessage.loading({ content: `Memproses ${filesList.length} berkas folder...`, key: "folder-upload-process", duration: 3 });
+
+    filesList.forEach((fileObj) => {
+      const relativePath = fileObj.webkitRelativePath || "";
+      let folderPath = "";
+      if (relativePath) {
+        const parts = relativePath.split("/");
+        parts.pop();
+        folderPath = parts.join("/");
+      }
+
+      let uploadTargetPath = currentPath;
+      if (folderPath) {
+        uploadTargetPath = currentPath
+          ? `${currentPath.replace(/\/+$/, "")}/${folderPath}`
+          : `/${folderPath}`;
+      }
+
+      fileObj.fullRelativePath = relativePath || fileObj.name;
+      handleCustomUpload({ file: fileObj, targetPath: uploadTargetPath });
+    });
+
+    e.target.value = "";
+  };
+
   // Filter files
   const filteredFiles = useMemo(() => {
     if (searchQuery.trim()) {
@@ -1146,9 +1318,19 @@ export default function PenyimpananCloud() {
         onClick: () => setIsUploadModalOpen(true),
       },
       {
+        key: "upload-folder",
+        label: "Upload Folder",
+        icon: <FolderAddOutlined style={{ color: "#fa8c16" }} />,
+        onClick: () => {
+          if (folderInputRef.current) {
+            folderInputRef.current.click();
+          }
+        },
+      },
+      {
         key: "create_folder",
         label: "Folder Baru",
-        icon: <FolderAddOutlined />,
+        icon: <PlusOutlined style={{ color: "#2563eb" }} />,
         onClick: () => setIsFolderModalOpen(true),
       },
     ];
@@ -1312,8 +1494,12 @@ export default function PenyimpananCloud() {
       title: "Ukuran",
       dataIndex: "size",
       key: "size",
-      width: 130,
-      render: (size, record) => (record.is_dir ? <Text type="secondary">-</Text> : <Text>{formatBytes(size)}</Text>),
+      width: 140,
+      render: (size, record) => (
+        <Text style={{ fontWeight: record.is_dir ? 600 : 400, color: record.is_dir ? "#0f5b99" : "inherit" }}>
+          {formatBytes(size)}
+        </Text>
+      ),
     },
     {
       title: "Terakhir Diubah",
@@ -1644,11 +1830,20 @@ export default function PenyimpananCloud() {
             </div>
           </div>
 
-          {/* Quick status display */}
-          <div className="drive-path-status-bar">
-            <Tag color="processing" className="status-tag">
-              Path: SIPTU Drive/{user?.nip}{currentPath}
+          {/* Quick status display with Total Folder Size summary */}
+          <div className="drive-path-status-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", margin: "12px 0 16px 0" }}>
+            <Tag color="processing" className="status-tag" style={{ borderRadius: 6, padding: "4px 10px", fontSize: 12 }}>
+              Path: SIPTU Drive/{user?.nip}{currentPath || "/"}
             </Tag>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Tag color="geekblue" style={{ borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
+                📁 {folderCount} Folder &nbsp;|&nbsp; 📄 {fileCount} Berkas
+              </Tag>
+              <Tag color="green" style={{ borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#059669", background: "#ecfdf5", borderColor: "#a7f3d0" }}>
+                💾 Total Ukuran Folder Ini: {formatBytes(totalSize)}
+              </Tag>
+            </div>
           </div>
 
           {/* Explorer Content */}
@@ -2489,17 +2684,28 @@ export default function PenyimpananCloud() {
         </div>
       )}
 
+      {/* Hidden Folder Directory Input */}
+      <input
+        type="file"
+        ref={folderInputRef}
+        webkitdirectory=""
+        directory=""
+        multiple
+        style={{ display: "none" }}
+        onChange={handleFolderSelectUpload}
+      />
+
       {/* Full screen Drag & Drop Overlay */}
       <div
         className={`drive-drag-overlay ${isDraggingOverPage ? "active" : ""}`}
-        onDragLeave={() => setIsDraggingOverPage(false)}
-        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
         <div className="drive-drag-overlay-content" style={{ pointerEvents: "none" }}>
           <CloudUploadOutlined className="drive-drag-overlay-icon" style={{ pointerEvents: "none" }} />
-          <h3 style={{ pointerEvents: "none" }}>Lepaskan berkas untuk mengunggah ke folder ini</h3>
-          <p style={{ pointerEvents: "none" }}>SIPTU Drive terintegrasi Nextcloud</p>
+          <h3 style={{ pointerEvents: "none" }}>Lepaskan Berkas atau Folder untuk Mengunggah</h3>
+          <p style={{ pointerEvents: "none" }}>SIPTU Drive otomatis membuat struktur folder & mengunggah seluruh isinya</p>
         </div>
       </div>
 

@@ -31,6 +31,7 @@ import {
   CalendarOutlined,
   BellOutlined,
   HistoryOutlined,
+  HomeFilled,
   RightOutlined,
   SafetyCertificateOutlined,
   CarOutlined,
@@ -80,8 +81,8 @@ const iconMap = {
   "bmn-peminjaman-aset": <InteractionOutlined />,
   "bmn-pemeliharaan-keluhan": <ToolOutlined />,
   "bmn-laporan": <BarChartOutlined />,
-  "layanan-mandiri": <CustomerServiceOutlined />,
-  "riwayat-layanan": <ClockCircleOutlined />,
+  "layanan-mandiri": <HomeFilled />,
+  "riwayat-layanan": <HistoryOutlined />,
   "it-helpdesk": <ToolOutlined />,
   "it-helpdesk-pelaporan": <FormOutlined />,
   "it-helpdesk-rekapan": <DatabaseOutlined />,
@@ -100,6 +101,11 @@ const iconMap = {
   "rispeg-dashboard": <DashboardOutlined />,
   "rispeg-izin-keluar": <ExportOutlined />,
   "rispeg-pengaturan-izin-keluar": <SettingOutlined />,
+  "rispeg-pengumuman": <BellOutlined />,
+  "zoom-generator": <MonitorOutlined />,
+  "penyimpanan-cloud": <FolderOpenOutlined />,
+  "pengaturan-slider": <SettingOutlined />,
+  "admin-news-posts": <FileTextOutlined />,
 };
 
 const NavbarMenu = ({

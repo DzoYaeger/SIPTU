@@ -43,6 +43,22 @@ class LpjItem extends Model
         'uang_transport_lokal',
         'uang_transport_lokal_harian',
         'uang_transport_lokal_hari',
+        'nama_hotel',
+        'nomor_kamar',
+        'uang_transport_umum',
+        'uang_transport_umum_berangkat',
+        'uang_transport_umum_pulang',
+        'uang_transport_bus_keterangan',
+        'uang_transport_taxi_keterangan',
+        'uang_transport_pesawat_keterangan',
+        'uang_transport_bbm_keterangan',
+        'uang_transport_sewa_mobil_keterangan',
+        'uang_transport_lokal_keterangan',
+        'uang_transport_umum_keterangan',
+        'uang_harian_keterangan',
+        'uang_penginapan_keterangan',
+        'uang_fullboard_keterangan',
+        'uang_harian_fullboard_keterangan',
     ];
 
     protected function casts(): array
@@ -77,6 +93,9 @@ class LpjItem extends Model
             'uang_transport_lokal'            => 'float',
             'uang_transport_lokal_harian'     => 'float',
             'uang_transport_lokal_hari'       => 'integer',
+            'uang_transport_umum'             => 'float',
+            'uang_transport_umum_berangkat'   => 'float',
+            'uang_transport_umum_pulang'      => 'float',
         ];
     }
 
