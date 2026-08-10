@@ -100,7 +100,7 @@ class DashboardController extends Controller
             'bmn-pemeliharaan-keluhan' => \App\Models\BmnMaintenanceReport::whereIn('status', ['pending', 'lapor', 'pengajuan'])->count(),
             'kepegawaian-surat-tugas' => SuratTugas::whereIn('status', ['draft', 'pending', 'menunggu_paraf'])->count(),
             'rispeg-izin-keluar' => ExitPermit::whereIn('status', ['out', 'pending', 'pengajuan'])->count(),
-            'it-helpdesk-pelaporan' => ItHelpdeskTicket::whereIn('status', ['open', 'pending'])->count(),
+            'it-helpdesk-pelaporan' => ItHelpdeskTicket::whereIn('status', ['new', 'open', 'pending'])->count(),
             'pengadaan-pbj' => \App\Models\ProcurementProposal::whereIn('status', ['submitted', 'pending', 'pengajuan'])->count(),
         ];
 

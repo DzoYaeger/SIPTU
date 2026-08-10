@@ -250,6 +250,7 @@ class ItHelpdeskTicketController extends Controller
             'report_type' => 'required|string',
             'problem_details' => 'required|string',
             'password' => 'nullable|string',
+            'totp_code' => 'nullable|string',
             'reporter_signature' => 'nullable|string',
             'employee_nip' => 'nullable|string',
             'employee_name' => 'nullable|string',
@@ -273,6 +274,9 @@ class ItHelpdeskTicketController extends Controller
             if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
                 \Illuminate\Support\Facades\Log::warning("IT Helpdesk TTE: Password mismatch for user {$user->nip}");
                 return response()->json(['message' => 'Password SIPTU salah.'], 422);
+            }
+            if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+                return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
             }
             $signatureToken = (string) Str::uuid();
             $signedAt = now();
@@ -344,6 +348,9 @@ class ItHelpdeskTicketController extends Controller
         if ($request->password && $request->employee_nip) {
             $user = \App\Models\User::where('nip', $request->employee_nip)->first();
             if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+                    return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+                }
                 $signatureToken = (string) Str::uuid();
                 $signedAt = now();
             } else {
@@ -611,6 +618,9 @@ class ItHelpdeskTicketController extends Controller
                 \Illuminate\Support\Facades\Log::warning("IT Helpdesk Complete: Password mismatch for staff {$user->nip}");
                 return response()->json(['message' => 'Password SIPTU salah.'], 422);
             }
+            if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+                return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+            }
             $signatureToken = (string) Str::uuid();
             $signedAt = now();
         }
@@ -675,6 +685,9 @@ class ItHelpdeskTicketController extends Controller
             }
 
             if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+                    return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+                }
                 $signatureToken = (string) Str::uuid();
                 $signedAt = now();
             } else {

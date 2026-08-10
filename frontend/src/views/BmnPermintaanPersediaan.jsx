@@ -297,7 +297,7 @@ const BmnPermintaanPersediaan = () => {
       {/* Header */}
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Permintaan Persediaan</Typography.Title>
+          <Typography.Title level={4} className="module-title">Permintaan Persediaan</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola pengajuan barang persediaan ATK dan lainnya.</Typography.Text>
         </div>
       </div>

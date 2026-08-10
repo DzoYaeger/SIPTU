@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
+import simbaIcon from "../assets/icons/simba-icon.png";
+import simkeuIcon from "../assets/icons/simkeu-icon.png";
+import siptuDriveIcon from "../assets/icons/siptu-drive-icon.png";
+import rispegPengumumanIcon from "../assets/icons/rispeg-pengumuman-icon.png";
+import sesiKompakIcon from "../assets/icons/sesi-kompak-icon.png";
+import zoomIcon from "../assets/icons/zoom-icon.png";
+import suratTugasIcon from "../assets/icons/surat-tugas-icon.png";
+import sakipIcon from "../assets/icons/sakip-icon.png";
+import ruanganIcon from "../assets/icons/ruangan-icon.png";
+import itHelpdeskIcon from "../assets/icons/it-helpdesk-icon.png";
+import kearsipanIcon from "../assets/icons/kearsipan-icon.png";
+import izinKeluarIcon from "../assets/icons/izin-keluar-icon.png";
+import kepegawaianIcon from "../assets/icons/kepegawaian-icon.png";
+import pdttIcon from "../assets/icons/pdtt-icon.png";
 import {
   SafetyCertificateOutlined,
   FundOutlined,
@@ -64,6 +78,26 @@ const LayananMandiri = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [visibleCards, setVisibleCards] = useState(new Set());
+  const [customLayananIcons, setCustomLayananIcons] = useState({});
+
+  // Synchronize custom Layanan Mandiri icons
+  useEffect(() => {
+    const loadCustomIcons = () => {
+      try {
+        const stored = localStorage.getItem("siptu_custom_layanan_icons");
+        if (stored) {
+          setCustomLayananIcons(JSON.parse(stored));
+        } else {
+          setCustomLayananIcons({});
+        }
+      } catch (e) {
+        console.error("Gagal memuat ikon Layanan Mandiri:", e);
+      }
+    };
+    loadCustomIcons();
+    window.addEventListener("siptu_layanan_icons_updated", loadCustomIcons);
+    return () => window.removeEventListener("siptu_layanan_icons_updated", loadCustomIcons);
+  }, []);
   const [isScrolled, setIsScrolled] = useState(false);
   const cardRefs = useRef([]);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -228,26 +262,36 @@ const LayananMandiri = () => {
   // Categories filter removed
 
   const rawServices = [
-    { id: "simkeu", title: "SIMKEU", description: "Sistem Informasi Keuangan: Pembuatan & Kelola LPJ Pertanggungjawaban Keuangan serta Invoice Belanja.", icon: <BankOutlined />, link: "/app/simkeu", accent: "#10b981", emoji: "💰", category: "keuangan" },
-    { id: "siptu-drive", title: "SIPTU Drive", description: "Penyimpanan cloud terintegrasi untuk berkas kerja dan kolaborasi dokumen Anda.", icon: <CloudServerOutlined />, link: "/app/penyimpanan-cloud", accent: "#1a73e8", emoji: "☁️", category: "kepegawaian" },
-    { id: "pelatihan-pegawai", title: "Sesi Kompak", description: "Sinkronkan & lihat data pelatihan teknis, workshop, serta diseminasi pegawai dari Google Sheets.", icon: <BookOutlined />, link: "/app/pelatihan-pegawai", accent: "#0f5b99", emoji: "📚", category: "kepegawaian" },
-    { id: "kearsipan", title: "Peminjaman Arsip", description: "Ajukan peminjaman arsip fisik atau digital dengan validasi TTE.", icon: <FileProtectOutlined />, link: "/kearsipan-peminjaman/new", accent: "#3b82f6", emoji: "📁", category: "kepegawaian" },
-    { id: "simba", title: "SIMBA", description: "Sistem Informasi Manajemen Barang & Aset BMN: Peminjaman Aset, Permintaan Persediaan, dan Keluhan Pemeliharaan.", icon: <BankOutlined />, link: "/app/simba", accent: "#2563eb", emoji: "📦", category: "logistik" },
-    { id: "ruangan", title: "Peminjaman Ruangan", description: "Lihat jadwal dan ajukan peminjaman ruangan rapat atau aula.", icon: <FundOutlined />, link: "/peminjaman-ruangan", accent: "#6366f1", emoji: "🏢", category: "logistik" },
-    { id: "rispeg", title: "Izin Keluar (RISPEG)", description: "Ajukan izin keluar kantor dengan pencatatan waktu otomatis.", icon: <ClockCircleOutlined />, link: "/izin-keluar", accent: "#8b5cf6", emoji: "🚶", category: "kepegawaian" },
-    { id: "pengumuman-rispeg", title: "Pengumuman RISPEG", description: "Lihat hasil rekapitulasi pelanggaran dan leaderboard poin disiplin RISPEG.", icon: <NotificationOutlined />, link: "/app/pengumuman-rispeg", accent: "#ef4444", emoji: "📢", category: "kepegawaian" },
-    { id: "it-helpdesk", title: "IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <ToolOutlined />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
-    { id: "surat-tugas", title: "Pengajuan Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <FileProtectOutlined />, link: "/app/surat-tugas", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
-    { id: "zoom-generator", title: "Pengajuan Zoom", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <VideoCameraOutlined />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
-    { id: "sakip-2026", title: "DATA SAKIP 2026", description: "Sistem Akuntabilitas Kinerja Instansi Pemerintah Balai POM di Palopo.", icon: <GlobalOutlined />, link: "https://s.id/sakippalopo26", accent: "#10b981", emoji: "📊", category: "kepegawaian", isExternal: true },
+    { id: "simkeu", title: "SIMKEU", description: "Sistem Informasi Keuangan: Pembuatan & Kelola LPJ Pertanggungjawaban Keuangan serta Invoice Belanja.", icon: <img src={simkeuIcon} alt="SIMKEU" className="lm-custom-img-icon" />, link: "/app/simkeu", accent: "#10b981", emoji: "💰", category: "keuangan" },
+    { id: "siptu-drive", title: "SIPTU Drive", description: "Penyimpanan cloud terintegrasi untuk berkas kerja dan kolaborasi dokumen Anda.", icon: <img src={siptuDriveIcon} alt="SIPTU Drive" className="lm-custom-img-icon" />, link: "/app/penyimpanan-cloud", accent: "#1a73e8", emoji: "☁️", category: "kepegawaian" },
+    { id: "pelatihan-pegawai", title: "Sesi Kompak", description: "Sinkronkan & lihat data pelatihan teknis, workshop, serta diseminasi pegawai dari Google Sheets.", icon: <img src={sesiKompakIcon} alt="Sesi Kompak" className="lm-custom-img-icon" />, link: "/app/pelatihan-pegawai", accent: "#0f5b99", emoji: "📚", category: "kepegawaian" },
+    { id: "kearsipan", title: "Peminjaman Arsip", description: "Ajukan peminjaman arsip fisik atau digital dengan validasi TTE.", icon: <img src={kearsipanIcon} alt="Peminjaman Arsip" className="lm-custom-img-icon" />, link: "/kearsipan-peminjaman/new", accent: "#3b82f6", emoji: "📁", category: "kepegawaian" },
+    { id: "simba", title: "SIMBA", description: "Sistem Informasi Manajemen Barang & Aset BMN: Peminjaman Aset, Permintaan Persediaan, dan Keluhan Pemeliharaan.", icon: <img src={simbaIcon} alt="SIMBA" className="lm-custom-img-icon" />, link: "/app/simba", accent: "#2563eb", emoji: "📦", category: "logistik" },
+    { id: "ruangan", title: "Peminjaman Ruangan", description: "Lihat jadwal dan ajukan peminjaman ruangan rapat atau aula.", icon: <img src={ruanganIcon} alt="Peminjaman Ruangan" className="lm-custom-img-icon" />, link: "/peminjaman-ruangan", accent: "#6366f1", emoji: "🏢", category: "logistik" },
+    { id: "rispeg", title: "Izin Keluar (RISPEG)", description: "Ajukan izin keluar kantor dengan pencatatan waktu otomatis.", icon: <img src={izinKeluarIcon} alt="Izin Keluar (RISPEG)" className="lm-custom-img-icon" />, link: "/izin-keluar", accent: "#8b5cf6", emoji: "🚶", category: "kepegawaian" },
+    { id: "pengumuman-rispeg", title: "RISPEG", description: "Lihat hasil rekapitulasi pelanggaran dan leaderboard poin disiplin RISPEG.", icon: <img src={rispegPengumumanIcon} alt="RISPEG" className="lm-custom-img-icon" />, link: "/app/pengumuman-rispeg", accent: "#ef4444", emoji: "📢", category: "kepegawaian" },
+    { id: "it-helpdesk", title: "IT Helpdesk", description: "Laporkan kendala IT: printer, komputer, jaringan, aplikasi.", icon: <img src={itHelpdeskIcon} alt="IT Helpdesk" className="lm-custom-img-icon" />, link: "/it-helpdesk/new", accent: "#f43f5e", emoji: "🔧", category: "it" },
+    { id: "surat-tugas", title: "Pengajuan Surat Tugas", description: "Buat surat tugas multi-pegawai dengan sinkronisasi SIAMPARAN.", icon: <img src={suratTugasIcon} alt="Pengajuan Surat Tugas" className="lm-custom-img-icon" />, link: "/app/surat-tugas", accent: "#6366f1", emoji: "📝", category: "kepegawaian" },
+    { id: "zoom-generator", title: "Pengajuan Zoom", description: "Buat room rapat Zoom instan menggunakan akun host resmi BPOM Palopo.", icon: <img src={zoomIcon} alt="Pengajuan Zoom" className="lm-custom-img-icon" />, link: "/app/zoom-generator", accent: "#0b56a4", emoji: "📹", category: "kepegawaian" },
+    { id: "rhpk", title: "Pengelolaan RHPK", description: "Rekapitulasi Hasil Pelaksanaan Kegiatan: Pencatatan target, realisasi, & eviden kinerja pegawai.", icon: <FileProtectOutlined />, link: "/app/rhpk", accent: "#0f5b99", emoji: "📋", category: "kepegawaian" },
+    { id: "sakip-2026", title: "DATA SAKIP 2026", description: "Sistem Akuntabilitas Kinerja Instansi Pemerintah Balai POM di Palopo.", icon: <img src={sakipIcon} alt="DATA SAKIP 2026" className="lm-custom-img-icon" />, link: "https://s.id/sakippalopo26", accent: "#10b981", emoji: "📊", category: "kepegawaian", isExternal: true },
   ];
 
   const services = useMemo(() => {
     const list = [...rawServices];
     if (showProcurementProposalService) list.push({ id: "pengusulan-pengadaan", title: "Pengusulan PBJ", description: "Usulkan layanan pengadaan barang baru diluar master data.", icon: <ShoppingOutlined />, link: "/pengusulan-pengadaan/new", accent: "#0284c7", emoji: "🛒", category: "logistik" });
-    if (showPdtt) list.push({ id: "pengajuan-pdtt", title: "Pengadaan PDTT", description: "Ajukan pengadaan untuk daftar barang sesuai periode aktif.", icon: <ShoppingOutlined />, link: "/pengajuan-pdtt/new", accent: "#f59e0b", emoji: "📦", category: "logistik" });
-    return list.sort((a, b) => a.title.localeCompare(b.title));
-  }, [showProcurementProposalService, showPdtt]);
+    if (showPdtt) list.push({ id: "pengajuan-pdtt", title: "Pengadaan PDTT", description: "Ajukan pengadaan untuk daftar barang sesuai periode aktif.", icon: <img src={pdttIcon} alt="Pengadaan PDTT" className="lm-custom-img-icon" />, link: "/pengajuan-pdtt/new", accent: "#f59e0b", emoji: "📦", category: "logistik" });
+
+    return list.map((item) => {
+      if (customLayananIcons[item.id]) {
+        return {
+          ...item,
+          icon: <img src={customLayananIcons[item.id]} alt={item.title} className="lm-custom-img-icon" />,
+        };
+      }
+      return item;
+    }).sort((a, b) => a.title.localeCompare(b.title));
+  }, [showProcurementProposalService, showPdtt, customLayananIcons]);
 
   const filteredServices = services.filter((s) => {
     const matchSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase()) || s.description.toLowerCase().includes(searchTerm.toLowerCase());

@@ -20,12 +20,11 @@ export default defineConfig({
     port: 3000
   },
   build: {
+    chunkSizeWarningLimit: 3500,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          antd: ['antd', '@ant-design/icons'],
-          utils: ['dayjs', 'xlsx', 'jspdf', 'jspdf-autotable']
+          vendor: ['react', 'react-dom', 'react-router-dom', 'antd', '@ant-design/icons'],
         }
       }
     }

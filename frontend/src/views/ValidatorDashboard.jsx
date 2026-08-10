@@ -200,7 +200,7 @@ export default function ValidatorDashboard() {
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>
         <div>
-          <Title level={3} className="module-title">Validator Dashboard</Title>
+          <Title level={4} className="module-title">Validator Dashboard</Title>
           <Text className="module-subtitle">
             {greeting}, <strong>{user?.name || "Validator"}</strong>. {totalPending > 0 ? `Ada ${totalPending} berkas menunggu validasi Anda.` : "Semua berkas sudah tervalidasi. Luar biasa! ✅"}
           </Text>

@@ -710,7 +710,7 @@ const KepegawaianSuratTugas = () => {
         <div className="module-section">
             <div className="module-toolbar" style={{ marginBottom: 16 }}>
                 <div>
-                    <Title level={3} className="module-title">Kepegawaian — Surat Tugas</Title>
+                    <Title level={4} className="module-title">Kepegawaian — Surat Tugas</Title>
                     <span className="module-subtitle">Kelola draft, lengkapi data penandatangan, dan generate dokumen final.</span>
                 </div>
                 <Button icon={<ReloadOutlined />} onClick={() => fetchData(1)}>Segarkan</Button>

@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\EmployeeCalendarController;
 use App\Http\Controllers\Api\SuratTugasController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LpjController;
+use App\Http\Controllers\Api\PanjarRequestController;
 use App\Http\Controllers\Api\PejabatPerbendaharaanController;
 use App\Http\Controllers\Api\ZoomController;
 use App\Http\Controllers\Api\QueueDisplayController;
@@ -40,6 +41,11 @@ use App\Http\Controllers\Api\VisitorQueueController;
 use App\Http\Controllers\Api\NewsPostController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\RevisionTicketController;
+use App\Http\Controllers\Api\MfaController;
+use App\Http\Controllers\Api\EInvitationController;
+use App\Http\Controllers\Api\RhpkController;
+use App\Http\Controllers\Api\RhpkOutputController;
+use App\Http\Controllers\Api\RhpkExplanationController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -97,6 +103,7 @@ Route::get('/view-log-siptu', function() {
 // ─── Authentication (rate-limited) ──────────────────────────────────
 Route::middleware('throttle:login')->group(function () {
     Route::post('/login', [UserController::class, 'login'])->name('login');
+    Route::post('/mfa/verify', [MfaController::class, 'verify']);
 });
 
 Route::post('/forgot-password', [UserController::class, 'requestPasswordReset']);
@@ -127,6 +134,10 @@ Route::middleware('throttle:public-api')->group(function () {
 
     // Public Calendar Agendas
     Route::get('/public/agendas', [AgendaController::class, 'publicCalendar']);
+
+    // Public E-Invitations
+    Route::get('/public/e-invitations/{slug}', [EInvitationController::class, 'getPublicInvitation']);
+    Route::post('/public/e-invitations/{slug}/rsvp', [EInvitationController::class, 'submitPublicRsvp']);
 
     // IT Helpdesk (public)
     Route::post('/public/it-helpdesk-tickets/{id}/confirm', [ItHelpdeskTicketController::class, 'confirm']);
@@ -222,6 +233,11 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::post('/user/profile/photo', [UserController::class, 'uploadPhoto']);
+
+    // MFA routes
+    Route::get('/mfa/setup', [MfaController::class, 'setup']);
+    Route::post('/mfa/confirm', [MfaController::class, 'confirm']);
+    Route::delete('/mfa/disable/{userId}', [MfaController::class, 'adminDisable']);
 
     // Nextcloud Storage routes
     Route::get('/nextcloud/files', [\App\Http\Controllers\Api\NextcloudStorageController::class, 'index']);
@@ -504,6 +520,16 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::post('/lpj/{suratTugasId}/exclude', [LpjController::class, 'exclude'])->whereNumber('suratTugasId');
     Route::delete('/lpj/{suratTugasId}', [LpjController::class, 'destroy'])->whereNumber('suratTugasId');
 
+    // ─── Permintaan Panjar ─────────────
+    Route::get('/panjar-requests', [PanjarRequestController::class, 'index']);
+    Route::post('/panjar-requests', [PanjarRequestController::class, 'store']);
+    Route::get('/panjar-requests/{id}', [PanjarRequestController::class, 'show'])->whereNumber('id');
+    Route::get('/panjar-requests/{id}/export-pdf', [PanjarRequestController::class, 'exportPdf'])->whereNumber('id');
+    Route::put('/panjar-requests/{id}', [PanjarRequestController::class, 'update'])->whereNumber('id');
+    Route::delete('/panjar-requests/{id}', [PanjarRequestController::class, 'destroy'])->whereNumber('id');
+    Route::put('/panjar-requests/{id}/approve', [PanjarRequestController::class, 'approve'])->whereNumber('id');
+    Route::put('/panjar-requests/{id}/reject', [PanjarRequestController::class, 'reject'])->whereNumber('id');
+
     // ─── Pejabat Perbendaharaan ─────────────
     Route::get('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'show']);
     Route::post('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'update']);
@@ -552,4 +578,133 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // ─── Zoom Generator ─────────────
     Route::get('/zoom/users', [ZoomController::class, 'listUsers']);
     Route::post('/zoom/meetings', [ZoomController::class, 'createMeeting']);
+
+    // ─── E-Invitations ─────────────
+    Route::get('/e-invitations', [EInvitationController::class, 'index']);
+    Route::post('/e-invitations', [EInvitationController::class, 'store']);
+    Route::get('/e-invitations/{id}', [EInvitationController::class, 'show'])->whereNumber('id');
+    Route::put('/e-invitations/{id}', [EInvitationController::class, 'update'])->whereNumber('id');
+    Route::post('/e-invitations/{id}', [EInvitationController::class, 'update'])->whereNumber('id');
+    Route::delete('/e-invitations/{id}', [EInvitationController::class, 'destroy'])->whereNumber('id');
+    Route::get('/e-invitations/{id}/guests', [EInvitationController::class, 'getGuests'])->whereNumber('id');
+    Route::post('/e-invitations/{id}/guests', [EInvitationController::class, 'addGuest'])->whereNumber('id');
+    Route::post('/e-invitations/{id}/guests/bulk', [EInvitationController::class, 'bulkAddGuests'])->whereNumber('id');
+    Route::delete('/e-invitations/{id}/guests/{guestId}', [EInvitationController::class, 'deleteGuest'])->whereNumber('id');
+    Route::post('/e-invitations/{id}/check-in', [EInvitationController::class, 'checkInGuest'])->whereNumber('id');
+
+    // ─── RHPK (Rencana Hasil Pelaksanaan Kegiatan V2) ─────────────
+    Route::get('/rhpk/summary', [RhpkController::class, 'summary']);
+    Route::get('/rhpk', [RhpkController::class, 'index']);
+    Route::post('/rhpk', [RhpkController::class, 'store']);
+    Route::get('/rhpk/{id}', [RhpkController::class, 'show'])->whereNumber('id');
+    Route::put('/rhpk/{id}', [RhpkController::class, 'update'])->whereNumber('id');
+    Route::delete('/rhpk/{id}', [RhpkController::class, 'destroy'])->whereNumber('id');
+    Route::put('/rhpk/{id}/status', [RhpkController::class, 'updateStatus'])->whereNumber('id');
+
+    // Sub-Menu 1: Capaian Output
+    Route::get('/rhpk-outputs', [RhpkOutputController::class, 'index']);
+    Route::post('/rhpk-outputs/target', [RhpkOutputController::class, 'storeTarget']);
+    Route::put('/rhpk-outputs/target/{id}', [RhpkOutputController::class, 'updateTarget'])->whereNumber('id');
+    Route::delete('/rhpk-outputs/target/{id}', [RhpkOutputController::class, 'destroyTarget'])->whereNumber('id');
+    Route::post('/rhpk-outputs/realization', [RhpkOutputController::class, 'saveRealization']);
+
+    // Sub-Menu 2: Penjelasan Capaian Output
+    Route::get('/rhpk-explanations', [RhpkExplanationController::class, 'index']);
+    Route::post('/rhpk-explanations/indicator', [RhpkExplanationController::class, 'storeIndicator']);
+    Route::put('/rhpk-explanations/indicator/{id}', [RhpkExplanationController::class, 'updateIndicator'])->whereNumber('id');
+    Route::delete('/rhpk-explanations/indicator/{id}', [RhpkExplanationController::class, 'destroyIndicator'])->whereNumber('id');
+    Route::post('/rhpk-explanations/save', [RhpkExplanationController::class, 'saveExplanation']);
+    Route::put('/rhpk-explanations/{id}/review', [RhpkExplanationController::class, 'reviewExplanation'])->whereNumber('id');
 });
+
+// Fallback Route Public Storage & Media (Bypass Hostinger Broken Symlink 404)
+Route::get('/media/{path}', function ($path) {
+    $filename = basename($path);
+    $candidates = [
+        storage_path('app/public/' . $path),
+        storage_path('app/' . $path),
+        base_path('storage/app/public/' . $path),
+        public_path('storage/' . $path),
+        base_path('public/storage/' . $path),
+        dirname(base_path()) . '/storage/app/public/' . $path,
+    ];
+
+    foreach ($candidates as $filePath) {
+        if (file_exists($filePath) && !is_dir($filePath)) {
+            $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+            return response()->file($filePath, [
+                'Content-Type' => $mimeType,
+                'Cache-Control' => 'public, max-age=31536000',
+            ]);
+        }
+    }
+
+    try {
+        $searchDir = storage_path();
+        if (is_dir($searchDir)) {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($searchDir, RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $file) {
+                if ($file->isFile() && $file->getFilename() === $filename) {
+                    $foundPath = $file->getRealPath();
+                    $mimeType = @mime_content_type($foundPath) ?: 'application/octet-stream';
+                    return response()->file($foundPath, [
+                        'Content-Type' => $mimeType,
+                        'Cache-Control' => 'public, max-age=31536000',
+                    ]);
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+    }
+
+    abort(404, 'File media tidak ditemukan di server.');
+})->where('path', '.*');
+
+Route::get('/storage/{path}', function ($path) {
+    $filename = basename($path);
+    $candidates = [
+        storage_path('app/public/' . $path),
+        storage_path('app/' . $path),
+        base_path('storage/app/public/' . $path),
+        public_path('storage/' . $path),
+        base_path('public/storage/' . $path),
+        dirname(base_path()) . '/storage/app/public/' . $path,
+    ];
+
+    foreach ($candidates as $filePath) {
+        if (file_exists($filePath) && !is_dir($filePath)) {
+            $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+            return response()->file($filePath, [
+                'Content-Type' => $mimeType,
+                'Cache-Control' => 'public, max-age=31536000',
+            ]);
+        }
+    }
+
+    try {
+        $searchDir = storage_path();
+        if (is_dir($searchDir)) {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($searchDir, RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $file) {
+                if ($file->isFile() && $file->getFilename() === $filename) {
+                    $foundPath = $file->getRealPath();
+                    $mimeType = @mime_content_type($foundPath) ?: 'application/octet-stream';
+                    return response()->file($foundPath, [
+                        'Content-Type' => $mimeType,
+                        'Cache-Control' => 'public, max-age=31536000',
+                    ]);
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+    }
+
+    abort(404, 'File storage tidak ditemukan di server.');
+})->where('path', '.*');
+
+
+

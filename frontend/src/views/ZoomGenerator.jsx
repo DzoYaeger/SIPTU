@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -23,6 +24,7 @@ import {
   LinkOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
@@ -32,6 +34,7 @@ import "./ZoomGenerator.css";
 const { Title, Text, Paragraph } = Typography;
 
 export default function ZoomGenerator() {
+  const navigate = useNavigate();
   const { apiFetch } = useAuth();
   const { message } = AntdApp.useApp();
   const notification = buildMessageAdapter(message);
@@ -177,6 +180,16 @@ export default function ZoomGenerator() {
 
   return (
     <div className="zoom-generator-container">
+      <div className="zoom-top-bar">
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/app/layanan-mandiri')}
+          className="zoom-back-btn"
+        >
+          Kembali ke Layanan Mandiri
+        </Button>
+      </div>
+
       <div className="zoom-header-section">
         <Title level={3}>
           <VideoCameraOutlined style={{ marginRight: 8 }} /> Zoom Meeting Generator

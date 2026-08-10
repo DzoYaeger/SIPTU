@@ -42,6 +42,7 @@ import {
   CopyOutlined,
   CheckOutlined,
   ThunderboltOutlined,
+  PercentageOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import useDebounce from '../hooks/useDebounce.js';
@@ -380,13 +381,13 @@ export default function InvoiceBelanja() {
       title: 'No. Invoice',
       dataIndex: 'invoice_no',
       key: 'invoice_no',
-      width: 170,
+      width: 190,
       render: (text, record) => {
         const displayNo = text || record.ticket_no;
         return (
           <div className="inv-no-cell">
             <div className="inv-no-text-row">
-              <span className="inv-no-code">{displayNo}</span>
+              <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px' }}>{displayNo}</span>
               <Tooltip title="Salin No. Invoice">
                 <Button
                   type="text"
@@ -406,52 +407,14 @@ export default function InvoiceBelanja() {
       },
     },
     {
-      title: 'Kode MAK',
-      dataIndex: 'mak',
-      key: 'mak',
-      width: 150,
-      render: (text) => (
-        <Tag color="geekblue" className="inv-mak-badge">
-          {text || '-'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Uraian Belanja',
+      title: 'Uraian',
       dataIndex: 'deskripsi',
       key: 'deskripsi',
       ellipsis: true,
       render: (text) => (
         <Tooltip title={text}>
-          <span className="inv-desc-text">{text}</span>
+          <span style={{ fontSize: '12px', color: '#0f172a' }}>{text || '-'}</span>
         </Tooltip>
-      ),
-    },
-    {
-      title: 'Nominal Gross',
-      dataIndex: 'nilai_kotor',
-      key: 'nilai_kotor',
-      align: 'right',
-      width: 130,
-      render: (val) => <span className="inv-gross-val">{formatCurrency(val)}</span>,
-    },
-    {
-      title: 'Potongan Pajak',
-      dataIndex: 'taxes',
-      key: 'taxes',
-      width: 150,
-      render: (taxes) => (
-        <div className="inv-tax-list">
-          {taxes && taxes.length > 0 ? (
-            taxes.map((t, idx) => (
-              <span key={idx} className="inv-tax-chip">
-                {t.jenis_pajak}: <strong>{formatCurrency(t.nilai_pajak)}</strong>
-              </span>
-            ))
-          ) : (
-            <span className="inv-tax-none">Tanpa Pajak</span>
-          )}
-        </div>
       ),
     },
     {
@@ -459,46 +422,31 @@ export default function InvoiceBelanja() {
       dataIndex: 'nilai_bersih',
       key: 'nilai_bersih',
       align: 'right',
-      width: 140,
+      width: 160,
       render: (val) => (
-        <div className="inv-net-badge">
+        <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '12px' }}>
           {formatCurrency(val)}
-        </div>
-      ),
-    },
-    {
-      title: 'Dibuat Oleh',
-      key: 'creator',
-      width: 140,
-      render: (_, record) => (
-        <div className="inv-creator-cell">
-          <span className="inv-creator-name">
-            {record.creator?.name || record.penerima_name || 'Pegawai'}
-          </span>
-          <span className="inv-creator-sub">
-            {record.creator?.nip ? `NIP. ${record.creator.nip}` : (record.creator?.base_role || 'User')}
-          </span>
-        </div>
+        </span>
       ),
     },
     {
       title: 'Aksi',
       key: 'actions',
-      width: 55,
+      width: 60,
       align: 'center',
       render: (_, record) => {
         const actionMenuItems = [
-          {
-            key: 'print',
-            icon: <PrinterOutlined style={{ color: '#0f172a' }} />,
-            label: 'Cetak Bukti Pembelian F4 (PDF)',
-            onClick: () => handlePrintPdfF4(record),
-          },
           {
             key: 'view',
             icon: <EyeOutlined style={{ color: '#0f172a' }} />,
             label: 'Pratinjau Detail Invoice',
             onClick: () => handleOpenViewModal(record),
+          },
+          {
+            key: 'print',
+            icon: <PrinterOutlined style={{ color: '#0f172a' }} />,
+            label: 'Cetak Bukti Pembelian F4 (PDF)',
+            onClick: () => handlePrintPdfF4(record),
           },
           {
             key: 'edit',
@@ -527,8 +475,8 @@ export default function InvoiceBelanja() {
         ];
 
         return (
-          <Dropdown menu={{ items: actionMenuItems, className: "inv-action-dropdown" }} trigger={['click']} placement="bottomRight">
-            <Button type="text" shape="circle" className="inv-action-btn" icon={<MoreOutlined style={{ color: '#475569', fontSize: 16 }} />} />
+          <Dropdown menu={{ items: actionMenuItems }} trigger={['click']} placement="bottomRight">
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#475569', fontSize: 16 }} />} />
           </Dropdown>
         );
       },
@@ -560,77 +508,61 @@ export default function InvoiceBelanja() {
               ) : (
                 <Tag color="green" icon={<UserOutlined />}>Mode Pegawai</Tag>
               )}
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => handleOpenModal()}
-                style={{ fontWeight: 500 }}
-              >
-                Buat Invoice Baru
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+                + Buat Invoice Baru
               </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {/* Standar Ant Design Metric Cards */}
+      {/* Ringkasan Statistik Quick Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card size="small" style={{ borderRadius: 8 }}>
-            <Row align="middle" justify="space-between">
+            <Row justify="space-between" align="middle">
               <Col>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Invoice</Text>
-                <Title level={4} style={{ margin: '2px 0 0 0', color: '#262626' }}>
-                  {metrics.totalCount} <span style={{ fontSize: 13, fontWeight: 400 }}>Nota</span>
-                </Title>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>Total Invoice</Text>
+                <Title level={4} style={{ margin: 0, marginTop: 4, fontWeight: 700 }}>{metrics.totalCount}</Title>
               </Col>
               <Col>
-                <FileProtectOutlined style={{ fontSize: 26, color: '#1890ff' }} />
+                <FileTextOutlined style={{ fontSize: 26, color: '#1890ff' }} />
               </Col>
             </Row>
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card size="small" style={{ borderRadius: 8 }}>
-            <Row align="middle" justify="space-between">
+            <Row justify="space-between" align="middle">
               <Col>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Nominal Gross</Text>
-                <Title level={4} style={{ margin: '2px 0 0 0', color: '#262626' }}>
-                  {formatCurrency(metrics.totalGross)}
-                </Title>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>Total Nominal Gross</Text>
+                <Title level={4} style={{ margin: 0, marginTop: 4, fontWeight: 700 }}>{formatCurrency(metrics.totalGross)}</Title>
               </Col>
               <Col>
-                <CalculatorOutlined style={{ fontSize: 26, color: '#722ed1' }} />
+                <DollarOutlined style={{ fontSize: 26, color: '#fa8c16' }} />
               </Col>
             </Row>
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={6}>
           <Card size="small" style={{ borderRadius: 8 }}>
-            <Row align="middle" justify="space-between">
+            <Row justify="space-between" align="middle">
               <Col>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Potongan Pajak</Text>
-                <Title level={4} style={{ margin: '2px 0 0 0', color: '#cf1322' }}>
-                  {formatCurrency(metrics.totalPajak)}
-                </Title>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>Total Potongan Pajak</Text>
+                <Title level={4} style={{ margin: 0, marginTop: 4, fontWeight: 700 }}>{formatCurrency(metrics.totalPajak)}</Title>
               </Col>
               <Col>
-                <DollarOutlined style={{ fontSize: 26, color: '#ff4d4f' }} />
+                <PercentageOutlined style={{ fontSize: 26, color: '#f5222d' }} />
               </Col>
             </Row>
           </Card>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card size="small" style={{ borderRadius: 8, background: '#f6ffed', borderColor: '#b7eb8f' }}>
-            <Row align="middle" justify="space-between">
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8 }}>
+            <Row justify="space-between" align="middle">
               <Col>
-                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase' }}>Total Dibayarkan (Net)</Text>
-                <Title level={4} style={{ margin: '2px 0 0 0', color: '#389e0d' }}>
-                  {formatCurrency(metrics.totalNet)}
-                </Title>
+                <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 600 }}>Total Net Dibayarkan</Text>
+                <Title level={4} style={{ margin: 0, marginTop: 4, fontWeight: 700, color: '#389e0d' }}>{formatCurrency(metrics.totalNet)}</Title>
               </Col>
               <Col>
                 <SafetyCertificateOutlined style={{ fontSize: 26, color: '#52c41a' }} />
@@ -685,6 +617,55 @@ export default function InvoiceBelanja() {
           dataSource={filteredData}
           rowKey="id"
           loading={loading}
+          expandable={{
+            expandedRowRender: (record) => (
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <Row gutter={[16, 12]}>
+                  <Col xs={24} sm={12} md={6}>
+                    <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                      Kode MAK
+                    </Text>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
+                      {record.mak || '-'}
+                    </span>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                      Nominal Gross
+                    </Text>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
+                      {formatCurrency(record.nilai_kotor)}
+                    </span>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                      Potongan Pajak
+                    </Text>
+                    <div style={{ fontSize: '12px', color: '#0f172a' }}>
+                      {record.taxes && record.taxes.length > 0 ? (
+                        record.taxes.map((t, idx) => (
+                          <div key={idx}>
+                            {t.jenis_pajak}: <strong>{formatCurrency(t.nilai_pajak)}</strong>
+                          </div>
+                        ))
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Tanpa Pajak</span>
+                      )}
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                      Dibuat Oleh
+                    </Text>
+                    <div style={{ fontSize: '12px', color: '#0f172a' }}>
+                      <span style={{ fontWeight: 600 }}>{record.creator?.name || record.penerima_name || 'Pegawai'}</span>
+                      {record.creator?.nip && <div style={{ fontSize: '11px', color: '#64748b' }}>NIP. {record.creator.nip}</div>}
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            ),
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,

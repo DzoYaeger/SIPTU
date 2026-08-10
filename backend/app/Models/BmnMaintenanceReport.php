@@ -11,6 +11,8 @@ class BmnMaintenanceReport extends Model
         'report_type',
         'asset_id',
         'asset_name',
+        'asset_ids',
+        'assets_data',
         'report_details',
         'status',
         'admin_notes',
@@ -25,6 +27,8 @@ class BmnMaintenanceReport extends Model
     ];
 
     protected $casts = [
+        'asset_ids' => 'array',
+        'assets_data' => 'array',
         'handled_at' => 'datetime',
     ];
 

@@ -716,9 +716,9 @@ export default function KeuanganLpj() {
         {
             title: "Kode MAK / Akun", key: "mak", width: 160,
             render: (_, r) => (
-                <Tag color="blue" style={{ fontWeight: 600, fontSize: "12px", borderRadius: "4px" }}>
+                <span style={{ fontWeight: 600, fontSize: "13.33px", color: "#0f172a" }}>
                     {r.mak || "Belum ada MAK"}
-                </Tag>
+                </span>
             ),
         },
         {
@@ -744,7 +744,7 @@ export default function KeuanganLpj() {
         {
             title: "Deskripsi Tugas", key: "deskripsi_tugas",
             render: (_, r) => (
-                <div className="klpj-desc-cell" style={{ color: '#64748b', fontSize: '12.5px', lineHeight: '1.4', whiteSpace: 'pre-wrap', maxHeight: '4.2em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="klpj-desc-cell" style={{ color: '#0f172a', fontSize: '13.33px', lineHeight: '1.4', whiteSpace: 'pre-wrap', maxHeight: '4.2em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {r.deskripsi_tugas || "-"}
                 </div>
             ),
@@ -913,13 +913,17 @@ export default function KeuanganLpj() {
             {/* ── Header ── */}
             <div className="module-toolbar">
                 <div>
-                    <Title level={3} className="module-title">Keuangan — LPJ</Title>
+                    <Title level={4} className="module-title">Keuangan — LPJ</Title>
                     <span className="module-subtitle">Kelola pertanggungjawaban biaya perjalanan dinas secara terpadu.</span>
                     <div style={{ marginTop: 6 }}>
                         {isAdmin ? (
-                            <Tag color="blue" icon={<FileProtectOutlined />}>Mode Admin: Menampilkan Seluruh Surat Tugas Pegawai</Tag>
+                            <span style={{ fontSize: '13.33px', fontWeight: 600, color: '#0F5B99' }}>
+                                <FileProtectOutlined style={{ marginRight: 4 }} /> Mode Admin: Menampilkan Seluruh Surat Tugas Pegawai
+                            </span>
                         ) : (
-                            <Tag color="green" icon={<UserOutlined />}>Mode Pegawai: Menampilkan Surat Tugas di mana Anda tertagging</Tag>
+                            <span style={{ fontSize: '13.33px', fontWeight: 600, color: '#10b981' }}>
+                                <UserOutlined style={{ marginRight: 4 }} /> Mode Pegawai: Menampilkan Surat Tugas di mana Anda tertagging
+                            </span>
                         )}
                     </div>
                 </div>
@@ -931,7 +935,7 @@ export default function KeuanganLpj() {
                 <div className="klpj-table-toolbar">
                     <div className="klpj-table-title">
                         <Title level={4}>Surat Tugas Siap LPJ</Title>
-                        <Tag className="klpj-count-tag">{stPagination.total} Item</Tag>
+                        <span style={{ fontSize: '13.33px', fontWeight: 600, color: '#0F5B99' }}>({stPagination.total} Item)</span>
                     </div>
                     <Input
                         className="klpj-search-input"

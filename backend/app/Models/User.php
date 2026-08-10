@@ -31,6 +31,10 @@ class User extends Authenticatable
         'module_permissions',
         'must_reset_password',
         'password_changed_at',
+        'mfa_secret',
+        'mfa_enabled',
+        'mfa_recovery_codes',
+        'mfa_confirmed_at',
     ];
 
     /**
@@ -41,6 +45,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'mfa_secret',
+        'mfa_recovery_codes',
     ];
 
     /**
@@ -59,8 +65,24 @@ class User extends Authenticatable
             'module_permissions' => 'array',
             'must_reset_password' => 'boolean',
             'password_changed_at' => 'datetime',
+            'mfa_enabled' => 'boolean',
+            'mfa_confirmed_at' => 'datetime',
+            'mfa_recovery_codes' => 'array',
         ];
     }
+
+    /**
+     * Accessor: Check if MFA is fully set up.
+     */
+    public function getHasMfaAttribute(): bool
+    {
+        return $this->mfa_enabled && $this->mfa_confirmed_at !== null;
+    }
+
+    /**
+     * Append has_mfa to JSON serialization.
+     */
+    protected $appends = ['has_mfa'];
 
     /**
      * Relationship with Assets (created)

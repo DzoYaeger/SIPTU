@@ -40,6 +40,7 @@ import {
   FundOutlined,
   FundProjectionScreenOutlined,
   MonitorOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import PropTypes from "prop-types";
 import MobileBottomNav from "./MobileBottomNav.jsx";
@@ -106,6 +107,7 @@ const iconMap = {
   "penyimpanan-cloud": <FolderOpenOutlined />,
   "pengaturan-slider": <SettingOutlined />,
   "admin-news-posts": <FileTextOutlined />,
+  "admin-layanan-mandiri-icons": <PictureOutlined />,
 };
 
 const NavbarMenu = ({

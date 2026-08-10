@@ -10,6 +10,7 @@ import {
   Spin,
   Space,
   Dropdown,
+  AutoComplete,
 } from "antd";
 import {
   SafetyCertificateOutlined,
@@ -96,6 +97,7 @@ function RiwayatLayanan() {
   const [signModalOpen, setSignModalOpen] = useState(false);
   const [signRecord, setSignRecord] = useState(null);
   const [signPassword, setSignPassword] = useState("");
+  const [signTotpCode, setSignTotpCode] = useState("");
   const [signLoading, setSignLoading] = useState(false);
   const [signWaitWa, setSignWaitWa] = useState(false);
   // Preview modal
@@ -154,7 +156,7 @@ function RiwayatLayanan() {
       const res = await apiFetch(`/my-service-history/surat_tugas/${record.id}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message);
-      setSignRecord(json); setSignPassword(""); setSignModalOpen(true);
+      setSignRecord(json); setSignPassword(""); setSignTotpCode(""); setSignModalOpen(true);
     } catch (e) { msg.error({ message: "Gagal memuat data surat tugas." }); }
   };
 
@@ -169,7 +171,7 @@ function RiwayatLayanan() {
     if (!signPassword) { msg.warning({ message: "Masukkan password Anda terlebih dahulu." }); return; }
     setSignLoading(true);
     try {
-      const res = await apiFetch(`/surat-tugas/${signRecord.id}/sign-protokol`, { method: "POST", body: JSON.stringify({ password: signPassword }) });
+      const res = await apiFetch(`/surat-tugas/${signRecord.id}/sign-protokol`, { method: "POST", body: JSON.stringify({ password: signPassword, totp_code: signTotpCode }) });
       if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || "Gagal menandatangani dokumen."); }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -202,13 +204,25 @@ function RiwayatLayanan() {
       if (!res.ok) throw new Error(json?.message || "Gagal memuat detail surat tugas.");
       const start = json?.tanggal_mulai ? dayjs(json.tanggal_mulai) : null;
       const end = json?.tanggal_selesai ? dayjs(json.tanggal_selesai) : null;
+      let saranaItems = Array.isArray(json.sarana) && json.sarana.length ? json.sarana : [];
+      if (!saranaItems.length && json.sarana_nama) {
+        const namas = String(json.sarana_nama).split(";");
+        const lokasis = String(json.sarana_lokasi || "").split(";");
+        saranaItems = namas
+          .map((n, i) => ({
+            id: json.sarana_id && i === 0 ? json.sarana_id : null,
+            nama: n.trim(),
+            lokasi: lokasis[i] ? lokasis[i].trim() : "",
+          }))
+          .filter((s) => s.nama);
+      }
       editForm.setFieldsValue({
         employee_ids: (json.employees ?? []).map((emp) => emp.id),
         ketua_tim_id: json.ketua_tim_id ?? undefined,
         tanggal_tugas: start && end ? [start, end] : [],
         mak: json.mak ?? "", lokasi_tugas: json.lokasi_tugas ?? "",
         deskripsi_tugas: json.deskripsi_tugas ?? "",
-        sarana: Array.isArray(json.sarana) ? json.sarana : [],
+        sarana: saranaItems,
       });
       setEditRecord(json); setEditModalOpen(true);
     } catch (e) { msg.error({ message: e.message }); }
@@ -302,8 +316,9 @@ function RiwayatLayanan() {
     <div className="rl-page module-section">
       {/* Header */}
       <div className="rl-header">
+        <div className="rl-eyebrow">Layanan Mandiri</div>
         <h2><span className="rl-header-icon"><HistoryOutlined /></span> Riwayat Layanan Mandiri</h2>
-        <p>Lihat semua riwayat layanan yang pernah Anda ajukan.</p>
+        <p>Lihat dan pantau semua pengajuan layanan mandiri yang pernah Anda buat.</p>
       </div>
 
       {/* Stats */}
@@ -324,22 +339,22 @@ function RiwayatLayanan() {
       <div className="rl-toolbar">
         <div className="rl-toolbar-group">
           <div className="rl-select">
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} aria-label="Filter Jenis Layanan">
               {SERVICE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div className="rl-select">
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} aria-label="Filter Status">
               {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div className="rl-search">
-            <SearchOutlined className="rl-search-icon" />
-            <input placeholder="Cari nomor tiket..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <SearchOutlined className="rl-search-icon" aria-hidden="true" />
+            <input placeholder="Cari nomor tiket atau keterangan..." value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Cari tiket" />
           </div>
         </div>
-        <button className={`rl-btn rl-btn--ghost ${loading ? "is-loading" : ""}`} onClick={fetchData}>
-          <ReloadOutlined /> Refresh
+        <button className={`rl-btn rl-btn--ghost ${loading ? "is-loading" : ""}`} onClick={fetchData} type="button">
+          <ReloadOutlined /> Segarkan
         </button>
       </div>
 
@@ -423,10 +438,29 @@ function RiwayatLayanan() {
         )}
       </div>
 
-      {/* ── Modals (keep Ant Design for complex forms) ── */}
-      <Modal title="Edit Data Surat Tugas" open={editModalOpen} onCancel={closeEditModal} onOk={handleSaveSuratTugas} confirmLoading={editSaving} okText="Simpan" cancelText="Batal" width={720} destroyOnClose>
+      {/* ── Modals (Microsoft-inspired Clean Corporate Design) ── */}
+      <Modal
+        title={
+          <div className="rl-modal-title">
+            <EditOutlined className="rl-modal-title-icon" />
+            <div>
+              <div className="rl-modal-title-main">Edit Data Surat Tugas</div>
+              <div className="rl-modal-title-sub">Perbarui informasi pengajuan surat tugas Anda.</div>
+            </div>
+          </div>
+        }
+        open={editModalOpen}
+        onCancel={closeEditModal}
+        onOk={handleSaveSuratTugas}
+        confirmLoading={editSaving}
+        okText="Simpan Perubahan"
+        cancelText="Batal"
+        width={720}
+        destroyOnClose
+        className="rl-custom-modal"
+      >
         <Spin spinning={editModalLoading}>
-          <Form form={editForm} layout="vertical">
+          <Form form={editForm} layout="vertical" className="rl-modal-form">
             <Form.Item name="employee_ids" label="Pegawai Ditugaskan" rules={[{ required: true, message: "Pilih minimal 1 pegawai." }]}>
               <Select mode="multiple" placeholder="Pilih pegawai" options={employeeOptions} loading={employeesLoading} showSearch optionFilterProp="label" />
             </Form.Item>
@@ -459,26 +493,48 @@ function RiwayatLayanan() {
                 )}
               </Form.List>
             </Form.Item>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>Setelah menyimpan, Anda dapat mengunduh ulang protokol kerja dengan data terbaru.</span>
+            <div className="rl-modal-note">Setelah menyimpan, Anda dapat mengunduh ulang protokol kerja dengan data terbaru.</div>
           </Form>
         </Spin>
       </Modal>
 
-      <Modal title="Tanda Tangan Elektronik Protokol Kerja" open={signModalOpen} onCancel={() => setSignModalOpen(false)} footer={null} destroyOnClose>
+      <Modal
+        title={
+          <div className="rl-modal-title">
+            <SafetyCertificateOutlined className="rl-modal-title-icon" style={{ color: "#4f46e5" }} />
+            <div>
+              <div className="rl-modal-title-main">Tanda Tangan Elektronik Protokol Kerja</div>
+              <div className="rl-modal-title-sub">Verifikasi identitas dan terbitkan dokumen TTE secara sah.</div>
+            </div>
+          </div>
+        }
+        open={signModalOpen}
+        onCancel={() => setSignModalOpen(false)}
+        footer={null}
+        destroyOnClose
+        className="rl-custom-modal"
+      >
         {signRecord && (user?.employee?.id === signRecord.ketua_tim_id || user?.nip === signRecord.ketua_tim?.nip) ? (
-          <div>
-            <p>Anda ditetapkan sebagai <strong>Ketua Tim</strong>. Masukkan password login untuk membubuhkan QR Code TTE pada PDF.</p>
-            <Input.Password placeholder="Masukkan password login SIPTU" value={signPassword} onChange={(e) => setSignPassword(e.target.value)} style={{ marginBottom: 16 }} />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <div className="rl-modal-body">
+            <p className="rl-modal-desc">Anda ditetapkan sebagai <strong>Ketua Tim</strong>. Masukkan password login dan kode autentikasi MFA untuk membubuhkan QR Code TTE pada PDF.</p>
+            <div className="rl-form-group">
+              <label className="rl-label">Password SIPTU</label>
+              <Input.Password placeholder="Masukkan password login SIPTU" value={signPassword} onChange={(e) => setSignPassword(e.target.value)} style={{ marginBottom: 12 }} />
+            </div>
+            <div className="rl-form-group">
+              <label className="rl-label">Kode MFA Authenticator / Recovery</label>
+              <Input placeholder="Kode Autentikasi MFA (6 Digit / Recovery Code)" value={signTotpCode} onChange={(e) => setSignTotpCode(e.target.value)} style={{ marginBottom: 16, fontWeight: 700, letterSpacing: '1px' }} />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <Button onClick={handleDownloadWithoutQR}>Unduh Tanpa TTE</Button>
-              <Button type="primary" onClick={handleSignProtokol} loading={signLoading}>Tandatangani & Unduh</Button>
+              <Button type="primary" onClick={handleSignProtokol} loading={signLoading} style={{ background: "#4f46e5", borderColor: "#4f46e5" }}>Tandatangani & Unduh</Button>
             </div>
           </div>
         ) : (
-          <div>
-            <p>Hanya Ketua Tim (<strong>{signRecord?.ketua_tim?.name || "-"}</strong>) yang dapat membubuhkan TTE.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
-              <Button type="primary" onClick={handleRequestSignature} loading={signWaitWa} block>Kirim Link via WhatsApp ke Ketua Tim</Button>
+          <div className="rl-modal-body">
+            <p className="rl-modal-desc">Hanya Ketua Tim (<strong>{signRecord?.ketua_tim?.name || "-"}</strong>) yang dapat membubuhkan TTE.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+              <Button type="primary" onClick={handleRequestSignature} loading={signWaitWa} block style={{ background: "#2563eb", borderColor: "#2563eb" }}>Kirim Link via WhatsApp ke Ketua Tim</Button>
               <Button onClick={handleDownloadWithoutQR} block>Unduh Tanpa QR Code (Draft)</Button>
             </div>
           </div>

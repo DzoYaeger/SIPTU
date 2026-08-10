@@ -11,6 +11,7 @@ const SignProtokolPage = ({ type = "ketua" }) => {
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
@@ -51,8 +52,8 @@ const SignProtokolPage = ({ type = "ketua" }) => {
   const previewLabel = isKepala ? "Pratinjau Dokumen" : "Pratinjau Dokumen (Tanpa QR Code)";
   const confirmationTitle = isKepala ? "Konfirmasi TTE Kepala Balai" : "Konfirmasi Penandatanganan";
   const confirmationDesc = isKepala 
-    ? "Masukkan password akun SIPTU Anda untuk membubuhkan tanda tangan elektronik." 
-    : "Masukkan password akun SIPTU Anda untuk membubuhkan QR Code pada dokumen di atas.";
+    ? "Masukkan password dan kode autentikasi 6 digit dari aplikasi Authenticator Anda." 
+    : "Masukkan password dan kode autentikasi 6 digit dari aplikasi Authenticator Anda untuk membubuhkan QR Code.";
   const btnText = isKepala ? "Tandatangani Dokumen" : "Setujui & Tandatangani";
   const footerText = isKepala 
     ? "Dokumen ini akan dilengkapi dengan QR Code kedua sebagai bukti pengesahan Kepala Balai." 
@@ -63,18 +64,22 @@ const SignProtokolPage = ({ type = "ketua" }) => {
       message.warning("Masukkan password login SIPTU Anda.");
       return;
     }
+    if (!totpCode) {
+      message.warning("Masukkan kode autentikasi 6 digit.");
+      return;
+    }
 
     setSigning(true);
     try {
       const res = await fetch(`${baseUrl}/public/surat-tugas/${id}/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, token }), // Pass token here too
+        body: JSON.stringify({ password, totp_code: totpCode, token }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Gagal memverifikasi password atau menandatangani dokumen.");
+        throw new Error(err.message || "Gagal memverifikasi password/kode MFA atau menandatangani dokumen.");
       }
 
       const blob = await res.blob();
@@ -108,51 +113,47 @@ const SignProtokolPage = ({ type = "ketua" }) => {
 
   if (error) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5" }}>
-        <Result
-          status="error"
-          title="Gagal Memuat Dokumen"
-          subTitle={error}
-          extra={<Button type="primary" onClick={() => navigate("/")}>Kembali ke Beranda</Button>}
-        />
+      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5", padding: 24 }}>
+        <Card style={{ maxWidth: 500, width: "100%", textAlign: "center", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+          <Result status="error" title="Gagal Memuat Dokumen" subTitle={error} />
+        </Card>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5" }}>
-        <Result
-          status="success"
-          title="Berhasil Ditandatangani"
-          subTitle={successSubTitle}
-          extra={[
-            <Button type="primary" key="home" onClick={() => navigate("/")}>Kembali ke Beranda</Button>,
-            <Button key="download" icon={<DownloadOutlined />} onClick={() => window.open(`${pdfUrl}&with_qr=1`, '_blank')}>Buka PDF Lagi</Button>
-          ]}
-        />
+      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f0f2f5", padding: 24 }}>
+        <Card style={{ maxWidth: 550, width: "100%", textAlign: "center", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+          <Result
+            status="success"
+            title={successMsg}
+            subTitle={successSubTitle}
+            extra={[
+              <Button type="primary" key="close" onClick={() => window.close()} style={{ background: themeColor, borderColor: themeColor }}>
+                Tutup Halaman Ini
+              </Button>
+            ]}
+          />
+        </Card>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5", padding: "40px 20px" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
-            <FileProtectOutlined style={{ color: themeColor, marginRight: 12 }} />
-            {pageTitle}
-          </Title>
-          <Text type="secondary" style={{ fontSize: 16 }}>
-            {pageSubtitle}
-          </Text>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "32px 16px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <FileProtectOutlined style={{ fontSize: 40, color: themeColor, marginBottom: 12 }} />
+          <Title level={2} style={{ margin: 0 }}>{pageTitle}</Title>
+          <Text type="secondary" style={{ fontSize: 15 }}>{pageSubtitle}</Text>
         </div>
 
         <Card 
           bodyStyle={{ padding: 0 }} 
           style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", marginBottom: 32 }}
         >
-          <div style={{ background: "#fafafa", padding: "12px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifycontent: "space-between", alignItems: "center" }}>
+          <div style={{ background: "#fafafa", padding: "12px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Space>
               <EyeOutlined style={{ color: "#8c8c8c" }} />
               <Text strong>{previewLabel}</Text>
@@ -183,15 +184,30 @@ const SignProtokolPage = ({ type = "ketua" }) => {
           <Divider />
 
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Input.Password
-              size="large"
-              prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
-              placeholder="Password SIPTU"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onPressEnter={handleSign}
-              style={{ borderRadius: 8 }}
-            />
+            <div>
+              <Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password SIPTU:</Text>
+              <Input.Password
+                size="large"
+                prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+                placeholder="Password SIPTU"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ borderRadius: 8 }}
+              />
+            </div>
+
+            <div>
+              <Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Kode Autentikasi MFA (6 Digit / Recovery Code):</Text>
+              <Input
+                size="large"
+                prefix={<LockOutlined style={{ color: "#0b56a4" }} />}
+                placeholder="Contoh: 123456 atau XXXX-XXXX"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                onPressEnter={handleSign}
+                style={{ borderRadius: 8, textAlign: "center", letterSpacing: "2px", fontWeight: 700 }}
+              />
+            </div>
 
             <Button
               type="primary"
@@ -199,8 +215,7 @@ const SignProtokolPage = ({ type = "ketua" }) => {
               block
               loading={signing}
               onClick={handleSign}
-              icon={<CheckCircleOutlined />}
-              style={{ borderRadius: 8, height: 50, fontSize: 16, fontWeight: 600, background: themeColor, borderColor: themeColor }}
+              style={{ borderRadius: 8, height: 44, background: themeColor, borderColor: themeColor }}
             >
               {btnText}
             </Button>

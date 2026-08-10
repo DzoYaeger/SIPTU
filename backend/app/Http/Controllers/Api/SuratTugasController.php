@@ -189,6 +189,20 @@ class SuratTugasController extends Controller
             return response()->json(['errors' => ['employee_ids' => ['Minimal 1 pegawai (internal atau luar) harus dipilih.']]], 422);
         }
 
+        // ── Verify Password & MFA BEFORE creating Surat Tugas ──
+        if ($request->password) {
+            $user = $createdBy ? User::find($createdBy) : null;
+            if (!$user) {
+                return response()->json(['message' => 'Akun pengguna tidak ditemukan.'], 404);
+            }
+            if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'Password SIPTU salah. Gagal membuat pengajuan Surat Tugas.'], 422);
+            }
+            if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+                return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+            }
+        }
+
         // Process sarana data — store as semicolon-separated
         $saranaData  = $request->sarana ?? [];
         $saranaIds   = collect($saranaData)->pluck('id')->filter()->values()->toArray();
@@ -219,26 +233,22 @@ class SuratTugasController extends Controller
         }
         $st->load('employees', 'ketuaTim');
 
-        // NEW: Atomic signing if password provided by Katim
+        // Atomic signing if password provided by Katim (password+MFA already validated above)
         $isKatim = false;
         if ($request->password && $createdBy) {
-            $user = User::find($createdBy);
+            $user = $user ?? User::find($createdBy);
             if ($user && $st->ketuaTim && ($st->ketuaTim->user_id === $user->id || $st->ketuaTim->nip === $user->nip)) {
-                if (\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
-                    $st->signature_token = (string) \Illuminate\Support\Str::uuid();
-                    $st->signed_at = now();
-                    $st->signed_by = $user->id;
-                    $st->save();
-                    $isKatim = true;
+                $st->signature_token = (string) \Illuminate\Support\Str::uuid();
+                $st->signed_at = now();
+                $st->signed_by = $user->id;
+                $st->save();
+                $isKatim = true;
 
-                    // Notify Kepala Balai for the next step
-                    try {
-                        $this->notifyKepalaBalaiForSign($st, $fonnteService);
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::warning('Notification to Kepala Balai failed after atomic sign: ' . $e->getMessage());
-                    }
-                } else {
-                    return response()->json(['message' => 'Password SIPTU salah. Gagal membubuhkan TTE.'], 401);
+                // Notify Kepala Balai for the next step
+                try {
+                    $this->notifyKepalaBalaiForSign($st, $fonnteService);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Notification to Kepala Balai failed after atomic sign: ' . $e->getMessage());
                 }
             }
         }
@@ -1204,10 +1214,15 @@ class SuratTugasController extends Controller
 
         $request->validate([
             'password' => 'required|string',
+            'totp_code' => $user->has_mfa ? 'required|string' : 'nullable|string',
         ]);
 
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Password salah.'], 401);
+        }
+
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         if (!$st->signature_token) {
@@ -1255,6 +1270,10 @@ class SuratTugasController extends Controller
 
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Password salah.'], 401);
+        }
+
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         if (!$st->signature_token) {
@@ -1319,6 +1338,10 @@ class SuratTugasController extends Controller
 
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Password salah.'], 401);
+        }
+
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         $st->signed_kepala_at = now();

@@ -113,10 +113,14 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--color-bg);
+  background: #f4f8fb url('/hero/main-bg.png') center center / cover no-repeat fixed;
   font-family: var(--ff-body);
   font-size: var(--fs-body);
   color: var(--color-text);
+}
+
+.ant-layout {
+  background: transparent !important;
 }
 
 #root {
@@ -244,6 +248,16 @@ html {
 .text-success   { color: var(--color-success); }
 .text-warning   { color: var(--color-warning); }
 .text-danger    { color: var(--color-danger); }
+
+/* ── Global Placeholder Styling ── */
+input::placeholder,
+textarea::placeholder,
+.ant-input::placeholder,
+.ant-select-selection-placeholder {
+  font-size: 9px !important;
+  font-family: var(--ff-body) !important;
+  color: var(--color-text-muted) !important;
+}
 
 /* ── Responsive Typography ── */
 @media (max-width: 768px) {

@@ -310,7 +310,7 @@ const BmnDataAsetTetap = () => {
       {/* Header */}
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Data Aset Tetap</Typography.Title>
+          <Typography.Title level={4} className="module-title">Data Aset Tetap</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola inventaris BMN dengan mudah dan efisien.</Typography.Text>
         </div>
         <Space>

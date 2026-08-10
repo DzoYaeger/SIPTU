@@ -1,7 +1,30 @@
 /* ZoomGenerator.css - Premium Styling for Zoom Meeting Generator */
 
 .zoom-generator-container {
-  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+.zoom-top-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.zoom-back-btn {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+}
+
+.zoom-back-btn:hover {
+  border-color: #0b56a4 !important;
+  color: #0b56a4 !important;
 }
 
 .zoom-header-section {

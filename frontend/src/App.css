@@ -6,12 +6,12 @@
 /* ── App Layout ── */
 .app-layout {
   min-height: 100vh;
-  background: var(--color-bg);
+  background: transparent !important;
 }
 
 .app-content {
   padding: var(--space-lg) var(--space-lg) var(--space-2xl);
-  background: var(--color-bg-subtle);
+  background: transparent !important;
   min-height: calc(100vh - 64px);
 }
 
@@ -745,6 +745,78 @@ h5.ant-typography {
 .ant-menu-submenu-title {
   font-family: var(--ff-body) !important;
   font-size: var(--fs-body) !important;
+}
+
+/* ── Statistic ── */
+.ant-statistic .ant-statistic-title {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+  font-weight: 500 !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.ant-statistic .ant-statistic-content {
+  font-family: var(--ff-heading) !important;
+  font-size: var(--fs-h3) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Dropdown Menu ── */
+.ant-dropdown .ant-dropdown-menu-item {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+/* ── Popover / Tooltip ── */
+.ant-popover .ant-popover-inner-content,
+.ant-tooltip .ant-tooltip-inner {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+/* ── Breadcrumb ── */
+.ant-breadcrumb {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+/* ── Empty State ── */
+.ant-empty .ant-empty-description {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+  color: var(--color-text-muted) !important;
+}
+
+/* ── Badge ── */
+.ant-badge .ant-badge-count {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-xs) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Alert ── */
+.ant-alert .ant-alert-message {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-body) !important;
+  font-weight: 600 !important;
+}
+
+.ant-alert .ant-alert-description {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+/* ── Timeline ── */
+.ant-timeline .ant-timeline-item-content {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-sm) !important;
+}
+
+/* ── Table Pagination ── */
+.ant-table-pagination .ant-pagination-total-text {
+  font-family: var(--ff-body) !important;
+  font-size: var(--fs-xs) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 /* ══════════════════════════════════════════════

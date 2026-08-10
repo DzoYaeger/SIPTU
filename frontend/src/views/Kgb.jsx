@@ -327,7 +327,7 @@ const Kgb = () => {
     <div className="module-section">
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Kenaikan Gaji Berkala</Typography.Title>
+          <Typography.Title level={4} className="module-title">Kenaikan Gaji Berkala</Typography.Title>
           <Typography.Text className="module-subtitle">Monitor dan proses kenaikan gaji berkala pegawai secara otomatis.</Typography.Text>
         </div>
       </div>

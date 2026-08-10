@@ -643,7 +643,7 @@
 /* ── Sidebar Layout Styling ── */
 .app-layout-sidebar-root {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent !important;
 }
 
 .app-sider {

@@ -564,6 +564,19 @@ const PublicArchiveLoanRequestPage = () => {
                   size="large"
                 />
               </Form.Item>
+
+              <Form.Item
+                name="totp_code"
+                label="Kode Autentikasi MFA (6 Digit / Recovery Code)"
+                rules={[{ required: true, message: "Kode autentikasi MFA wajib diisi." }]}
+              >
+                <Input 
+                  prefix={<LockOutlined style={{ color: '#0b56a4' }} />}
+                  placeholder="Contoh: 123456 atau XXXX-XXXX" 
+                  size="large"
+                  style={{ fontWeight: 700, letterSpacing: '1px' }}
+                />
+              </Form.Item>
             </Form>
 
             <Alert

@@ -448,6 +448,10 @@ const BmnPeminjamanAsetForm = () => {
           >
             <Input.Password placeholder="Masukkan password login SIPTU pemohon" />
           </Form.Item>
+          <Form.Item name="totp_code" label="Kode Autentikasi MFA (6 Digit / Recovery Code)" rules={[{ required: true, message: 'Kode MFA wajib diisi untuk verifikasi TTE.' }]}
+          >
+            <Input placeholder="Contoh: 123456 atau XXXX-XXXX" style={{ fontWeight: 700, letterSpacing: '1px' }} />
+          </Form.Item>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button htmlType="reset" onClick={() => form.resetFields()}>Reset</Button>

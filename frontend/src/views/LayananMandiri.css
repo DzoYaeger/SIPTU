@@ -11,7 +11,7 @@
   --lm-accent-light: #2563eb;  /* Sky Blue Accent */
   --lm-accent-hover: #0b4575;  /* Deep Royal Blue */
   
-  --lm-bg: #f8fafc;            /* Clean Slate Gray */
+  --lm-bg: transparent;            /* Clean Slate Gray */
   --lm-card-bg: #ffffff;       /* Pure White Cards */
   --lm-border: #e2e8f0;        /* Soft Gray Borders */
   --lm-border-light: #f1f5f9;  /* Hairline Borders */
@@ -931,7 +931,14 @@
   border-radius: 10px;
   background: #f1f5f9 !important;
   flex-shrink: 0;
+  overflow: hidden;
   transition: all var(--transition-normal);
+}
+.lm-custom-img-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
 }
 .lm-card-premium:hover .lm-card-icon-container {
   color: #ffffff;

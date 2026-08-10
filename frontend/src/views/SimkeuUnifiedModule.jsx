@@ -1,104 +1,143 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import {
   ArrowLeftOutlined,
-  DollarOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  BankOutlined,
   FileProtectOutlined,
   CalculatorOutlined,
-  BankOutlined,
-  CheckCircleFilled,
-  InfoCircleOutlined,
-  FileTextOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
-import { Typography, Tabs, Card } from 'antd';
+import { Tooltip } from 'antd';
 import KeuanganLpj from './KeuanganLpj.jsx';
 import InvoiceBelanja from './InvoiceBelanja.jsx';
+import PermintaanPanjar from './PermintaanPanjar.jsx';
+import simkeuIcon from '../assets/icons/simkeu-icon.png';
 
 import './SimkeuUnifiedModule.css';
 
-const { Title, Text } = Typography;
-
 const SimkeuUnifiedModule = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('lpj');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const menuItems = [
+    {
+      group: 'KEUANGAN',
+      items: [
+        {
+          key: 'lpj',
+          label: 'Pembuatan / Kelola LPJ',
+          icon: <FileProtectOutlined />,
+        },
+        {
+          key: 'panjar',
+          label: 'Permintaan Panjar',
+          icon: <WalletOutlined />,
+        },
+        {
+          key: 'invoice',
+          label: 'Pembuatan / Kelola Invoice Belanja',
+          icon: <CalculatorOutlined />,
+        },
+      ],
+    },
+  ];
 
   return (
-    <div className="simkeu-unified-container">
-      {/* ── Top Corporate Header ── */}
-      <header className="simkeu-header">
-        <div className="simkeu-header-content">
-          <div className="simkeu-header-left">
-            <button
-              className="simkeu-back-btn"
-              onClick={() => navigate('/app/layanan-mandiri')}
-              title="Kembali ke Layanan Mandiri"
-            >
-              <ArrowLeftOutlined />
-            </button>
-
-            <div className="simkeu-brand-wrap">
-              <div className="simkeu-brand-icon">
-                <BankOutlined />
+    <div className="simkeu-module">
+      {/* ── Sub-Sidebar Navigation SIMKEU ── */}
+      <aside className={`simkeu-sidebar ${sidebarCollapsed ? 'simkeu-sidebar--collapsed' : 'simkeu-sidebar--expanded'}`}>
+        {/* Module Title Header */}
+        <div className={`simkeu-sidebar-header ${sidebarCollapsed ? 'simkeu-sidebar-header--collapsed' : ''}`}>
+          <div className={`simkeu-sidebar-header__top ${sidebarCollapsed ? 'simkeu-sidebar-header__top--collapsed' : ''}`}>
+            <div className="simkeu-sidebar-brand">
+              <div className="simkeu-sidebar-brand__icon">
+                <img src={simkeuIcon} alt="SIMKEU" style={{ width: 34, height: 34, objectFit: "contain" }} />
               </div>
-              <div>
-                <div className="simkeu-brand-title">
-                  SIMKEU <span className="simkeu-badge">Sistem Informasi Keuangan</span>
+              {!sidebarCollapsed && (
+                <div>
+                  <h2 className="simkeu-sidebar-brand__title">SIMKEU</h2>
+                  <span className="simkeu-sidebar-brand__subtitle">
+                    Sistem Informasi Keuangan
+                  </span>
                 </div>
-                <div className="simkeu-brand-subtitle">
-                  Layanan Mandiri Keuangan BPOM di Palopo — Pembuatan LPJ & Invoice Belanja
-                </div>
-              </div>
+              )}
             </div>
-          </div>
 
-          <div className="simkeu-header-user">
-            <Text style={{ fontSize: 12, color: '#64748b' }}>Pengguna Aktif:</Text>
-            <Text strong style={{ fontSize: 13, color: '#0f172a' }}>
-              {user?.name || 'Pegawai'}
-            </Text>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              title={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+              className="simkeu-toggle-btn"
+            >
+              {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* ── Sub Navigation Tabs ── */}
-      <div className="simkeu-body">
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key)}
-          type="line"
-          className="simkeu-tabs"
-          items={[
-            {
-              key: 'lpj',
-              label: (
-                <span className="simkeu-tab-label">
-                  <FileProtectOutlined /> Pembuatan & Kelola LPJ
-                </span>
-              ),
-              children: (
-                <div className="simkeu-tab-content">
-                  <KeuanganLpj />
+        {/* Sidebar Menu Items */}
+        <div className={`simkeu-sidebar-menu ${sidebarCollapsed ? 'simkeu-sidebar-menu--collapsed' : ''}`}>
+          {menuItems.map((group, idx) => (
+            <div key={idx} className={`simkeu-menu-group ${sidebarCollapsed ? 'simkeu-menu-group--collapsed' : ''}`}>
+              {!sidebarCollapsed && (
+                <div className="simkeu-menu-group__label">
+                  {group.group}
                 </div>
-              ),
-            },
-            {
-              key: 'invoice',
-              label: (
-                <span className="simkeu-tab-label">
-                  <CalculatorOutlined /> Pembuatan & Kelola Invoice Belanja
-                </span>
-              ),
-              children: (
-                <div className="simkeu-tab-content">
-                  <InvoiceBelanja />
-                </div>
-              ),
-            },
-          ]}
-        />
-      </div>
+              )}
+              {group.items.map((item) => {
+                const isActive = activeTab === item.key;
+                const buttonContent = (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveTab(item.key)}
+                    className={`simkeu-menu-item ${isActive ? 'simkeu-menu-item--active' : ''} ${sidebarCollapsed ? 'simkeu-menu-item--collapsed' : ''}`}
+                  >
+                    <span className="simkeu-menu-item__icon">
+                      {item.icon}
+                    </span>
+                    {!sidebarCollapsed && (
+                      <span className="simkeu-menu-item__label">
+                        {item.label}
+                      </span>
+                    )}
+                  </button>
+                );
+
+                return sidebarCollapsed ? (
+                  <Tooltip key={item.key} title={item.label} placement="right">
+                    {buttonContent}
+                  </Tooltip>
+                ) : (
+                  buttonContent
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Sidebar Footer — Back Button */}
+        <div className={`simkeu-sidebar-footer ${sidebarCollapsed ? 'simkeu-sidebar-footer--collapsed' : ''}`}>
+          {sidebarCollapsed ? (
+            <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
+              <a href="/app/layanan-mandiri" className="simkeu-back-btn simkeu-back-btn--collapsed">
+                <ArrowLeftOutlined style={{ fontSize: 13 }} />
+              </a>
+            </Tooltip>
+          ) : (
+            <a href="/app/layanan-mandiri" className="simkeu-back-btn">
+              <ArrowLeftOutlined style={{ fontSize: 11 }} /> Kembali ke Layanan Mandiri
+            </a>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main Dynamic Workspace ── */}
+      <main className="simkeu-main">
+        {activeTab === 'lpj' && <KeuanganLpj />}
+        {activeTab === 'panjar' && <PermintaanPanjar />}
+        {activeTab === 'invoice' && <InvoiceBelanja />}
+      </main>
     </div>
   );
 };

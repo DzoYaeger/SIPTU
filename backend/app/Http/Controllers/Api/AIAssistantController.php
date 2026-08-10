@@ -22,7 +22,8 @@ class AIAssistantController extends Controller
     public function chat(Request $request)
     {
         $request->validate([
-            'message' => 'required|string|max:1000',
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array',
         ]);
 
         $user = Auth::user();
@@ -34,6 +35,7 @@ class AIAssistantController extends Controller
         $context = [
             'user_name' => $user->name,
             'user_role' => $user->base_role,
+            'user_nip' => $user->nip,
             'recent_bmn_loans' => BmnLoan::where('borrower_id', $user->id)
                 ->latest()
                 ->take(3)
@@ -48,7 +50,9 @@ class AIAssistantController extends Controller
                 ->get(['id', 'date', 'status', 'permit_type']),
         ];
 
-        $response = $this->geminiService->chatAssistant($request->message, $context);
+        $history = $request->input('history', []);
+
+        $response = $this->geminiService->chatAssistant($request->message, $context, $history);
 
         return response()->json([
             'status' => 'success',

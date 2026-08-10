@@ -85,7 +85,7 @@ export function useArchiveLoans() {
 
   const saveSignature = useCallback(async (loanId, data) => {
     try {
-      const payload = { password: data.password };
+      const payload = { password: data.password, totp_code: data.totp_code };
       
       if (data?.type === 'borrowing' && data?.role === 'admin') {
         const response = await apiFetch(`/archive-loans/${loanId}/approve`, {

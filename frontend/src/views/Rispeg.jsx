@@ -586,7 +586,7 @@ const Rispeg = () => {
     <div className="module-section">
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">
+          <Typography.Title level={4} className="module-title">
             RISPEG (Kontrol Harian)
           </Typography.Title>
           <Typography.Text className="module-subtitle">

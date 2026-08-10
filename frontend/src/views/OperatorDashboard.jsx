@@ -510,7 +510,7 @@ function OperatorDashboard() {
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>
         <div>
-          <Title level={3} className="module-title">Operator Dashboard</Title>
+          <Title level={4} className="module-title">Operator Dashboard</Title>
           <Text className="module-subtitle">
             Halo, <strong>{user?.name || "Operator"}</strong>. Pantau dan kelola pengajuan layanan Anda dari satu tempat terpadu.
           </Text>

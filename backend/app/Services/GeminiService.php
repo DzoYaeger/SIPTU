@@ -13,7 +13,7 @@ class GeminiService
     public function __construct()
     {
         $this->apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY', ''));
-        $this->model = 'gemini-2.5-flash';
+        $this->model = config('services.gemini.model', env('GEMINI_MODEL', 'gemini-2.5-flash'));
     }
 
     /**
@@ -124,7 +124,7 @@ Ketentuan penulisan:
 PROMPT;
     }
 
-    public function chatAssistant(string $message, array $context = []): string
+    public function chatAssistant(string $message, array $context = [], array $history = []): string
     {
         if (empty($this->apiKey)) {
             Log::error('Gemini API Key is missing in .env');
@@ -132,36 +132,67 @@ PROMPT;
         }
 
         try {
-            // Initial conversation contents
-            $contents = [
-                [
+            $contents = [];
+
+            // Add previous history turns if provided (ensuring roles alternate user/model)
+            if (!empty($history) && is_array($history)) {
+                $lastRole = null;
+                foreach ($history as $turn) {
+                    $role = ($turn['role'] ?? '') === 'assistant' ? 'model' : 'user';
+                    $text = $turn['content'] ?? '';
+                    if (empty(trim($text))) continue;
+
+                    // Avoid consecutive duplicate roles
+                    if ($role === $lastRole) {
+                        $lastIdx = count($contents) - 1;
+                        if ($lastIdx >= 0) {
+                            $contents[$lastIdx]['parts'][0]['text'] .= "\n\n" . $text;
+                        }
+                    } else {
+                        $contents[] = [
+                            'role' => $role,
+                            'parts' => [['text' => $text]]
+                        ];
+                        $lastRole = $role;
+                    }
+                }
+            }
+
+            // Current user turn text with context
+            $userTurnText = "";
+            if (!empty($context)) {
+                $userTurnText .= "Konteks data pengguna saat ini: " . json_encode($context, JSON_UNESCAPED_UNICODE) . "\n\n";
+            }
+            $userTurnText .= $message;
+
+            // Ensure turn alternation by appending to user or creating new user turn
+            if (!empty($contents) && end($contents)['role'] === 'user') {
+                $lastIdx = count($contents) - 1;
+                $contents[$lastIdx]['parts'][0]['text'] .= "\n\n" . $userTurnText;
+            } else {
+                $contents[] = [
                     'role' => 'user',
-                    'parts' => [
-                        ['text' => "Konteks data pengguna saat ini: " . json_encode($context, JSON_UNESCAPED_UNICODE)]
-                    ]
-                ],
-                [
-                    'role' => 'user',
-                    'parts' => [['text' => $message]]
-                ]
-            ];
+                    'parts' => [['text' => $userTurnText]]
+                ];
+            }
 
             $systemInstruction = [
                 'parts' => [
-                    ['text' => "Anda adalah Asisten Tata Usaha SIPTU (SIPTU AI Agent) yang profesional namun ramah. 
+                    ['text' => "Anda adalah Asisten Tata Usaha SIPTU (SIPTU AI Agent) yang profesional, intuitif, ramah, dan makin cerdas dalam mendampingi operasional kantor.
                     Anda dapat membantu pengguna dengan:
                     1. Pengajuan Peminjaman BMN (Aset Kantor).
                     2. Pengajuan Surat Tugas.
                     3. Pencatatan Izin Keluar.
                     4. Pelaporan Kendala IT (Helpdesk).
                     5. Pencarian data pegawai.
-                    6. Menjawab pertanyaan umum menggunakan Google Search.
+                    6. Pengecekan realisasi anggaran bulanan / per MAK / sisa pagu anggaran (menggunakan tool `cek_realisasi_anggaran`).
 
-                    ATURAN:
-                    - Gunakan Bahasa Indonesia formal dan santun.
+                    ATURAN & PERILAKU:
+                    - Gunakan Bahasa Indonesia formal, santun, ramah, dan terstruktur.
+                    - Jika pengguna bertanya tentang realisasi anggaran, LANGSUNG gunakan tool `cek_realisasi_anggaran` untuk mengambil data akurat secara real-time dari sistem SIPTU tanpa perlu membalas dengan kalimat 'mohon tunggu' terlebih dahulu.
+                    - Mengingat konteks percakapan sebelumnya agar respon terasa menyambung dan smooth.
                     - Jika data yang dibutuhkan untuk pengajuan belum lengkap, mintalah kepada pengguna dengan sopan.
-                    - Konfirmasi kembali detail pengajuan sebelum melakukan eksekusi (submit).
-                    - Jika menggunakan Google Search, berikan jawaban yang relevan dan ringkas."]
+                    - Konfirmasi kembali detail pengajuan sebelum melakukan eksekusi (submit)."]
                 ]
             ];
 
@@ -170,65 +201,78 @@ PROMPT;
                 'system_instruction' => $systemInstruction,
                 'tools' => $this->getTools(),
                 'generationConfig' => [
-                    'temperature' => 0.85,
-                    'maxOutputTokens' => 1500,
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 1800,
                 ],
             ];
 
-            // Use v1beta for Gemini 2.5 Flash and Function Calling
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
 
             $response = Http::timeout(60)->post($url, $payload);
 
             if (!$response->successful()) {
+                $errorMsg = $response->json()['error']['message'] ?? ('HTTP ' . $response->status() . ' ' . $response->body());
                 Log::error('Gemini API Error', [
                     'status' => $response->status(),
                     'body' => $response->json(),
                     'model' => $this->model,
-                    'url_obfuscated' => "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key=***"
                 ]);
-                return "Maaf, terjadi kendala saat menghubungi asisten AI SIPTU. (Error: " . ($response->json()['error']['message'] ?? 'Unknown API Error') . ")";
+                return "Maaf, terjadi kendala saat menghubungi asisten AI SIPTU. (Error: " . $errorMsg . ")";
             }
 
             $data = $response->json();
             $candidate = $data['candidates'][0] ?? null;
 
+            // Helper to extract functionCall from any part in candidate
+            $getFunctionCall = function ($cand) {
+                if (!$cand || empty($cand['content']['parts'])) return null;
+                foreach ($cand['content']['parts'] as $part) {
+                    if (isset($part['functionCall'])) {
+                        return $part['functionCall'];
+                    }
+                }
+                return null;
+            };
+
+            // Helper to extract and join all text parts from candidate
+            $getText = function ($cand) {
+                if (!$cand || empty($cand['content']['parts'])) return null;
+                $texts = [];
+                foreach ($cand['content']['parts'] as $part) {
+                    if (!empty($part['text'])) {
+                        $texts[] = trim($part['text']);
+                    }
+                }
+                return !empty($texts) ? implode("\n\n", $texts) : null;
+            };
+
             // Handle the loop for potential function calls
             $maxIterations = 5;
             $iteration = 0;
 
-            while ($candidate && isset($candidate['content']['parts'][0]['functionCall']) && $iteration < $maxIterations) {
+            while ($candidate && ($functionCall = $getFunctionCall($candidate)) && $iteration < $maxIterations) {
                 $iteration++;
-                $functionCall = $candidate['content']['parts'][0]['functionCall'];
                 $functionName = $functionCall['name'];
                 $args = $functionCall['args'] ?? [];
 
-                // Log the tool call
                 Log::info("Gemini Tool Call: $functionName", ['args' => $args]);
 
-                // Execute the local function
                 $functionResult = $this->executeLocalFunction($functionName, $args);
 
-                // Add the model's message (with function call) to history
                 $contents[] = $candidate['content'];
 
-                // Add the function response to history
                 $contents[] = [
-                    'role' => 'function',
+                    'role' => 'user',
                     'parts' => [
                         [
                             'functionResponse' => [
                                 'name' => $functionName,
-                                'response' => [
-                                    'name' => $functionName,
-                                    'content' => $functionResult
-                                ]
+                                'response' => is_array($functionResult) ? $functionResult : ['result' => $functionResult]
                             ]
                         ]
                     ]
                 ];
 
-                // Request final or follow-up response from Gemini
                 $payload['contents'] = $contents;
                 $response = Http::timeout(60)->post($url, $payload);
 
@@ -241,7 +285,8 @@ PROMPT;
                 $candidate = $data['candidates'][0] ?? null;
             }
 
-            return $candidate['content']['parts'][0]['text'] ?? "Maaf, saya tidak dapat merespon saat ini.";
+            $finalText = $getText($candidate);
+            return $finalText ?: "Maaf, saya tidak dapat merespon saat ini.";
 
         } catch (\Exception $e) {
             Log::error('Gemini Chat Error: ' . $e->getMessage());
@@ -264,6 +309,18 @@ PROMPT;
                             'type' => 'OBJECT',
                             'properties' => [
                                 'nama_pegawai' => ['type' => 'STRING']
+                            ]
+                        ]
+                    ],
+                    [
+                        'name' => 'cek_realisasi_anggaran',
+                        'description' => 'Mengecek data realisasi anggaran per bulan, per MAK (Mata Anggaran Kegiatan), sisa pagu, dan persentase penyerapan anggaran.',
+                        'parameters' => [
+                            'type' => 'OBJECT',
+                            'properties' => [
+                                'tahun' => ['type' => 'INTEGER', 'description' => 'Tahun anggaran, default tahun berjalan.'],
+                                'bulan' => ['type' => 'INTEGER', 'description' => 'Angka bulan 1-12 (misal: 1=Januari, 8=Agustus). Kosongkan untuk total setahun.'],
+                                'mak' => ['type' => 'STRING', 'description' => 'Kode MAK spesifik jika dicari (contoh: 524111).']
                             ]
                         ]
                     ],
@@ -338,9 +395,7 @@ PROMPT;
                         ]
                     ]
                 ]
-            ],
-            // Google Search Retrieval Tool
-            ['google_search_retrieval' => ['dynamic_retrieval_config' => ['mode' => 'DYNAMIC', 'dynamic_threshold' => 0.3]]]
+            ]
         ];
     }
 
@@ -352,6 +407,8 @@ PROMPT;
         switch ($name) {
             case 'cari_data_pegawai':
                 return $this->handleCariDataPegawai($args['nama_pegawai'] ?? '');
+            case 'cek_realisasi_anggaran':
+                return $this->handleCekRealisasiAnggaran($args);
             case 'ajukan_peminjaman_bmn':
                 return $this->handleSubmitBmnLoan($args);
             case 'ajukan_surat_tugas':
@@ -363,6 +420,111 @@ PROMPT;
             default:
                 return ['error' => 'Fungsi tidak ditemukan.'];
         }
+    }
+
+    protected function handleCekRealisasiAnggaran(array $args)
+    {
+        $tahun = !empty($args['tahun']) ? (int)$args['tahun'] : (int)date('Y');
+        $bulan = !empty($args['bulan']) ? (int)$args['bulan'] : null;
+        $mak = !empty($args['mak']) ? trim($args['mak']) : null;
+
+        $budgetsQuery = \App\Models\Budget::query();
+        if ($mak) {
+            $budgetsQuery->where('mak', 'like', "%{$mak}%");
+        }
+        $budgets = $budgetsQuery->get();
+
+        if ($budgets->isEmpty()) {
+            return [
+                'status' => 'not_found',
+                'message' => 'Data anggaran untuk MAK ' . ($mak ?? 'tersebut') . ' tidak ditemukan.'
+            ];
+        }
+
+        // Invoice Realization
+        $invQuery = \Illuminate\Support\Facades\DB::table('invoices')
+            ->select('mak', \Illuminate\Support\Facades\DB::raw('SUM(nilai_bersih) as total_realisasi'))
+            ->whereNotNull('mak')
+            ->whereIn('status', ['approved', 'paid', 'Selesai', 'Disetujui', 'final', 'completed']);
+
+        if ($tahun) {
+            $invQuery->whereYear('created_at', $tahun);
+        }
+        if ($bulan) {
+            $invQuery->whereMonth('created_at', $bulan);
+        }
+        $realisasiInvoices = $invQuery->groupBy('mak')->pluck('total_realisasi', 'mak');
+
+        // Perjadin (Surat Tugas / LPJ) Realization
+        $stQuery = \Illuminate\Support\Facades\DB::table('lpj_items')
+            ->join('lpj_headers', 'lpj_items.lpj_header_id', '=', 'lpj_headers.id')
+            ->join('surat_tugas', 'lpj_headers.surat_tugas_id', '=', 'surat_tugas.id')
+            ->select('surat_tugas.mak', \Illuminate\Support\Facades\DB::raw('SUM(
+                COALESCE(uang_harian,0) + COALESCE(uang_penginapan,0) + COALESCE(uang_transport_taxi,0) + 
+                COALESCE(uang_transport_bus,0) + COALESCE(uang_transport_bbm,0) + COALESCE(uang_transport_sewa_mobil,0) + 
+                COALESCE(uang_transport_pesawat,0) + COALESCE(uang_fullboard,0) + COALESCE(uang_harian_fullboard,0) + 
+                COALESCE(uang_transport_lokal,0) + COALESCE(uang_transport_umum,0)
+            ) as total_realisasi'))
+            ->whereNotNull('surat_tugas.mak');
+
+        if ($tahun) {
+            $stQuery->whereYear('lpj_headers.created_at', $tahun);
+        }
+        if ($bulan) {
+            $stQuery->whereMonth('lpj_headers.created_at', $bulan);
+        }
+        $realisasiPerjadin = $stQuery->groupBy('surat_tugas.mak')->pluck('total_realisasi', 'surat_tugas.mak');
+
+        $namaBulan = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        $periodeText = $bulan && isset($namaBulan[$bulan])
+            ? "Bulan {$namaBulan[$bulan]} {$tahun}"
+            : "Tahun {$tahun}";
+
+        $resultList = [];
+        $totalPaguAll = 0;
+        $totalRealisasiAll = 0;
+
+        foreach ($budgets as $b) {
+            $pagu = (float) $b->anggaran;
+            $inv = (float) ($realisasiInvoices->get($b->mak) ?? 0);
+            $st = (float) ($realisasiPerjadin->get($b->mak) ?? 0);
+            $totalRealisasi = $inv + $st;
+            $sisa = $pagu - $totalRealisasi;
+            $persen = $pagu > 0 ? round(($totalRealisasi / $pagu) * 100, 2) : 0;
+
+            $totalPaguAll += $pagu;
+            $totalRealisasiAll += $totalRealisasi;
+
+            $resultList[] = [
+                'mak' => $b->mak,
+                'deskripsi' => $b->deskripsi ?? 'Tanpa deskripsi',
+                'pagu' => "Rp " . number_format($pagu, 0, ',', '.'),
+                'realisasi_pembelian' => "Rp " . number_format($inv, 0, ',', '.'),
+                'realisasi_perjadin' => "Rp " . number_format($st, 0, ',', '.'),
+                'total_realisasi' => "Rp " . number_format($totalRealisasi, 0, ',', '.'),
+                'sisa_anggaran' => "Rp " . number_format($sisa, 0, ',', '.'),
+                'persentase_realisasi' => $persen . "%"
+            ];
+        }
+
+        $totalSisaAll = $totalPaguAll - $totalRealisasiAll;
+        $totalPersenAll = $totalPaguAll > 0 ? round(($totalRealisasiAll / $totalPaguAll) * 100, 2) : 0;
+
+        return [
+            'periode' => $periodeText,
+            'ringkasan_total' => [
+                'total_pagu' => "Rp " . number_format($totalPaguAll, 0, ',', '.'),
+                'total_realisasi' => "Rp " . number_format($totalRealisasiAll, 0, ',', '.'),
+                'total_sisa_anggaran' => "Rp " . number_format($totalSisaAll, 0, ',', '.'),
+                'persentase_realisasi' => $totalPersenAll . "%"
+            ],
+            'detail_per_mak' => $resultList
+        ];
     }
 
     protected function handleCariDataPegawai(string $nama)

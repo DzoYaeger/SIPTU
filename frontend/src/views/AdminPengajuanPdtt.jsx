@@ -1157,7 +1157,7 @@ export default function AdminPengajuanPdtt() {
         <div className="module-section">
             <div className="module-toolbar" style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                    <Title level={3} className="module-title" style={{ margin: 0 }}>
+                    <Title level={4} className="module-title" style={{ margin: 0 }}>
                         Rekapan Pengajuan PDTT
                     </Title>
                     <Text className="module-subtitle">

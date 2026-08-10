@@ -73,15 +73,29 @@ class UserController extends Controller
             ]);
         }
 
-        // Generate token
+        // MFA Check:
+        // Case 1: User has completed MFA setup -> Require TOTP verification (Step 2)
+        if ($user->has_mfa) {
+            $mfaToken = (string) Str::uuid();
+            \Illuminate\Support\Facades\Cache::put("mfa_pending_{$mfaToken}", $user->id, now()->addMinutes(5));
+
+            return response()->json([
+                'requires_mfa' => true,
+                'mfa_token' => $mfaToken,
+                'message' => 'Silakan masukkan kode autentikasi 6 digit.',
+            ]);
+        }
+
+        // Case 2: User has NOT set up MFA -> Generate token but flag for mandatory MFA setup
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        \App\Services\ActivityLogger::log('login', 'system', 'User logged in', null, $user);
+        \App\Services\ActivityLogger::log('login', 'system', 'User logged in (MFA setup pending)', null, $user);
 
         return response()->json([
             'user' => $user->load('employee'),
             'token' => $token,
             'token_type' => 'bearer',
+            'requires_mfa_setup' => true,
         ]);
     }
 

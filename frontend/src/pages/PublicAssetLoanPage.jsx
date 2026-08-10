@@ -95,6 +95,7 @@ const PublicAssetLoanPage = ({ isEmbedded = false }) => {
   const msg = buildMessageAdapter(message);
   const [form] = Form.useForm();
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
 
   const [assets, setAssets] = useState([]);
   const [loans, setLoans] = useState([]);
@@ -260,6 +261,7 @@ const PublicAssetLoanPage = ({ isEmbedded = false }) => {
         location: chosenLocation,
         notes: values.alasan,
         password: password,
+        totp_code: totpCode,
         assets: picked.map((id) => {
           const a = assetMap.get(id);
           return {
@@ -592,7 +594,6 @@ const PublicAssetLoanPage = ({ isEmbedded = false }) => {
               <Form.Item
                 label="Password SIPTU (Verifikasi TTE)"
                 required
-                style={{ marginBottom: 0 }}
               >
                 <Input.Password
                   prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
@@ -600,6 +601,20 @@ const PublicAssetLoanPage = ({ isEmbedded = false }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Kode Autentikasi MFA (6 Digit / Recovery Code)"
+                required
+                style={{ marginBottom: 0 }}
+              >
+                <Input
+                  prefix={<LockOutlined style={{ color: "#0b56a4" }} />}
+                  placeholder="Contoh: 123456 atau XXXX-XXXX"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  style={{ borderRadius: 6, fontWeight: 700, letterSpacing: "1px" }}
                 />
               </Form.Item>
             </div>

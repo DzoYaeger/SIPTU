@@ -230,7 +230,20 @@ export default function BmnPemeliharaanKeluhan() {
         title: "Aset BMN",
         dataIndex: "asset_name",
         key: "asset_name",
-        render: (v) => v || "-",
+        render: (_, record) => {
+          if (record.assets_data && record.assets_data.length > 0) {
+            return (
+              <Space direction="vertical" size={2}>
+                {record.assets_data.map((a, i) => (
+                  <Tag color="blue" key={i} style={{ margin: "2px 0", fontSize: 11 }}>
+                    {a.name} ({a.asset_code || "-"})
+                  </Tag>
+                ))}
+              </Space>
+            );
+          }
+          return record.asset_name || "-";
+        },
       },
       {
         title: "Permasalahan",
@@ -315,7 +328,7 @@ export default function BmnPemeliharaanKeluhan() {
     <div className="module-section">
       <div className="module-toolbar">
         <div>
-          <Title level={3} className="module-title">
+          <Title level={4} className="module-title">
             Pemeliharaan / Keluhan BMN
           </Title>
           <Text className="module-subtitle">
@@ -443,7 +456,17 @@ export default function BmnPemeliharaanKeluhan() {
               </div>
               <div className="bmn-maint-summary-item">
                 <span>Aset BMN</span>
-                <strong>{selectedReport.asset_name || "-"}</strong>
+                {selectedReport.assets_data && selectedReport.assets_data.length > 0 ? (
+                  <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {selectedReport.assets_data.map((a, idx) => (
+                      <Tag color="blue" key={idx} style={{ fontSize: 11 }}>
+                        {a.name} — Kode: {a.asset_code || "-"}
+                      </Tag>
+                    ))}
+                  </div>
+                ) : (
+                  <strong>{selectedReport.asset_name || "-"}</strong>
+                )}
               </div>
             </div>
           ) : null}

@@ -202,7 +202,7 @@ const KearsipanManajemenUpUk = () => {
       {/* Header */}
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Manajemen UP/UK</Typography.Title>
+          <Typography.Title level={4} className="module-title">Manajemen UP/UK</Typography.Title>
           <Typography.Text className="module-subtitle">Tetapkan penanggung jawab Unit Pengolah &amp; Unit Kearsipan.</Typography.Text>
         </div>
         <Button icon={<ReloadOutlined />} onClick={fetchUnits}>Muat Ulang</Button>

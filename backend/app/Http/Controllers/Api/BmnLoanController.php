@@ -132,13 +132,16 @@ class BmnLoanController extends Controller
             'assets.*.kode_bmn' => ['nullable', 'string'],
         ]);
 
-        // Verify SIPTU Password
-        $user = User::where('nip', $payload['nip'])->first();
+        // Verify SIPTU Password & MFA
+        $user = $request->user() ?? User::where('nip', $payload['nip'])->orWhere('email', $payload['nip'])->first();
         if (!$user) {
-            return response()->json(['message' => 'Akun SIPTU dengan NIP tersebut tidak ditemukan.'], 404);
+            return response()->json(['message' => 'Akun SIPTU dengan NIP/Email tersebut tidak ditemukan.'], 404);
         }
         if (!Hash::check($payload['password'], $user->password)) {
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
+        }
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa.'], 422);
         }
 
         $requestedAssetIds = collect($payload['assets'])->pluck('asset_id')->all();
@@ -829,6 +832,9 @@ class BmnLoanController extends Controller
         if (!Hash::check($payload['password'], $user->password)) {
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
         }
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+        }
 
         $requestedAssetIds = collect($payload['assets'])->pluck('asset_id')->all();
         $this->validateConflicts($requestedAssetIds, $payload['loan_date'], $payload['return_date']);
@@ -879,6 +885,9 @@ class BmnLoanController extends Controller
         $user = $request->user();
         if (!Hash::check($payload['password'], $user->password)) {
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
+        }
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         $loan->update([
@@ -1630,6 +1639,9 @@ class BmnLoanController extends Controller
         }
         if (!Hash::check($payload['password'], $user->password)) {
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
+        }
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         // Get room asset details

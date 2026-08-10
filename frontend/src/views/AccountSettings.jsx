@@ -12,6 +12,8 @@ import {
     Spin,
     Avatar,
     Modal,
+    Tag,
+    Alert,
 } from 'antd';
 import {
     LockOutlined,
@@ -26,11 +28,13 @@ import {
     IdcardOutlined,
 } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { buildMessageAdapter } from '../utils/notify.js';
 import { useWebPush } from '../hooks/useWebPush.js';
 
 const AccountSettings = () => {
+    const navigate = useNavigate();
     const { user, updateProfile, changePassword, token, refreshProfile } = useAuth();
     const { message } = AntdApp.useApp();
     const notification = buildMessageAdapter(message);
@@ -40,6 +44,7 @@ const AccountSettings = () => {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [badgeVisible, setBadgeVisible] = useState(false);
+    const [resettingMfa, setResettingMfa] = useState(false);
     const push = useWebPush();
 
     useEffect(() => {
@@ -141,6 +146,40 @@ const AccountSettings = () => {
                 });
             }
         },
+    };
+
+    const handleResetMfa = () => {
+        Modal.confirm({
+            title: "Reset & Pindai Ulang MFA",
+            content: "Tindakan ini akan mengosongkan rahasia MFA lama Anda. Anda harus memindai QR Code baru di Google Authenticator. Lanjutkan?",
+            okText: "Ya, Pindai Ulang",
+            cancelText: "Batal",
+            okButtonProps: { danger: true },
+            onOk: async () => {
+                setResettingMfa(true);
+                try {
+                    const baseUrl = import.meta.env.VITE_API_URL || "https://siptu.bpompalopo.com/core_api/api";
+                    const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/mfa/disable/${user.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                        }
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.message || "Gagal mereset MFA.");
+                    }
+                    if (refreshProfile) await refreshProfile();
+                    notification.success({ message: "MFA berhasil direset. Silakan pindai QR Code baru." });
+                    navigate('/app/mfa-setup');
+                } catch (e) {
+                    notification.error({ message: e.message });
+                } finally {
+                    setResettingMfa(false);
+                }
+            }
+        });
     };
 
     const items = [
@@ -320,6 +359,71 @@ const AccountSettings = () => {
                     )}
                 </div>
             )
+        },
+        {
+            key: 'mfa',
+            label: (
+                <span>
+                    <SafetyCertificateOutlined />
+                    Keamanan MFA
+                </span>
+            ),
+            children: (
+                <div style={{ maxWidth: 600, marginTop: 12 }}>
+                    <Typography.Title level={5}>Autentikasi Dua Langkah (MFA TOTP)</Typography.Title>
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
+                        Autentikasi Dua Langkah menambahkan lapisan keamanan ekstra pada akun dan tanda tangan elektronik (TTE) Anda menggunakan aplikasi Google Authenticator atau Microsoft Authenticator.
+                    </Typography.Paragraph>
+
+                    <div style={{ background: "#f8fafc", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: 20 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                            <Typography.Text strong>Status Keamanan MFA:</Typography.Text>
+                            {user?.has_mfa ? (
+                                <Tag color="success" style={{ padding: "4px 12px", fontSize: 13, borderRadius: 6 }}>
+                                    ✓ AKTIF & TERDOKUMENTASI
+                                </Tag>
+                            ) : (
+                                <Tag color="warning" style={{ padding: "4px 12px", fontSize: 13, borderRadius: 6 }}>
+                                    ! BELUM AKTIF
+                                </Tag>
+                            )}
+                        </div>
+
+                        {user?.has_mfa ? (
+                            <Alert
+                                type="success"
+                                showIcon
+                                message="Akun Anda Dilindungi MFA"
+                                description="Setiap kali Anda login atau melakukan Tanda Tangan Elektronik (TTE), sistem akan meminta kode 6 digit dari aplikasi authenticator Anda."
+                            />
+                        ) : (
+                            <Alert
+                                type="warning"
+                                showIcon
+                                message="MFA Diperlukan"
+                                description="Silakan lakukan setup QR Code sekarang agar akun dan TTE Anda terlindungi sepenuhnya."
+                            />
+                        )}
+                    </div>
+
+                    <Button
+                        type="primary"
+                        icon={<SafetyCertificateOutlined />}
+                        size="large"
+                        loading={resettingMfa}
+                        onClick={() => {
+                            if (user?.has_mfa) {
+                                handleResetMfa();
+                            } else {
+                                navigate('/app/mfa-setup');
+                            }
+                        }}
+                        style={{ background: "#0b56a4", borderRadius: 8 }}
+                    >
+                        {user?.has_mfa ? "Atur Ulang / Pindai Ulang QR Code MFA" : "Setup MFA Sekarang"}
+                    </Button>
+                </div>
+            )
         }
     ];
 
@@ -327,7 +431,7 @@ const AccountSettings = () => {
         <div className="module-section">
             <div className="module-toolbar">
                 <div>
-                    <Typography.Title level={3} className="module-title">
+                    <Typography.Title level={4} className="module-title">
                         Pengaturan Akun
                     </Typography.Title>
                     <Typography.Text className="module-subtitle">

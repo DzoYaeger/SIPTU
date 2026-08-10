@@ -70,6 +70,7 @@ const ManajemenPeminjamanArsip = () => {
   // State
   const [passwordModal, setPasswordModal] = useState({ open: false, loanId: null, type: '', role: '' });
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [isSignatureSaving, setIsSignatureSaving] = useState(false);
 
   // Data State
@@ -207,10 +208,11 @@ const ManajemenPeminjamanArsip = () => {
     }
     setIsSignatureSaving(true);
     const { loanId, type, role } = passwordModal;
-    if (await saveSignature(loanId, { password, type, role })) {
+    if (await saveSignature(loanId, { password, totp_code: totpCode, type, role })) {
       refreshLoans();
       setPasswordModal({ open: false, loanId: null, type: '', role: '' });
       setPassword('');
+      setTotpCode('');
     }
     setIsSignatureSaving(false);
   };
@@ -313,7 +315,7 @@ const ManajemenPeminjamanArsip = () => {
       {/* Header */}
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Peminjaman Arsip</Typography.Title>
+          <Typography.Title level={4} className="module-title">Peminjaman Arsip</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola sirkulasi arsip fisik dan digital.</Typography.Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>Buat Peminjaman</Button>
@@ -518,6 +520,7 @@ const ManajemenPeminjamanArsip = () => {
         onCancel={() => {
           setPasswordModal({ open: false, loanId: null, type: '', role: '' });
           setPassword('');
+          setTotpCode('');
         }}
         onOk={handleSignatureSave}
         confirmLoading={isSignatureSaving}
@@ -527,21 +530,42 @@ const ManajemenPeminjamanArsip = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Typography.Paragraph>
-            Masukkan password SIPTU Anda untuk melakukan validasi peminjaman/pengembalian secara digital.
+            Masukkan password SIPTU dan 6 digit kode MFA (jika akun mengaktifkan MFA) untuk melakukan validasi peminjaman/pengembalian secara digital.
           </Typography.Paragraph>
-          <Input.Password
-            prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
-            placeholder="Masukkan password SIPTU"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            size="large"
-            autoFocus
-            onPressEnter={handleSignatureSave}
-          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ minHeight: 32, display: 'flex', alignItems: 'flex-end', marginBottom: 6 }}>
+                <Typography.Text strong style={{ fontSize: 12, color: '#334155' }}>Password SIPTU:</Typography.Text>
+              </div>
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                size="large"
+                style={{ borderRadius: 6 }}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ minHeight: 32, display: 'flex', alignItems: 'flex-end', marginBottom: 6 }}>
+                <Typography.Text strong style={{ fontSize: 12, color: '#334155' }}>Kode MFA Authenticator / Recovery:</Typography.Text>
+              </div>
+              <Input
+                prefix={<LockOutlined style={{ color: '#0b56a4' }} />}
+                placeholder="Contoh: 123456"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                size="large"
+                onPressEnter={handleSignatureSave}
+                style={{ borderRadius: 6, fontWeight: 700, letterSpacing: '1px' }}
+              />
+            </div>
+          </div>
         </div>
         <Alert
           message="Pernyataan"
-          description="Dengan memasukkan password, saya menyatakan telah memverifikasi data ini dan memberikan persetujuan resmi melalui sistem SIPTU."
+          description="Dengan memasukkan password dan verifikasi MFA, saya menyatakan telah memverifikasi data ini dan memberikan persetujuan resmi melalui sistem SIPTU."
           type="info"
           showIcon
           icon={<InfoCircleOutlined />}

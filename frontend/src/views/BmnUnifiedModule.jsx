@@ -28,6 +28,7 @@ import PublicAssetLoanPage from '../pages/PublicAssetLoanPage.jsx';
 import PublicInventoryRequestPage from '../pages/PublicInventoryRequestPage.jsx';
 import BmnPemeliharaanKeluhan from './BmnPemeliharaanKeluhan.jsx';
 import BmnMaintenanceReportForm from '../pages/BmnMaintenanceReportForm.jsx';
+import simbaIcon from '../assets/icons/simba-icon.png';
 
 import './BmnUnifiedModule.css';
 
@@ -38,6 +39,30 @@ const BmnUnifiedModule = () => {
   const [activeTab, setActiveTab] = useState('peminjaman-new'); // default sub-tab
   const [complaintMode, setComplaintMode] = useState('auto'); // 'auto' | 'form' | 'manage'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [customModuleIcon, setCustomModuleIcon] = useState(null);
+
+  // Synchronize custom Layanan Mandiri / sidebar icons dynamically
+  useEffect(() => {
+    const loadIcon = () => {
+      try {
+        const storedLayanan = localStorage.getItem("siptu_custom_layanan_icons");
+        const storedSidebar = localStorage.getItem("siptu_custom_sidebar_icons");
+        const mapL = storedLayanan ? JSON.parse(storedLayanan) : {};
+        const mapS = storedSidebar ? JSON.parse(storedSidebar) : {};
+        const customUrl = mapL["simba"] || mapL["bmn"] || mapS["simba"] || mapS["bmn"] || null;
+        setCustomModuleIcon(customUrl);
+      } catch (e) {
+        console.error("Gagal memuat ikon kustom SIMBA:", e);
+      }
+    };
+    loadIcon();
+    window.addEventListener("siptu_layanan_icons_updated", loadIcon);
+    window.addEventListener("siptu_sidebar_icons_updated", loadIcon);
+    return () => {
+      window.removeEventListener("siptu_layanan_icons_updated", loadIcon);
+      window.removeEventListener("siptu_sidebar_icons_updated", loadIcon);
+    };
+  }, []);
 
   // State for user's BMN loan history
   const [myLoans, setMyLoans] = useState([]);
@@ -107,95 +132,78 @@ const BmnUnifiedModule = () => {
   const menuItems = [
     {
       group: 'PEMINJAMAN',
+      description: 'Ajukan dan pantau aset yang dipinjam.',
       items: [
-        {
-          key: 'peminjaman-new',
-          label: 'Peminjaman BMN',
-          icon: <PlusCircleOutlined />,
-        },
-        {
-          key: 'peminjaman-history',
-          label: 'Riwayat Peminjaman',
-          icon: <HistoryOutlined />,
-        },
+        { key: 'peminjaman-new', label: 'Peminjaman BMN', icon: <PlusCircleOutlined />, hint: 'Buat pengajuan baru' },
+        { key: 'peminjaman-history', label: 'Riwayat Peminjaman', icon: <HistoryOutlined />, hint: 'Lihat status pengajuan' },
       ],
     },
     {
       group: 'PERSEDIAAN',
+      description: 'Ajukan kebutuhan barang persediaan.',
       items: [
-        {
-          key: 'persediaan-new',
-          label: 'Permintaan Persediaan',
-          icon: <ShoppingOutlined />,
-        },
-        {
-          key: 'persediaan-history',
-          label: 'Riwayat Persediaan',
-          icon: <FileTextOutlined />,
-        },
+        { key: 'persediaan-new', label: 'Permintaan Persediaan', icon: <ShoppingOutlined />, hint: 'Buat permintaan barang' },
+        { key: 'persediaan-history', label: 'Riwayat Persediaan', icon: <FileTextOutlined />, hint: 'Lihat riwayat permintaan' },
       ],
     },
     {
       group: 'PEMELIHARAAN',
+      description: 'Laporkan kendala dan pantau perbaikannya.',
       items: [
-        {
-          key: 'pemeliharaan-new',
-          label: 'Ajukan Pemeliharaan',
-          icon: <ToolOutlined />,
-        },
-        {
-          key: 'pemeliharaan-history',
-          label: 'Riwayat Pemeliharaan',
-          icon: <HistoryOutlined />,
-        },
+        { key: 'pemeliharaan-new', label: 'Ajukan Pemeliharaan', icon: <ToolOutlined />, hint: 'Laporkan aset bermasalah' },
+        { key: 'pemeliharaan-history', label: 'Riwayat Pemeliharaan', icon: <HistoryOutlined />, hint: 'Lihat progres perbaikan' },
       ],
     },
   ];
+
+  const activeMenuItem = menuItems
+    .flatMap((group) => group.items)
+    .find((item) => item.key === activeTab);
 
   return (
     <div className="simba-module">
       {/* ── Sub-Sidebar Navigation SIMBA ── */}
       <aside className={`simba-sidebar ${sidebarCollapsed ? 'simba-sidebar--collapsed' : 'simba-sidebar--expanded'}`}>
-        {/* Module Title Header — Light Corporate */}
         <div className={`simba-sidebar-header ${sidebarCollapsed ? 'simba-sidebar-header--collapsed' : ''}`}>
           <div className={`simba-sidebar-header__top ${sidebarCollapsed ? 'simba-sidebar-header__top--collapsed' : ''}`}>
-            {!sidebarCollapsed ? (
-              <div className="simba-sidebar-brand">
-                <div className="simba-sidebar-brand__icon">
-                  <DropboxOutlined />
-                </div>
+            <div className="simba-sidebar-brand">
+              <div className="simba-sidebar-brand__icon" aria-hidden="true">
+                <img
+                  src={customModuleIcon || simbaIcon}
+                  alt="SIMBA"
+                  style={{ width: 34, height: 34, objectFit: "contain" }}
+                />
+              </div>
+              {!sidebarCollapsed && (
                 <div>
-                  <h2 className="simba-sidebar-brand__title">
-                    SIMBA
-                  </h2>
-                  <span className="simba-sidebar-brand__subtitle">
-                    Barang & Aset BMN
-                  </span>
+                  <h2 className="simba-sidebar-brand__title">SIMBA</h2>
+                  <span className="simba-sidebar-brand__subtitle">Barang &amp; Aset BMN</span>
                 </div>
-              </div>
-            ) : (
-              <div className="simba-sidebar-brand__icon">
-                <DropboxOutlined />
-              </div>
-            )}
-
+              )}
+            </div>
             <button
+              type="button"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               title={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+              aria-label={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
               className="simba-toggle-btn"
             >
               {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </button>
           </div>
+          {!sidebarCollapsed && (
+            <p className="simba-sidebar-intro">Kelola peminjaman, persediaan, dan pemeliharaan aset dalam satu tempat.</p>
+          )}
         </div>
 
-        {/* Sub-Sidebar Items List */}
         <div className={`simba-sidebar-menu ${sidebarCollapsed ? 'simba-sidebar-menu--collapsed' : ''}`}>
-          {menuItems.map((group, idx) => (
-            <div key={idx} className={`simba-menu-group ${sidebarCollapsed ? 'simba-menu-group--collapsed' : ''}`}>
+          {!sidebarCollapsed && <div className="simba-sidebar-section-label">Menu utama</div>}
+          {menuItems.map((group) => (
+            <div key={group.group} className={`simba-menu-group ${sidebarCollapsed ? 'simba-menu-group--collapsed' : ''}`}>
               {!sidebarCollapsed && (
-                <div className="simba-menu-group__label">
-                  {group.group}
+                <div className="simba-menu-group__heading">
+                  <span className="simba-menu-group__label">{group.group}</span>
+                  <span className="simba-menu-group__description">{group.description}</span>
                 </div>
               )}
               {group.items.map((item) => {
@@ -203,45 +211,45 @@ const BmnUnifiedModule = () => {
                 const buttonContent = (
                   <button
                     key={item.key}
+                    type="button"
                     onClick={() => setActiveTab(item.key)}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-label={item.label}
                     className={`simba-menu-item ${isActive ? 'simba-menu-item--active' : ''} ${sidebarCollapsed ? 'simba-menu-item--collapsed' : ''}`}
                   >
-                    <span className="simba-menu-item__icon">
-                      {item.icon}
-                    </span>
+                    <span className="simba-menu-item__icon" aria-hidden="true">{item.icon}</span>
                     {!sidebarCollapsed && (
-                      <span className="simba-menu-item__label">
-                        {item.label}
+                      <span className="simba-menu-item__copy">
+                        <span className="simba-menu-item__label">{item.label}</span>
+                        <span className="simba-menu-item__hint">{item.hint}</span>
                       </span>
                     )}
                   </button>
                 );
-
                 return sidebarCollapsed ? (
                   <Tooltip key={item.key} title={item.label} placement="right">
                     {buttonContent}
                   </Tooltip>
-                ) : (
-                  buttonContent
-                );
+                ) : buttonContent;
               })}
             </div>
           ))}
         </div>
 
-        {/* Sidebar Footer — Back Button */}
+        {!sidebarCollapsed && activeMenuItem && (
+          <div className="simba-current-area">
+            <span className="simba-current-area__label">Sedang dibuka</span>
+            <strong>{activeMenuItem.label}</strong>
+          </div>
+        )}
+
         <div className={`simba-sidebar-footer ${sidebarCollapsed ? 'simba-sidebar-footer--collapsed' : ''}`}>
-          {sidebarCollapsed ? (
-            <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
-              <a href="/app/layanan-mandiri" className="simba-back-btn simba-back-btn--collapsed">
-                <ArrowLeftOutlined style={{ fontSize: 13 }} />
-              </a>
-            </Tooltip>
-          ) : (
-            <a href="/app/layanan-mandiri" className="simba-back-btn">
-              <ArrowLeftOutlined style={{ fontSize: 11 }} /> Kembali ke Layanan Mandiri
+          <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
+            <a href="/app/layanan-mandiri" className={`simba-back-btn ${sidebarCollapsed ? 'simba-back-btn--collapsed' : ''}`}>
+              <ArrowLeftOutlined aria-hidden="true" />
+              {!sidebarCollapsed && <span>Kembali ke Layanan Mandiri</span>}
             </a>
-          )}
+          </Tooltip>
         </div>
       </aside>
 

@@ -28,6 +28,7 @@ import QueueTvDisplay from "./pages/QueueTvDisplay.jsx";
 import PublicQueueRegistration from "./pages/PublicQueueRegistration.jsx";
 import AdminQueueStandalone from "./views/AdminQueueStandalone.jsx";
 import PenyimpananCloud from "./views/PenyimpananCloud.jsx";
+import RhpkUnifiedSidebarModule from "./views/RhpkUnifiedSidebarModule.jsx";
 import PelatihanPegawai from "./views/PelatihanPegawai.jsx";
 import PublicSharePage from "./views/PublicSharePage.jsx";
 import DriveEditor from "./views/DriveEditor.jsx";
@@ -42,6 +43,10 @@ import SignProtokolPage from "./pages/SignProtokolPage.jsx";
 import VerifyDocumentPage from "./pages/VerifyDocumentPage.jsx";
 import PublicRoomSchedulePage from "./pages/PublicRoomSchedulePage.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ZoomGenerator from "./views/ZoomGenerator.jsx";
+import MfaSetupPage from "./pages/MfaSetupPage.jsx";
+import EInvitationModule from "./views/EInvitationModule.jsx";
+import PublicEInvitationPage from "./pages/PublicEInvitationPage.jsx";
 import "./App.css";
 import "./MobileNativeForms.css";
 
@@ -53,6 +58,7 @@ const PUBLIC_PATHS = [
   "/peminjaman-ruangan",
   "/antrian-display",
   "/daftar-antrian",
+  "/undangan",
 ];
 
 const SSOSelarasRedirect = () => {
@@ -159,6 +165,7 @@ function App() {
       "/app/validator-dashboard": "SIPTU | Dashboard Validator",
       "/app/operator-dashboard": "SIPTU | Dashboard Operator",
       "/app/layanan-mandiri": "SIPTU | Layanan Mandiri",
+      "/app/rhpk": "SIPTU | Pengelolaan RHPK",
       "/app/riwayat-layanan": "SIPTU | Riwayat Layanan",
       "/app/penyimpanan-cloud": "SIPTU | Penyimpanan Cloud",
       "/app/kepegawaian-data-pegawai": "SIPTU | Kepegawaian - Data Pegawai",
@@ -194,10 +201,12 @@ function App() {
       "/app/admin-user-management": "SIPTU | Admin - Manajemen Pengguna",
       "/app/admin-notification-settings": "SIPTU | Admin - Pengaturan Notifikasi",
       "/app/admin-news-posts": "SIPTU | Admin - Kelola Berita",
+      "/app/admin-layanan-mandiri-icons": "SIPTU | Admin - Manajemen Ikon Layanan Mandiri",
       "/app/pengaturan-slider": "SIPTU | Admin - Pengaturan Slider",
       "/app/antrian-kontrol": "SIPTU | Manajemen UPP",
       "/app/account-settings": "SIPTU | Pengaturan Akun",
       "/app/pengumuman-rispeg": "SIPTU | Pengumuman RISPEG",
+      "/app/e-invitation": "SIPTU | E-Invitation Undangan Digital",
     };
 
     // Exact match
@@ -247,12 +256,16 @@ function App() {
     return "/app/layanan-mandiri";
   }, [user, currentRole]);
 
-  const loginRedirectTarget =
-    redirectParam &&
-    redirectParam.startsWith("/") &&
-    !redirectParam.startsWith("//")
+  const loginRedirectTarget = useMemo(() => {
+    if (user && !user.has_mfa) {
+      return "/app/mfa-setup";
+    }
+    return redirectParam &&
+      redirectParam.startsWith("/") &&
+      !redirectParam.startsWith("//")
       ? redirectParam
       : defaultDashboardPath;
+  }, [user, redirectParam, defaultDashboardPath]);
 
   const isPublicRoute =
     location.pathname.startsWith("/loan/") ||
@@ -268,7 +281,16 @@ function App() {
     location.pathname === "/app/kepegawaian-kalender" ||
     location.pathname === "/antrian-display" ||
     location.pathname === "/sso/selaras" ||
+    location.pathname.startsWith("/undangan/") ||
     location.pathname.endsWith("/new");
+
+  // Global MFA setup enforcement — applies to all authenticated routes if MFA is not enabled yet
+  const mustSetupMfa = useMemo(() => {
+    if (!token || !user) return false;
+    const path = location.pathname;
+    if (path === "/app/mfa-setup" || isPublicRoute) return false;
+    return !user.has_mfa;
+  }, [token, user, location.pathname, isPublicRoute]);
 
   useEffect(() => {
     if (!token || isPublicRoute) {
@@ -308,6 +330,9 @@ function App() {
         <ForcePasswordReset
           returnUrl={location.pathname + location.search}
         />
+      )}
+      {mustSetupMfa && (
+        <Navigate to="/app/mfa-setup" replace />
       )}
       <Routes>
       <Route
@@ -360,6 +385,7 @@ function App() {
       <Route path="/verifikasi/:token" element={<VerifyDocumentPage />} />
       <Route path="/share/:token" element={<PublicSharePage />} />
       <Route path="/peminjaman-ruangan" element={<PublicRoomSchedulePage />} />
+      <Route path="/undangan/:slug" element={<PublicEInvitationPage />} />
       <Route path="/surat-tugas/new" element={<SuratTugasForm />} />
       <Route path="/antrian-display" element={<QueueTvDisplay />} />
       <Route path="/daftar-antrian" element={<PublicQueueRegistration />} />
@@ -376,8 +402,24 @@ function App() {
         element={token ? <PelatihanPegawai /> : <Navigate to="/login" replace />}
       />
       <Route
+        path="/app/zoom-generator"
+        element={token ? <ZoomGenerator /> : <Navigate to="/login?redirect=/app/zoom-generator" replace />}
+      />
+      <Route
+        path="/zoom-generator"
+        element={token ? <ZoomGenerator /> : <Navigate to="/login?redirect=/app/zoom-generator" replace />}
+      />
+      <Route
+        path="/app/mfa-setup"
+        element={token ? <MfaSetupPage /> : <Navigate to="/login" replace />}
+      />
+      <Route
         path="/app/drive/editor"
         element={token ? <DriveEditor /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/app/rhpk"
+        element={token ? <RhpkUnifiedSidebarModule /> : <Navigate to="/login?redirect=/app/rhpk" replace />}
       />
       <Route path="/it-helpdesk/new" element={<ItHelpdeskForm />} />
       <Route

@@ -42,6 +42,7 @@ import {
   DownOutlined,
   SyncOutlined,
   ClockCircleOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import NavbarMenu from "../components/NavbarMenu.jsx";
@@ -78,6 +79,7 @@ import RealisasiAnggaran from "../views/RealisasiAnggaran.jsx";
 import AdminNotificationSettings from "../views/AdminNotificationSettings.jsx";
 import AdminNewsPosts from "../views/AdminNewsPosts.jsx";
 import AdminUserManagement from "../views/AdminUserManagement.jsx";
+import AdminLayananMandiriIconManagement from "../views/AdminLayananMandiriIconManagement.jsx";
 import KearsipanManajemenUpUk from "../views/KearsipanManajemenUpUk.jsx";
 import KearsipanPencatatanSurat from "../views/KearsipanPencatatanSurat.jsx";
 import ValidatorDashboard from "../views/ValidatorDashboard.jsx";
@@ -102,6 +104,7 @@ import PengumumanRispeg from "../views/PengumumanRispeg.jsx";
 import PengadaanPbj from "../views/PengadaanPbj.jsx";
 import KearsipanArsipVital from "../views/KearsipanArsipVital.jsx";
 import PelatihanPegawai from "../views/PelatihanPegawai.jsx";
+import EInvitationModule from "../views/EInvitationModule.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import "./AppLayout.css";
 import MobileAppShell from "./MobileAppShell.jsx";
@@ -123,11 +126,13 @@ const MODULE_ORDER = [
   "pengadaan-pdtt",
   "it-helpdesk",
   "penyimpanan-cloud",
+  "e-invitation",
   "siamparan",
   "antrian-kontrol",
   "admin-user-management",
   "admin-notification-settings",
   "admin-news-posts",
+  "admin-layanan-mandiri-icons",
 ];
 const CHILD_ORDER = {
   kepegawaian: [
@@ -262,6 +267,7 @@ function mapSlugToPath(slug) {
     "admin-user-management": "/app/admin-user-management",
     "admin-notification-settings": "/app/admin-notification-settings",
     "admin-news-posts": "/app/admin-news-posts",
+    "admin-layanan-mandiri-icons": "/app/admin-layanan-mandiri-icons",
     "validator-dashboard": "/app/validator-dashboard",
     "operator-dashboard": "/app/operator-dashboard",
     "pengaturan-slider": "/app/pengaturan-slider",
@@ -269,6 +275,7 @@ function mapSlugToPath(slug) {
     "penyimpanan-cloud": "/app/penyimpanan-cloud",
     "pelatihan-pegawai": "/app/kepegawaian-bangkom",
     "kepegawaian-pelatihan": "/app/kepegawaian-bangkom",
+    "e-invitation": "/app/e-invitation",
     "simkeu": "/app/simkeu",
   };
   return routes[slug] ?? null;
@@ -449,6 +456,11 @@ function AppLayout() {
       key: "admin-news-posts",
       label: "Kelola Berita",
       icon: <FileTextOutlined />,
+    });
+    items.push({
+      key: "admin-layanan-mandiri-icons",
+      label: "Manajemen Ikon Layanan Mandiri",
+      icon: <PictureOutlined />,
     });
     if ((allowedRoles ?? []).includes("validator") || currentRole === "admin") {
       items.push({
@@ -708,14 +720,7 @@ function AppLayout() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="zoom-generator"
-              element={
-                <ProtectedRoute moduleSlug="zoom-generator">
-                  <ZoomGenerator />
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="rispeg-ruh"
               element={
@@ -982,10 +987,15 @@ function AppLayout() {
               element={isAdminUser ? <AdminNewsPosts /> : <NotFound />}
             />
             <Route
+              path="admin-layanan-mandiri-icons"
+              element={isAdminUser ? <AdminLayananMandiriIconManagement /> : <NotFound />}
+            />
+            <Route
               path="admin-user-management"
               element={isAdminUser ? <AdminUserManagement /> : <NotFound />}
             />
             <Route path="account-settings" element={<AccountSettings />} />
+            <Route path="e-invitation" element={<EInvitationModule />} />
             <Route path="*" element={<NotFound />} />
     </Routes>
   );

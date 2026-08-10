@@ -63,7 +63,7 @@ const PublicRoomSchedulePage = () => {
   const [showBooking, setShowBooking] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     room_id: '', loan_date: '', return_date: '',
-    start_time: '', end_time: '', activity_name: '', password: '',
+    start_time: '', end_time: '', activity_name: '', password: '', totp_code: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(null);
@@ -137,7 +137,7 @@ const PublicRoomSchedulePage = () => {
   };
 
   const handleSubmitBooking = async () => {
-    const { room_id, loan_date, return_date, start_time, end_time, activity_name, password } = bookingForm;
+    const { room_id, loan_date, return_date, start_time, end_time, activity_name, password, totp_code } = bookingForm;
     if (!room_id || !loan_date || !return_date || !start_time || !end_time || !activity_name || !password) {
       setBookingError('Semua field wajib diisi.');
       return;
@@ -149,7 +149,7 @@ const PublicRoomSchedulePage = () => {
         nip: user.nip || user.username, nama: user.name,
         fungsi_bidang: user?.employee?.work_unit || '',
         room_id: parseInt(room_id, 10),
-        loan_date, return_date, start_time, end_time, activity_name, password,
+        loan_date, return_date, start_time, end_time, activity_name, password, totp_code,
       };
       const result = await svc.post('/public/room-loans', payload, authToken);
       const roomName = rooms.find(r => r.id === parseInt(room_id, 10))?.name || 'Ruangan';
@@ -165,7 +165,7 @@ const PublicRoomSchedulePage = () => {
 
   const resetBooking = () => {
     setBookingSuccess(null);
-    setBookingForm({ room_id: '', loan_date: '', return_date: '', start_time: '', end_time: '', activity_name: '', password: '' });
+    setBookingForm({ room_id: '', loan_date: '', return_date: '', start_time: '', end_time: '', activity_name: '', password: '', totp_code: '' });
   };
 
   /* ════ SUCCESS ════ */
@@ -419,9 +419,17 @@ const PublicRoomSchedulePage = () => {
                 <label>Password SIPTU <span className="req">*</span></label>
                 <input type="password" className="rs-input" placeholder="Masukkan password akun SIPTU" value={bookingForm.password}
                   onChange={e => handleFormChange('password', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSubmitBooking(); }}
                 />
-                <div className="rs-hint">Dengan memasukkan password, Anda menyetujui pengajuan ini secara elektronik (TTE).</div>
+              </div>
+
+              <div className="rs-field">
+                <label>Kode Autentikasi MFA (6 Digit / Recovery Code) <span className="req">*</span></label>
+                <input type="text" className="rs-input" placeholder="Contoh: 123456 atau XXXX-XXXX" value={bookingForm.totp_code}
+                  onChange={e => handleFormChange('totp_code', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSubmitBooking(); }}
+                  style={{ fontWeight: 700, letterSpacing: '1px' }}
+                />
+                <div className="rs-hint">Dengan memasukkan password & kode MFA, Anda menyetujui pengajuan ini secara elektronik (TTE).</div>
               </div>
 
               {bookingError && <div className="rs-error-box">⚠️ {bookingError}</div>}

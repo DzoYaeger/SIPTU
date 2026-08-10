@@ -36,18 +36,24 @@ const AIAssistantWidget = () => {
   }, [chatHistory, isOpen]);
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!message.trim() || isLoading) return;
 
     const userMessage = message.trim();
     setMessage("");
-    setChatHistory(prev => [...prev, { role: "user", content: userMessage }]);
+    
+    // Prepare updated history to pass to backend
+    const updatedHistory = [...chatHistory, { role: "user", content: userMessage }];
+    setChatHistory(updatedHistory);
     setIsLoading(true);
 
     try {
+      // Send last 8 chat turns as history so assistant remembers conversation context
+      const historyPayload = updatedHistory.slice(1).slice(-8);
+
       const response = await apiFetch("/ai/chat", {
         method: "POST",
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, history: historyPayload }),
       });
 
       if (response.ok) {
@@ -161,11 +167,18 @@ const AIAssistantWidget = () => {
               </div>
 
               <form className="ai-chat-input-area" onSubmit={handleSendMessage}>
-                <input
-                  type="text"
-                  placeholder="Tanya sesuatu..."
+                <textarea
+                  className="ai-chat-textarea"
+                  placeholder="Tanya sesuatu... (Shift+Enter untuk baris baru)"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
+                  rows={1}
                   disabled={isLoading}
                 />
                 <button type="submit" disabled={!message.trim() || isLoading}>

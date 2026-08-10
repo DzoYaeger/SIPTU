@@ -32,6 +32,8 @@ import {
   CarOutlined,
   UserAddOutlined,
   FilePdfOutlined,
+  BankOutlined,
+  ShopOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
@@ -76,13 +78,22 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
   const [isExtModalOpen, setIsExtModalOpen] = useState(false);
   const [extForm] = Form.useForm();
 
+  // Sarana (SIAMPARAN & Manual)
+  const [saranaList, setSaranaList] = useState([]);
+  const [siamparanSuggestions, setSiamparanSuggestions] = useState([]);
+  const [siamparanLoading, setSiamparanLoading] = useState(false);
+  const siamparanDebounceRef = useRef(null);
+  const [isSaranaModalOpen, setIsSaranaModalOpen] = useState(false);
+  const [saranaForm] = Form.useForm();
+
   // MAK Suggestions
   const [makSuggestions, setMakSuggestions] = useState([]);
   const [makLoading, setMakLoading] = useState(false);
   const makDebounceRef = useRef(null);
 
-  // Password for TTE
+  // Password & MFA for TTE
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
 
   /* ── Fetch Employees & Default Data ── */
   useEffect(() => {
@@ -127,8 +138,154 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
       if (Array.isArray(editData.external_participants)) {
         setSelectedExternal(editData.external_participants);
       }
+
+      // Pre-fill Sarana data
+      if (Array.isArray(editData.sarana) && editData.sarana.length > 0) {
+        setSaranaList(
+          editData.sarana.map((s) => ({
+            id: s.id || null,
+            nama: s.nama || s.nama_sarana || "",
+            lokasi: s.lokasi || s.alamat || "",
+            source: s.id ? "siamparan" : "manual",
+          }))
+        );
+      } else if (editData.sarana_nama) {
+        const namas = String(editData.sarana_nama).split(";");
+        const lokasis = String(editData.sarana_lokasi || "").split(";");
+        const parsed = namas
+          .map((n, i) => ({
+            id: editData.sarana_id && i === 0 ? editData.sarana_id : null,
+            nama: n.trim(),
+            lokasi: lokasis[i] ? lokasis[i].trim() : "",
+            source: editData.sarana_id && i === 0 ? "siamparan" : "manual",
+          }))
+          .filter((s) => s.nama);
+        setSaranaList(parsed);
+      }
     }
   }, [editData, form]);
+
+  /* ── SIAMPARAN Sarana Suggestions Fetcher ── */
+  const fetchSiamparanSarana = useCallback(
+    async (search = "") => {
+      setSiamparanLoading(true);
+      try {
+        const res = await apiFetch(`/public/siamparan/sarana?q=${encodeURIComponent(search)}&per_page=30`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data?.data || data?.sarana || [];
+
+        setSiamparanSuggestions(
+          items.map((item) => {
+            const nama = item.nama_sarana || item.nama || item.nama_perusahaan || item.nama_toko || item.nama_fasilitas || "";
+            
+            // Extract detailed location components from SIAMPARAN
+            const alamat = item.alamat || item.alamat_sarana || item.jalan || "";
+            const kel = item.kelurahan || item.desa || item.nama_kelurahan || item.nama_desa || "";
+            const kec = item.kecamatan || item.nama_kecamatan || "";
+            const kab = item.kabupaten || item.kota || item.kabupaten_kota || item.nama_kabupaten || item.nama_kota || "";
+
+            const locParts = [];
+            if (alamat) locParts.push(alamat);
+            if (kel) locParts.push(kel.toLowerCase().startsWith("kel") || kel.toLowerCase().startsWith("desa") ? kel : `Kel. ${kel}`);
+            if (kec) locParts.push(kec.toLowerCase().startsWith("kec") ? kec : `Kec. ${kec}`);
+            if (kab) locParts.push(kab);
+
+            const lokasiFormatted = locParts.length > 0 ? locParts.join(", ") : (item.lokasi || "");
+            const id = item.id || item.sarana_id || null;
+
+            const subtext = [
+              kel ? (kel.toLowerCase().startsWith("kel") || kel.toLowerCase().startsWith("desa") ? kel : `Kel. ${kel}`) : "",
+              kec ? (kec.toLowerCase().startsWith("kec") ? kec : `Kec. ${kec}`) : "",
+              kab,
+            ]
+              .filter(Boolean)
+              .join(" • ");
+
+            return {
+              key: id ? `siamparan-${id}` : `siamparan-${nama}-${lokasiFormatted}`,
+              value: nama,
+              label: (
+                <div style={{ padding: "2px 0" }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#1a1f2e" }}>{nama}</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>
+                    {subtext || lokasiFormatted || "Lokasi tidak terdaftar"}
+                  </div>
+                </div>
+              ),
+              raw: { id, nama, lokasi: lokasiFormatted, source: "siamparan" },
+            };
+          })
+        );
+      } catch (e) {
+        console.error("Failed to fetch SIAMPARAN sarana", e);
+      } finally {
+        setSiamparanLoading(false);
+      }
+    },
+    [apiFetch]
+  );
+
+  useEffect(() => {
+    fetchSiamparanSarana();
+  }, [fetchSiamparanSarana]);
+
+  const handleSiamparanSearch = (val) => {
+    if (siamparanDebounceRef.current) clearTimeout(siamparanDebounceRef.current);
+    siamparanDebounceRef.current = setTimeout(() => {
+      fetchSiamparanSarana(val);
+    }, 350);
+  };
+
+  const handleSelectSiamparanSarana = (value, option) => {
+    if (!option || !option.raw) return;
+    const newSarana = option.raw;
+    if (saranaList.some((s) => s.nama.toLowerCase() === newSarana.nama.toLowerCase())) {
+      message.info("Sarana ini sudah ada dalam daftar.");
+      return;
+    }
+    setSaranaList((prev) => [...prev, newSarana]);
+  };
+
+  const handleAddManualSarana = async () => {
+    try {
+      const vals = await saranaForm.validateFields();
+      const locParts = [];
+      if (vals.alamat) locParts.push(vals.alamat.trim());
+      if (vals.kelurahan) {
+        const kel = vals.kelurahan.trim();
+        locParts.push(kel.toLowerCase().startsWith("kel") || kel.toLowerCase().startsWith("desa") ? kel : `Kel. ${kel}`);
+      }
+      if (vals.kecamatan) {
+        const kec = vals.kecamatan.trim();
+        locParts.push(kec.toLowerCase().startsWith("kec") ? kec : `Kec. ${kec}`);
+      }
+      if (vals.kabupaten) locParts.push(vals.kabupaten.trim());
+
+      const fullLocation = locParts.length > 0 ? locParts.join(", ") : "";
+
+      const newSarana = {
+        id: null,
+        nama: vals.nama.trim(),
+        lokasi: fullLocation,
+        source: "manual",
+      };
+
+      if (saranaList.some((s) => s.nama.toLowerCase() === newSarana.nama.toLowerCase())) {
+        message.info("Sarana dengan nama ini sudah dimasukkan.");
+        return;
+      }
+      setSaranaList((prev) => [...prev, newSarana]);
+      saranaForm.resetFields();
+      setIsSaranaModalOpen(false);
+    } catch (e) {
+      // Validation error
+    }
+  };
+
+  const handleRemoveSarana = (idx) => {
+    setSaranaList((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   /* ── MAK Suggestions Fetcher ── */
   const fetchMakSuggestions = useCallback(
@@ -228,6 +385,11 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
           nip: ext.nip || "",
           jabatan: ext.instansi || ext.jabatan || "",
         })),
+        sarana: saranaList.map((s) => ({
+          id: s.id || null,
+          nama: s.nama,
+          lokasi: s.lokasi || "",
+        })),
         tanggal_mulai: startDate,
         tanggal_st: startDate,
         tanggal_selesai: endDate,
@@ -236,6 +398,7 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
         mak: values.mak,
         penandatangan_id: values.penandatangan_id || null,
         password: password,
+        totp_code: totpCode,
       };
 
       const isEditMode = !!editData;
@@ -342,12 +505,105 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
           )}
         </Card>
 
-        {/* ════════════ SEKSI 2: Tim Pegawai Ditugaskan & Ketua Tim ════════════ */}
+        {/* ════════════ SEKSI 2: Sasaran & Pemilihan Sarana ════════════ */}
         <Card
           size="small"
           title={
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0F5B99", display: "flex", alignItems: "center", gap: 6 }}>
-              <TeamOutlined /> 2. Tim Pegawai Ditugaskan & Ketua Tim
+              <BankOutlined /> 2. Sasaran & Pemilihan Sarana Pengawasan
+            </div>
+          }
+          style={{ borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 16 }}
+        >
+          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+            Cari sarana pengawasan atau tambahkan sarana manual. Data sarana ini akan otomatis tercetak di lembar <strong>Protokol Kerja</strong>.
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <AutoComplete
+              options={siamparanSuggestions}
+              onSearch={handleSiamparanSearch}
+              onSelect={handleSelectSiamparanSarana}
+              placeholder="Cari sarana / toko / apotek / sarana pengawasan..."
+              style={{ flex: 1, borderRadius: 6 }}
+              notFoundContent={siamparanLoading ? <Spin size="small" /> : "Sarana tidak ditemukan"}
+            />
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => setIsSaranaModalOpen(true)}
+              style={{ borderRadius: 6, fontSize: 12 }}
+            >
+              + Sarana Manual
+            </Button>
+          </div>
+
+          {saranaList.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {saranaList.map((sar, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#e0f2fe",
+                        color: "#0284c7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 13,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <BankOutlined />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: "#1a1f2e" }}>
+                        {index + 1}. {sar.nama}
+                      </div>
+                      {sar.lokasi && (
+                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                          <EnvironmentOutlined style={{ marginRight: 4 }} />
+                          {sar.lokasi}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="small"
+                    type="text"
+                    danger
+                    icon={<CloseOutlined />}
+                    onClick={() => handleRemoveSarana(index)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, fontStyle: "italic", color: "#94a3b8", padding: "4px 0" }}>
+              Belum ada sarana terpilih (opsional).
+            </div>
+          )}
+        </Card>
+
+        {/* ════════════ SEKSI 3: Tim Pegawai Ditugaskan & Ketua Tim ════════════ */}
+        <Card
+          size="small"
+          title={
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0F5B99", display: "flex", alignItems: "center", gap: 6 }}>
+              <TeamOutlined /> 3. Tim Pegawai Ditugaskan & Ketua Tim
             </div>
           }
           style={{ borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 16 }}
@@ -504,12 +760,12 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
           </div>
         </Card>
 
-        {/* ════════════ SEKSI 3: Anggaran & Verifikasi TTE ════════════ */}
+        {/* ════════════ SEKSI 4: Anggaran & Verifikasi TTE ════════════ */}
         <Card
           size="small"
           title={
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0F5B99", display: "flex", alignItems: "center", gap: 6 }}>
-              <DollarOutlined /> 3. Sumber Anggaran & Verifikasi TTE
+              <DollarOutlined /> 4. Sumber Anggaran & Verifikasi TTE
             </div>
           }
           style={{ borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 20 }}
@@ -546,19 +802,35 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
             </Form.Item>
           </div>
 
-          <Form.Item
-            label="Password SIPTU (Verifikasi TTE)"
-            required
-            style={{ marginBottom: 0 }}
-          >
-            <Input.Password
-              prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
-              placeholder="Masukkan password akun SIPTU Anda..."
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ borderRadius: 6, fontSize: 13 }}
-            />
-          </Form.Item>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Form.Item
+              label="Password SIPTU (Verifikasi TTE)"
+              required
+              style={{ marginBottom: 0 }}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: "#94a3b8" }} />}
+                placeholder="Masukkan password akun SIPTU Anda..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ borderRadius: 6, fontSize: 13 }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Kode Autentikasi MFA (6 Digit / Recovery Code)"
+              required
+              style={{ marginBottom: 0 }}
+            >
+              <Input
+                prefix={<LockOutlined style={{ color: "#0b56a4" }} />}
+                placeholder="Contoh: 123456 atau XXXX-XXXX"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                style={{ borderRadius: 6, fontSize: 13, fontWeight: 700, letterSpacing: "1px" }}
+              />
+            </Form.Item>
+          </div>
         </Card>
 
         {/* ── Submit Action Button ── */}
@@ -580,6 +852,51 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
           </Button>
         </div>
       </Form>
+
+      {/* ── Modal Tambah Sarana Manual ── */}
+      <Modal
+        title="Tambah Sarana Pengawasan (Manual)"
+        open={isSaranaModalOpen}
+        onCancel={() => setIsSaranaModalOpen(false)}
+        onOk={handleAddManualSarana}
+        okText="Tambah Sarana"
+        cancelText="Batal"
+        width={480}
+        centered
+      >
+        <Form form={saranaForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item
+            name="nama"
+            label="Nama Sarana / Perusahaan / Fasilitas"
+            rules={[{ required: true, message: "Nama sarana wajib diisi." }]}
+            style={{ marginBottom: 12 }}
+          >
+            <Input placeholder="Contoh: Apotek K-24 Palopo" style={{ borderRadius: 6 }} />
+          </Form.Item>
+
+          <Form.Item name="alamat" label="Alamat Jalan / No (Opsional)" style={{ marginBottom: 12 }}>
+            <Input placeholder="Contoh: Jl. Merdeka No. 12" style={{ borderRadius: 6 }} />
+          </Form.Item>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item name="kelurahan" label="Kelurahan / Desa (Opsional)" style={{ marginBottom: 12 }}>
+              <Input placeholder="Contoh: Dangerakko" style={{ borderRadius: 6 }} />
+            </Form.Item>
+
+            <Form.Item name="kecamatan" label="Kecamatan (Opsional)" style={{ marginBottom: 12 }}>
+              <Input placeholder="Contoh: Wara" style={{ borderRadius: 6 }} />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="kabupaten" label="Kabupaten / Kota (Opsional)" style={{ marginBottom: 0 }}>
+            <AutoComplete
+              options={LOKASI_OPTIONS.map((loc) => ({ label: loc, value: loc }))}
+              placeholder="Pilih atau ketik Kabupaten / Kota..."
+              style={{ borderRadius: 6, width: "100%" }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* ── Modal Tambah Petugas Luar ── */}
       <Modal
@@ -651,6 +968,7 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
                   setResultData(null);
                   setSelectedEmployees([]);
                   setSelectedExternal([]);
+                  setSaranaList([]);
                   form.resetFields();
                 }}
                 style={{ borderRadius: 6, height: 38, marginTop: 4 }}

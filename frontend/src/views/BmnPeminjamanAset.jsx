@@ -106,6 +106,7 @@ const BmnPeminjamanAset = () => {
   const { modal, message } = AntdApp.useApp();
   const notification = buildMessageAdapter(message);
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
 
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -182,6 +183,8 @@ const BmnPeminjamanAset = () => {
 
   const handleCloseApproval = () => {
     setApprovalModalOpen(false);
+    setPassword('');
+    setTotpCode('');
     if (!detailDrawerOpen) setSelectedLoan(null);
   };
 
@@ -202,6 +205,7 @@ const BmnPeminjamanAset = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           password: password,
+          totp_code: totpCode,
           is_vehicle: isVehicle,
           kondisi_barang_pinjam: kondisiPinjam,
           kondisi_kendaraan_pinjam: isVehicle ? buildVehiclePayload(kendaraanPinjam) : null,
@@ -406,7 +410,7 @@ const BmnPeminjamanAset = () => {
     <div className="module-section">
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Peminjaman Aset</Typography.Title>
+          <Typography.Title level={4} className="module-title">Peminjaman Aset</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola peminjaman dan pengembalian BMN dengan mudah.</Typography.Text>
         </div>
         <Link to="/app/bmn-peminjaman-aset/new">
@@ -662,18 +666,39 @@ const BmnPeminjamanAset = () => {
               </div>
             )}
 
-            <Typography.Text strong>Password Otorisasi SIPTU:</Typography.Text>
-            <div style={{ marginTop: 8 }}>
-              <Input.Password 
-                size="large"
-                placeholder="Masukkan password SIPTU Anda untuk menyetujui" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onPressEnter={handleApprove}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ minHeight: 32, display: 'flex', alignItems: 'flex-end', marginBottom: 6 }}>
+                  <Typography.Text strong style={{ fontSize: 12, color: '#334155' }}>
+                    Password Otorisasi SIPTU:
+                  </Typography.Text>
+                </div>
+                <Input.Password 
+                  size="large"
+                  placeholder="Masukkan password SIPTU" 
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  style={{ borderRadius: 6 }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ minHeight: 32, display: 'flex', alignItems: 'flex-end', marginBottom: 6 }}>
+                  <Typography.Text strong style={{ fontSize: 12, color: '#334155' }}>
+                    Kode MFA Authenticator / Recovery:
+                  </Typography.Text>
+                </div>
+                <Input 
+                  size="large"
+                  placeholder="Contoh: 123456" 
+                  value={totpCode}
+                  onChange={e => setTotpCode(e.target.value)}
+                  onPressEnter={handleApprove}
+                  style={{ borderRadius: 6, fontWeight: 700, letterSpacing: '1px' }}
+                />
+              </div>
             </div>
             <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 8 }}>
-              * Dengan memasukkan password, Anda menyetujui peminjaman ini secara elektronik menggunakan TTE QR Code.
+              * Masukkan password SIPTU dan 6 digit kode MFA dari Authenticator (jika akun mengaktifkan MFA) untuk menyetujui peminjaman ini secara elektronik via TTE QR Code.
             </Typography.Text>
           </div>
         )}

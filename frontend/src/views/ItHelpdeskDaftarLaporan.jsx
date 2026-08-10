@@ -24,6 +24,7 @@ import {
   Badge,
 } from "antd";
 import { buildMessageAdapter } from "../utils/notify.js";
+import itHelpdeskIcon from "../assets/icons/it-helpdesk-icon.png";
 import {
   FileExcelOutlined,
   FilePdfOutlined,
@@ -388,6 +389,7 @@ const ItHelpdeskDaftarLaporan = () => {
         followup_details: values.followup_details,
         completion_date: values.completion_date.format("YYYY-MM-DD"),
         password: values.password,
+        totp_code: values.totp_code?.trim() || "",
       };
       const response = await apiFetch(
         `/it-helpdesk-tickets/${selectedTicket.id}/complete`,
@@ -401,6 +403,7 @@ const ItHelpdeskDaftarLaporan = () => {
         throw new Error(data.message || "Gagal menyimpan tindak lanjut.");
       }
       notification.success({ message: "Tindak lanjut berhasil disimpan & TTE terverifikasi." });
+      window.dispatchEvent(new Event("siptu:refresh-badge-counts"));
       setFollowupModalOpen(false);
       fetchTickets();
     } catch (error) {
@@ -618,7 +621,8 @@ const ItHelpdeskDaftarLaporan = () => {
       <div className="it-helpdesk-banner">
         <div>
           <h1 className="it-helpdesk-banner-title">
-            <ToolOutlined style={{ color: "#2563eb" }} /> IT Helpdesk - Pelaporan Keluhan
+            <img src={itHelpdeskIcon} alt="IT Helpdesk" style={{ width: 34, height: 34, objectFit: "contain", verticalAlign: "middle", marginRight: 10 }} />
+            IT Helpdesk - Pelaporan Keluhan
           </h1>
           <p className="it-helpdesk-banner-subtitle">
             Pusat penanganan kendala sistem IT, perbaikan jaringan, dan tindak lanjut TTE terintegrasi.
@@ -875,8 +879,16 @@ const ItHelpdeskDaftarLaporan = () => {
                     message: "Masukkan password SIPTU Anda untuk menandatangani TTE secara digital.",
                   },
                 ]}
+                style={{ marginBottom: 12 }}
               >
                 <Input.Password placeholder="Masukkan password login SIPTU Anda" style={{ borderRadius: 8, height: 38 }} />
+              </Form.Item>
+
+              <Form.Item
+                name="totp_code"
+                label={<Text strong style={{ fontSize: 13 }}>Kode Autentikasi MFA (6 Digit / Recovery Code)</Text>}
+              >
+                <Input placeholder="Contoh: 123456 atau XXXX-XXXX (jika akun mengaktifkan MFA)" style={{ borderRadius: 8, height: 38, fontWeight: 700, letterSpacing: '1px' }} />
               </Form.Item>
             </Form>
           </div>

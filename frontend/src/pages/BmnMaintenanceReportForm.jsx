@@ -41,7 +41,7 @@ export default function BmnMaintenanceReportForm() {
   const [doneTicket, setDoneTicket] = useState(null);
 
   const reportType = Form.useWatch("report_type", form);
-  const selectedAssetId = Form.useWatch("asset_id", form);
+  const selectedAssetIds = Form.useWatch("asset_ids", form);
 
   // Set default report_type to "pemeliharaan"
   useEffect(() => {
@@ -77,9 +77,12 @@ export default function BmnMaintenanceReportForm() {
     [assets],
   );
 
-  const selectedAsset = useMemo(
-    () => assets.find((a) => Number(a.id) === Number(selectedAssetId)),
-    [assets, selectedAssetId],
+  const selectedAssets = useMemo(
+    () =>
+      assets.filter((a) =>
+        (selectedAssetIds ?? []).map(Number).includes(Number(a.id)),
+      ),
+    [assets, selectedAssetIds],
   );
 
   const onSubmit = async (values) => {
@@ -87,7 +90,11 @@ export default function BmnMaintenanceReportForm() {
     try {
       const payload = {
         report_type: values.report_type,
-        asset_id: values.report_type === "pemeliharaan" ? values.asset_id : null,
+        asset_ids: values.report_type === "pemeliharaan" ? values.asset_ids : [],
+        asset_id:
+          values.report_type === "pemeliharaan" && values.asset_ids?.length
+            ? values.asset_ids[0]
+            : null,
         report_details: values.report_details,
       };
       const res = await apiFetch(`${API_URL}/bmn-maintenance-reports`, {
@@ -201,18 +208,20 @@ export default function BmnMaintenanceReportForm() {
 
           {reportType === "pemeliharaan" && (
             <Form.Item
-              name="asset_id"
-              label="Pilih Aset BMN Berkendala"
-              rules={[{ required: true, message: "Silakan pilih aset BMN yang akan dipelihara." }]}
+              name="asset_ids"
+              label="Pilih Aset BMN Berkendala (Bisa Lebih dari 1 Aset)"
+              rules={[{ required: true, message: "Silakan pilih setidaknya 1 aset BMN yang akan dipelihara." }]}
               style={{ marginBottom: 12 }}
             >
               <Select
+                mode="multiple"
                 showSearch
                 loading={loadingAssets}
                 options={assetOptions}
-                placeholder="Cari berdasarkan nama aset, kode BMN, merek, atau model..."
+                placeholder="Cari & pilih satu atau beberapa aset BMN yang akan dipelihara..."
                 optionFilterProp="searchLabel"
                 style={{ borderRadius: 6 }}
+                maxTagCount="responsive"
                 optionRender={(option) => {
                   const data = option.data?.asset ?? {};
                   return (
@@ -228,29 +237,50 @@ export default function BmnMaintenanceReportForm() {
             </Form.Item>
           )}
 
-          {/* Asset Info Card */}
-          {reportType === "pemeliharaan" && selectedAsset && (
+          {/* Multi-Asset Info List */}
+          {reportType === "pemeliharaan" && selectedAssets.length > 0 && (
             <div
               style={{
-                padding: "10px 14px",
+                padding: "12px 14px",
                 borderRadius: 6,
                 background: "#f8fafc",
                 border: "1px solid #e2e8f0",
                 marginBottom: 16,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#0F5B99" }}>
-                  Aset Dipilih: {selectedAsset.name}
+                  Daftar {selectedAssets.length} Aset Dipilih:
                 </span>
                 <Tag color="blue" style={{ borderRadius: 4, fontSize: 10.5, fontWeight: 600 }}>
-                  {selectedAsset.status || "Aktif"}
+                  Multi-Aset ({selectedAssets.length})
                 </Tag>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 11.5, color: "#475569" }}>
-                <div><strong>Kode BMN:</strong> {selectedAsset.asset_code || "-"}</div>
-                <div><strong>Merek/Model:</strong> {selectedAsset.brand || "-"} / {selectedAsset.model || "-"}</div>
-                <div><strong>Lokasi:</strong> {selectedAsset.location || "-"}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {selectedAssets.map((asset, idx) => (
+                  <div
+                    key={asset.id}
+                    style={{
+                      padding: "8px 12px",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: 6,
+                      display: "grid",
+                      gridTemplateColumns: "1.5fr 1fr 1fr 1fr",
+                      gap: 8,
+                      alignItems: "center",
+                      fontSize: 11.5,
+                      color: "#334155",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "#0f172a" }}>{idx + 1}. {asset.name}</strong>
+                    </div>
+                    <div><Text type="secondary">Kode BMN:</Text> {asset.asset_code || "-"}</div>
+                    <div><Text type="secondary">Merek/Model:</Text> {asset.brand || "-"} / {asset.model || "-"}</div>
+                    <div><Text type="secondary">Lokasi:</Text> {asset.location || "-"}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

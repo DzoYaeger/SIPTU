@@ -11,6 +11,7 @@ import {
   Empty,
   Tooltip,
   Space,
+  Typography,
   message,
   Dropdown,
 } from "antd";
@@ -38,12 +39,37 @@ import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
 import SuratTugasForm from "../pages/SuratTugasForm.jsx";
 import KepegawaianSuratTugas from "./KepegawaianSuratTugas.jsx";
+import suratTugasIcon from "../assets/icons/surat-tugas-icon.png";
 import "./SuratTugasUnifiedModule.css";
 
 const SuratTugasUnifiedModule = () => {
   const { user, apiFetch } = useAuth();
   const [activeTab, setActiveTab] = useState("form"); // 'form' | 'my-assignments' | 'validator'
   const [collapsed, setCollapsed] = useState(false);
+  const [customModuleIcon, setCustomModuleIcon] = useState(null);
+
+  // Synchronize custom Layanan Mandiri / sidebar icons dynamically
+  useEffect(() => {
+    const loadIcon = () => {
+      try {
+        const storedLayanan = localStorage.getItem("siptu_custom_layanan_icons");
+        const storedSidebar = localStorage.getItem("siptu_custom_sidebar_icons");
+        const mapL = storedLayanan ? JSON.parse(storedLayanan) : {};
+        const mapS = storedSidebar ? JSON.parse(storedSidebar) : {};
+        const customUrl = mapL["surat-tugas"] || mapL["surat_tugas"] || mapS["surat-tugas"] || mapS["surat_tugas"] || null;
+        setCustomModuleIcon(customUrl);
+      } catch (e) {
+        console.error("Gagal memuat ikon kustom:", e);
+      }
+    };
+    loadIcon();
+    window.addEventListener("siptu_layanan_icons_updated", loadIcon);
+    window.addEventListener("siptu_sidebar_icons_updated", loadIcon);
+    return () => {
+      window.removeEventListener("siptu_layanan_icons_updated", loadIcon);
+      window.removeEventListener("siptu_sidebar_icons_updated", loadIcon);
+    };
+  }, []);
 
   // My Assignments State
   const [assignments, setAssignments] = useState([]);
@@ -64,6 +90,7 @@ const SuratTugasUnifiedModule = () => {
   const [reSignST, setReSignST] = useState(null);
   const [reSignModalOpen, setReSignModalOpen] = useState(false);
   const [reSignPassword, setReSignPassword] = useState("");
+  const [reSignTotpCode, setReSignTotpCode] = useState("");
   const [reSigning, setReSigning] = useState(false);
 
   // Check if user has validator/admin access
@@ -101,7 +128,6 @@ const SuratTugasUnifiedModule = () => {
     }
   }, [activeTab]);
 
-  // Helper: Determine user's role in a Surat Tugas
   const getUserRoleTag = (record) => {
     if (!user) return null;
     const myId = user.id;
@@ -127,38 +153,21 @@ const SuratTugasUnifiedModule = () => {
 
     if (isCreator && (isOfficer || isKetua)) {
       return (
-        <Space size={4}>
-          <Tag color="indigo" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
-            🏷️ Pengaju ST
-          </Tag>
-          <Tag color="blue" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
-            {isKetua ? "👑 Ketua Tim" : "👥 Petugas"}
-          </Tag>
-        </Space>
+        <span className="st-history-role-text">
+          Pengaju ST <span className="st-history-role-separator">·</span> {isKetua ? "Ketua Tim" : "Petugas"}
+        </span>
       );
     }
 
     if (isCreator) {
-      return (
-        <Tag color="indigo" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
-          🏷️ Pengaju ST
-        </Tag>
-      );
+      return <span className="st-history-role-text">Pengaju ST</span>;
     }
 
     if (isKetua) {
-      return (
-        <Tag color="purple" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
-          👑 Ketua Tim
-        </Tag>
-      );
+      return <span className="st-history-role-text">Ketua Tim</span>;
     }
 
-    return (
-      <Tag color="blue" style={{ borderRadius: 4, fontWeight: 600, fontSize: 10.5 }}>
-        👥 Petugas (Ditagging)
-      </Tag>
-    );
+    return <span className="st-history-role-text">Petugas Ditagging</span>;
   };
 
   // Filter My Assignments
@@ -212,7 +221,7 @@ const SuratTugasUnifiedModule = () => {
       const res = await apiFetch(`/surat-tugas/${reSignST.id}/re-sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: reSignPassword }),
+        body: JSON.stringify({ password: reSignPassword, totp_code: reSignTotpCode }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -222,6 +231,7 @@ const SuratTugasUnifiedModule = () => {
       setReSignModalOpen(false);
       setReSignST(null);
       setReSignPassword("");
+      setReSignTotpCode("");
       fetchMyAssignments();
     } catch (err) {
       message.error(err.message);
@@ -242,7 +252,6 @@ const SuratTugasUnifiedModule = () => {
             {val || `ST-${String(r.id).padStart(6, "0")}`}
           </div>
           <div style={{ fontSize: 11, color: "#64748b" }}>
-            <CalendarOutlined />{" "}
             {r.tanggal_st
               ? dayjs(r.tanggal_st).format("DD MMM YYYY")
               : dayjs(r.created_at).format("DD MMM YYYY")}
@@ -268,8 +277,8 @@ const SuratTugasUnifiedModule = () => {
           >
             {val || r.maksud_tugas || "-"}
           </div>
-          <div style={{ fontSize: 11, color: "#64748b" }}>
-            <EnvironmentOutlined /> {r.lokasi_tugas || r.sarana_nama || "-"}
+          <div className="st-history-metadata">
+            {r.lokasi_tugas || r.sarana_nama || "-"}
           </div>
         </div>
       ),
@@ -284,15 +293,13 @@ const SuratTugasUnifiedModule = () => {
       key: "employees",
       render: (_, r) => {
         const emps = r.employees || [];
-        if (emps.length === 0) return <span style={{ color: "#94a3b8", fontSize: 11 }}>-</span>;
+        if (emps.length === 0) return <span className="st-history-metadata">-</span>;
         return (
           <Tooltip
             title={emps.map((e) => e.name || e.nama).join(", ")}
             placement="top"
           >
-            <Tag color="cyan" style={{ borderRadius: 4, fontSize: 11 }}>
-              <TeamOutlined /> {emps.length} Pegawai
-            </Tag>
+            <span className="st-history-team-count">{emps.length} pegawai</span>
           </Tooltip>
         );
       },
@@ -303,18 +310,14 @@ const SuratTugasUnifiedModule = () => {
       key: "status",
       render: (val) => {
         const statusMap = {
-          draft: { color: "default", label: "Draft" },
-          pending: { color: "warning", label: "Proses TTE" },
-          lengkap: { color: "success", label: "Disetujui / Lengkap" },
-          selesai: { color: "blue", label: "Selesai" },
-          rejected: { color: "error", label: "Ditolak" },
+          draft: "Draft",
+          pending: "Proses TTE",
+          lengkap: "Disetujui / Lengkap",
+          selesai: "Selesai",
+          rejected: "Ditolak",
         };
-        const conf = statusMap[val] || { color: "default", label: val || "Draft" };
-        return (
-          <Tag color={conf.color} style={{ borderRadius: 4, fontWeight: 600, fontSize: 11 }}>
-            {conf.label}
-          </Tag>
-        );
+        const label = statusMap[val] || val || "Draft";
+        return <span className={`st-history-status st-history-status--${val || "default"}`}>{label}</span>;
       },
     },
     {
@@ -368,7 +371,7 @@ const SuratTugasUnifiedModule = () => {
 
         return (
           <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
-            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#1e293b", fontSize: 16 }} />} />
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: "#475569", fontSize: 16 }} />} />
           </Dropdown>
         );
       },
@@ -377,80 +380,82 @@ const SuratTugasUnifiedModule = () => {
 
   return (
     <div className="st-module">
-      {/* ── Sub-Sidebar Navigation ── */}
-      <aside className={`st-sidebar ${collapsed ? "st-sidebar--collapsed" : "st-sidebar--expanded"}`}>
-        {/* Header Brand */}
+      <aside className={`st-sidebar ${collapsed ? "st-sidebar--collapsed" : "st-sidebar--expanded"}`} aria-label="Navigasi Surat Tugas">
         <div className={`st-sidebar-header ${collapsed ? "st-sidebar-header--collapsed" : ""}`}>
           <div className={`st-sidebar-header__top ${collapsed ? "st-sidebar-header__top--collapsed" : ""}`}>
             <div className="st-sidebar-brand">
-              <div className="st-sidebar-brand__icon">
-                <FileProtectOutlined />
+              <div className="st-sidebar-brand__icon" aria-hidden="true">
+                <img
+                  src={customModuleIcon || suratTugasIcon}
+                  alt="Surat Tugas"
+                  style={{ width: 34, height: 34, objectFit: "contain" }}
+                />
               </div>
               {!collapsed && (
                 <div>
                   <h1 className="st-sidebar-brand__title">SURAT TUGAS</h1>
+                  <span className="st-sidebar-brand__subtitle">Administrasi perjalanan dinas</span>
                 </div>
               )}
             </div>
-
             <button
+              type="button"
               className="st-toggle-btn"
               onClick={() => setCollapsed(!collapsed)}
-              title={collapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
+              title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+              aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </button>
           </div>
+          {!collapsed && <p className="st-sidebar-intro">Buat, pantau, dan kelola surat tugas Anda.</p>}
         </div>
 
-        {/* Menu List */}
         <nav className={`st-sidebar-menu ${collapsed ? "st-sidebar-menu--collapsed" : ""}`}>
+          {!collapsed && <div className="st-menu-section-label">Menu utama</div>}
           <div className={`st-menu-group ${collapsed ? "st-menu-group--collapsed" : ""}`}>
-
             <button
+              type="button"
               className={`st-menu-item ${activeTab === "form" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
               onClick={() => setActiveTab("form")}
               title="Pengajuan Surat Tugas Baru"
+              aria-current={activeTab === "form" ? "page" : undefined}
             >
-              <span className="st-menu-item__icon"><FormOutlined /></span>
-              {!collapsed && <span className="st-menu-item__text">Pengajuan Baru</span>}
+              <span className="st-menu-item__icon" aria-hidden="true"><FormOutlined /></span>
+              {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Pengajuan Baru</span><span className="st-menu-item__hint">Buat surat tugas baru</span></span>}
             </button>
-
             <button
+              type="button"
               className={`st-menu-item ${activeTab === "my-assignments" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
               onClick={() => setActiveTab("my-assignments")}
               title="Riwayat Penugasan Saya"
+              aria-current={activeTab === "my-assignments" ? "page" : undefined}
             >
-              <span className="st-menu-item__icon"><HistoryOutlined /></span>
-              {!collapsed && <span className="st-menu-item__text">Riwayat Saya</span>}
+              <span className="st-menu-item__icon" aria-hidden="true"><HistoryOutlined /></span>
+              {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Riwayat Saya</span><span className="st-menu-item__hint">Lihat semua penugasan</span></span>}
             </button>
           </div>
 
-          {/* Admin / Validator Group */}
           {isValidatorOrAdmin && (
             <div className={`st-menu-group ${collapsed ? "st-menu-group--collapsed" : ""}`}>
-              {!collapsed && <div className="st-menu-group__label">Administrasi</div>}
-
+              {!collapsed && <div className="st-menu-section-label st-menu-section-label--secondary">Administrasi</div>}
               <button
+                type="button"
                 className={`st-menu-item ${activeTab === "validator" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
                 onClick={() => setActiveTab("validator")}
                 title="Monitoring & Validasi Surat Tugas"
+                aria-current={activeTab === "validator" ? "page" : undefined}
               >
-                <span className="st-menu-item__icon"><SafetyCertificateOutlined /></span>
-                {!collapsed && <span className="st-menu-item__text">Monitoring ST</span>}
+                <span className="st-menu-item__icon" aria-hidden="true"><SafetyCertificateOutlined /></span>
+                {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Monitoring ST</span><span className="st-menu-item__hint">Validasi dan tindak lanjut</span></span>}
               </button>
             </div>
           )}
         </nav>
 
-        {/* Footer Back Button */}
         <div className={`st-sidebar-footer ${collapsed ? "st-sidebar-footer--collapsed" : ""}`}>
-          <a
-            href="/app/layanan-mandiri"
-            className={`st-back-btn ${collapsed ? "st-back-btn--collapsed" : ""}`}
-            title="Kembali ke Layanan Mandiri"
-          >
-            <ArrowLeftOutlined />
+          <a href="/app/layanan-mandiri" className={`st-back-btn ${collapsed ? "st-back-btn--collapsed" : ""}`} title="Kembali ke Layanan Mandiri">
+            <ArrowLeftOutlined aria-hidden="true" />
             {!collapsed && <span>Kembali ke Layanan Mandiri</span>}
           </a>
         </div>
@@ -467,41 +472,39 @@ const SuratTugasUnifiedModule = () => {
         {activeTab === "my-assignments" && (
           <div className="st-history-container">
             <div className="st-history-header">
-              <h2 className="st-history-title">Riwayat Penugasan Saya</h2>
-              <p className="st-history-subtitle">
-                Daftar pengajuan surat tugas yang Anda buat maupun penugasan di mana Anda di-tagging sebagai pegawai bertugas.
-              </p>
+              <div>
+                <div className="st-eyebrow">Surat Tugas</div>
+                <h2 className="st-history-title">Riwayat Penugasan Saya</h2>
+                <p className="st-history-subtitle">Kelola pengajuan surat tugas dan penugasan yang melibatkan Anda.</p>
+              </div>
             </div>
 
             <div className="st-history-card">
-              {/* Filter Toolbar */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16, justifyContent: "space-between" }}>
-                <Input
-                  placeholder="Cari nomor ST, maksud, atau lokasi..."
-                  prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ width: 280, borderRadius: 6 }}
-                  size="middle"
-                  allowClear
-                />
-
-                <Space size={8}>
+              <div className="st-history-toolbar">
+                <div className="st-history-search">
+                  <Input
+                    placeholder="Cari nomor ST, maksud, atau lokasi"
+                    prefix={<SearchOutlined aria-hidden="true" />}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    allowClear
+                  />
+                </div>
+                <div className="st-history-filters">
                   <Select
                     value={roleFilter}
                     onChange={(v) => setRoleFilter(v)}
-                    style={{ width: 160, borderRadius: 6 }}
+                    aria-label="Filter peran"
                     options={[
-                      { label: "Semua Peran Saya", value: "all" },
+                      { label: "Semua Peran", value: "all" },
                       { label: "Pengaju ST", value: "creator" },
                       { label: "Petugas Ditagging", value: "tagged" },
                     ]}
                   />
-
                   <Select
                     value={statusFilter}
                     onChange={(v) => setStatusFilter(v)}
-                    style={{ width: 160, borderRadius: 6 }}
+                    aria-label="Filter status"
                     options={[
                       { label: "Semua Status", value: "all" },
                       { label: "Draft", value: "draft" },
@@ -510,10 +513,9 @@ const SuratTugasUnifiedModule = () => {
                       { label: "Selesai", value: "selesai" },
                     ]}
                   />
-                </Space>
+                </div>
               </div>
 
-              {/* Table */}
               <Table
                 dataSource={filteredAssignments}
                 columns={columns}
@@ -521,6 +523,7 @@ const SuratTugasUnifiedModule = () => {
                 loading={loading}
                 pagination={{ pageSize: 10, showSizeChanger: false }}
                 size="middle"
+                className="st-history-table"
               />
             </div>
           </div>
@@ -533,25 +536,29 @@ const SuratTugasUnifiedModule = () => {
         )}
       </main>
 
-      {/* ── Detail Modal (Simpel & Corporate) ── */}
+      {/* ── Detail Modal (Clean Microsoft Corporate Style) ── */}
       <Modal
         title={null}
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         footer={null}
-        width={620}
+        width={640}
         centered
-        className="simba-detail-modal"
+        className="st-custom-modal"
       >
         {selectedST && (
           <div>
-            <div className="simba-detail-header">
-              <h3 className="simba-detail-title">
-                <FileProtectOutlined style={{ color: "#4f46e5" }} />
-                Detail Surat Tugas: {selectedST.nomor_st || `ST-${String(selectedST.id).padStart(6, "0")}`}
-              </h3>
-              <div className="simba-detail-subtitle">
-                Rincian agenda, tim pegawai bertugas, dan status penandatanganan TTE.
+            <div className="st-modal-header">
+              <div className="st-modal-brand-icon">
+                <FileProtectOutlined />
+              </div>
+              <div>
+                <h3 className="st-modal-title">
+                  Detail Surat Tugas: {selectedST.nomor_st || `ST-${String(selectedST.id).padStart(6, "0")}`}
+                </h3>
+                <div className="st-modal-subtitle">
+                  Rincian agenda, lokasi, pegawai bertugas, dan status dokumen TTE.
+                </div>
               </div>
             </div>
 
@@ -565,8 +572,14 @@ const SuratTugasUnifiedModule = () => {
                 </div>
                 <div className="simba-detail-item">
                   <span className="simba-detail-label">Lokasi / Tujuan</span>
-                  <span className="simba-detail-value">{selectedST.lokasi_tugas || selectedST.sarana_nama || "-"}</span>
+                  <span className="simba-detail-value">{selectedST.lokasi_tugas || "-"}</span>
                 </div>
+                {selectedST.sarana_nama && (
+                  <div className="simba-detail-item">
+                    <span className="simba-detail-label">Sarana / Sasaran</span>
+                    <span className="simba-detail-value">{selectedST.sarana_nama}</span>
+                  </div>
+                )}
                 <div className="simba-detail-item">
                   <span className="simba-detail-label">Tanggal Pelaksanaan</span>
                   <span className="simba-detail-value">
@@ -632,8 +645,8 @@ const SuratTugasUnifiedModule = () => {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20, paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
-              <Button onClick={() => setDetailModalOpen(false)} style={{ borderRadius: 6 }}>
+            <div className="st-modal-footer">
+              <Button onClick={() => setDetailModalOpen(false)} style={{ borderRadius: 8 }}>
                 Tutup
               </Button>
 
@@ -646,7 +659,7 @@ const SuratTugasUnifiedModule = () => {
                   const protokolUrl = `${baseUrl.replace(/\/+$/, "")}/public/surat-tugas/${selectedST.id}/protokol-kerja?with_qr=1&token=${tokenStr}`;
                   window.open(protokolUrl, "_blank");
                 }}
-                style={{ borderRadius: 6, fontWeight: 600, backgroundColor: "#0F5B99", borderColor: "#0F5B99" }}
+                style={{ borderRadius: 8, fontWeight: 600, backgroundColor: "#4f46e5", borderColor: "#4f46e5" }}
               >
                 Cetak / Lihat Protokol Kerja
               </Button>
@@ -715,6 +728,7 @@ const SuratTugasUnifiedModule = () => {
           setReSignModalOpen(false);
           setReSignST(null);
           setReSignPassword("");
+          setReSignTotpCode("");
         }}
         confirmLoading={reSigning}
         okText="Tanda Tangan Sekarang"
@@ -724,17 +738,36 @@ const SuratTugasUnifiedModule = () => {
       >
         <div style={{ padding: "12px 0" }}>
           <p style={{ marginBottom: 14, fontSize: 13, color: "#475569" }}>
-            Masukkan <strong>Password SIPTU</strong> Anda untuk membubuhkan TTE ulang secara sah pada Surat Tugas ini.
+            Masukkan <strong>Password SIPTU</strong> dan <strong>Kode MFA</strong> (jika akun mengaktifkan MFA) Anda untuk membubuhkan TTE ulang secara sah pada Surat Tugas ini.
           </p>
-          <Input.Password
-            placeholder="Masukkan Password SIPTU"
-            value={reSignPassword}
-            onChange={(e) => setReSignPassword(e.target.value)}
-            onPressEnter={executeReSign}
-            size="large"
-            style={{ borderRadius: 8 }}
-            autoFocus
-          />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ minHeight: 32, display: "flex", alignItems: "flex-end", marginBottom: 6 }}>
+                <Typography.Text strong style={{ fontSize: 12, color: "#334155" }}>Password SIPTU:</Typography.Text>
+              </div>
+              <Input.Password
+                placeholder="Masukkan Password"
+                value={reSignPassword}
+                onChange={(e) => setReSignPassword(e.target.value)}
+                size="large"
+                style={{ borderRadius: 8 }}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ minHeight: 32, display: "flex", alignItems: "flex-end", marginBottom: 6 }}>
+                <Typography.Text strong style={{ fontSize: 12, color: "#334155" }}>Kode MFA Authenticator / Recovery:</Typography.Text>
+              </div>
+              <Input
+                placeholder="Contoh: 123456"
+                value={reSignTotpCode}
+                onChange={(e) => setReSignTotpCode(e.target.value)}
+                onPressEnter={executeReSign}
+                size="large"
+                style={{ borderRadius: 8, fontWeight: 700, letterSpacing: "1px" }}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

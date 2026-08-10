@@ -46,6 +46,7 @@ const ItHelpdeskReporterSignature = () => {
     }, [ticketId, notification]);
 
     const [password, setPassword] = useState("");
+    const [totpCode, setTotpCode] = useState("");
 
     const handleSubmit = async () => {
         if (!password) {
@@ -57,7 +58,7 @@ const ItHelpdeskReporterSignature = () => {
         try {
             const response = await apiFetch(`/public/it-helpdesk-tickets/${ticketId}/confirm`, {
                 method: 'POST',
-                body: JSON.stringify({ password: password }),
+                body: JSON.stringify({ password: password, totp_code: totpCode }),
             });
 
             if (!response.ok) {
@@ -119,12 +120,23 @@ const ItHelpdeskReporterSignature = () => {
                             Dengan memasukkan password ini, saya menyatakan bahwa masalah TI yang saya laporkan telah diselesaikan dengan baik.
                         </Typography.Paragraph>
 
-                        <div style={{ marginBottom: 16 }}>
+                        <div style={{ marginBottom: 12 }}>
+                            <Typography.Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password SIPTU:</Typography.Text>
                             <Input.Password 
                                 placeholder="Masukkan password login SIPTU Anda" 
                                 size="large"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+                        <div style={{ marginBottom: 16 }}>
+                            <Typography.Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Kode Autentikasi MFA (6 Digit / Recovery Code):</Typography.Text>
+                            <Input 
+                                placeholder="Contoh: 123456 atau XXXX-XXXX" 
+                                size="large"
+                                value={totpCode}
+                                onChange={(e) => setTotpCode(e.target.value)}
+                                style={{ fontWeight: 700, letterSpacing: '1px' }}
                             />
                         </div>
 

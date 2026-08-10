@@ -44,6 +44,7 @@ const PublicArchiveLoanInfoPage = () => {
   const [error, setError] = useState('');
   const [passwordModal, setPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchLoan = useCallback(async () => {
@@ -125,7 +126,7 @@ const PublicArchiveLoanInfoPage = () => {
       const response = await apiFetch(`/public/archive-loans/${token}/return-request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, totp_code: totpCode }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -308,17 +309,30 @@ const PublicArchiveLoanInfoPage = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Typography.Paragraph>
-            Untuk mengajukan pengembalian, silakan masukkan password akun SIPTU Anda sebagai bentuk Tanda Tangan Elektronik (TTE).
+            Untuk mengajukan pengembalian, silakan masukkan password akun SIPTU dan kode autentikasi MFA Anda sebagai bentuk Tanda Tangan Elektronik (TTE).
           </Typography.Paragraph>
-          <Input.Password
-            prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
-            placeholder="Masukkan password SIPTU Anda"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            size="large"
-            autoFocus
-            onPressEnter={handleSubmitReturn}
-          />
+          <div style={{ marginBottom: 12 }}>
+            <Typography.Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password SIPTU:</Typography.Text>
+            <Input.Password
+              prefix={<LockOutlined style={{ color: '#94a3b8' }} />}
+              placeholder="Masukkan password SIPTU Anda"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              size="large"
+            />
+          </div>
+          <div>
+            <Typography.Text style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Kode Autentikasi MFA (6 Digit / Recovery Code):</Typography.Text>
+            <Input
+              prefix={<LockOutlined style={{ color: '#0b56a4' }} />}
+              placeholder="Contoh: 123456 atau XXXX-XXXX"
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              size="large"
+              onPressEnter={handleSubmitReturn}
+              style={{ fontWeight: 700, letterSpacing: '1px' }}
+            />
+          </div>
         </div>
         <Alert
           message="Pernyataan"

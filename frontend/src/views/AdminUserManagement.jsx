@@ -694,6 +694,21 @@ const AdminUserManagement = () => {
     notification,
   ]);
 
+  const handleResetMfa = useCallback(async (userRecord) => {
+    if (!window.confirm(`Reset MFA untuk ${userRecord.name} (${userRecord.nip})? User akan diminta setup ulang MFA saat login.`)) {
+      return;
+    }
+    try {
+      const res = await apiFetch(`/mfa/disable/${userRecord.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal reset MFA.");
+      notification.success({ message: "Reset MFA Berhasil", description: data.message });
+      fetchResources();
+    } catch (err) {
+      notification.error({ message: "Gagal Reset MFA", description: err.message });
+    }
+  }, [apiFetch, notification, fetchResources]);
+
   const columns = useMemo(
     () => [
       {
@@ -829,6 +844,12 @@ const AdminUserManagement = () => {
               onClick: () => openEditModal(record),
             },
             {
+              key: "reset_mfa",
+              label: "Reset MFA User",
+              icon: <SafetyCertificateOutlined />,
+              onClick: () => handleResetMfa(record),
+            },
+            {
               key: "delete",
               label: <span style={{ color: "#ff4d4f" }}>Hapus Pengguna</span>,
               icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
@@ -848,7 +869,7 @@ const AdminUserManagement = () => {
         },
       },
     ],
-    [moduleIndex, openEditModal, openDeleteModal],
+    [moduleIndex, openEditModal, openDeleteModal, handleResetMfa],
   );
 
   if (loading) {

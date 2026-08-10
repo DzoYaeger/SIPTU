@@ -26,7 +26,7 @@ const readRememberedCredentials = () => {
 // Captcha slider removed in favor of Google reCAPTCHA v2
 
 const Login = () => {
-  const { login, authLoading, requestPasswordReset, resetPassword } = useAuth();
+  const { login, verifyMfa, authLoading, requestPasswordReset, resetPassword } = useAuth();
   const [form] = Form.useForm();
   const [forgotForm] = Form.useForm();
   const [resetForm] = Form.useForm();
@@ -38,6 +38,11 @@ const Login = () => {
   const [forgotMessage, setForgotMessage] = useState(null);
   const [recaptchaToken, setRecaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
+
+  // MFA 2-Step states
+  const [mfaStep, setMfaStep] = useState(false);
+  const [mfaToken, setMfaToken] = useState('');
+  const [totpCode, setTotpCode] = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,6 +87,29 @@ const Login = () => {
   }, [form, remembered]);
 
   const handleSubmit = async (values) => {
+    if (mfaStep) {
+      // Step 2: Verify TOTP Code
+      if (!totpCode || totpCode.trim().length === 0) {
+        message.warning('Masukkan kode 6 digit dari aplikasi authenticator.');
+        return;
+      }
+      try {
+        setError(null);
+        const user = await verifyMfa(mfaToken, totpCode.trim());
+        if (!user?.has_mfa) {
+          navigate('/app/mfa-setup');
+        } else {
+          navigate(postLoginTarget);
+        }
+      } catch (err) {
+        let msg = err.message || 'Verifikasi MFA gagal.';
+        setError(msg);
+        message.error(msg);
+      }
+      return;
+    }
+
+    // Step 1: Submit NIP + Password
     if (!recaptchaToken) {
       message.warning('Silakan selesaikan verifikasi reCAPTCHA terlebih dahulu.');
       return;
@@ -97,7 +125,21 @@ const Login = () => {
       } else {
         window.localStorage.removeItem(REMEMBER_CREDENTIAL_KEY);
       }
-      await login(values.nip, values.password, recaptchaToken);
+
+      const res = await login(values.nip, values.password, recaptchaToken);
+
+      if (res?.requires_mfa) {
+        setMfaToken(res.mfa_token);
+        setMfaStep(true);
+        message.info('Silakan masukkan 6 digit kode dari aplikasi authenticator Anda.');
+        return;
+      }
+
+      if (res?.requires_mfa_setup || !res?.user?.has_mfa) {
+        navigate('/app/mfa-setup');
+        return;
+      }
+
       navigate(postLoginTarget);
     } catch (err) {
       let msg = err.message || 'Gagal masuk. Periksa kembali kredensial Anda.';
@@ -109,7 +151,6 @@ const Login = () => {
       }
       setError(msg);
       message.error(msg);
-      // Reset reCAPTCHA on login failure
       recaptchaRef.current?.reset();
     }
   };
@@ -184,70 +225,135 @@ const Login = () => {
         )}
 
         <Form layout="vertical" form={form} onFinish={handleSubmit} autoComplete="off">
-          <Form.Item
-            name="nip"
-            rules={[
-              { required: true, message: 'NIP wajib diisi.' },
-              { pattern: /^\d{18}$/, message: 'Gunakan 18 digit angka NIP.' },
-            ]}
-          >
-            <Input
-              size="large"
-              prefix={<IdcardOutlined />}
-              placeholder="Masukkan NIP Anda"
-            />
-          </Form.Item>
+          {mfaStep ? (
+            <div className="mfa-login-step2">
+              <Alert
+                type="info"
+                showIcon
+                message="Verifikasi Autentikasi Dua Langkah (MFA)"
+                description="Buka aplikasi Google Authenticator atau Microsoft Authenticator di HP Anda, lalu masukkan kode 6 digit di bawah."
+                style={{ marginBottom: 20, borderRadius: 10 }}
+              />
 
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Kata sandi wajib diisi.' }]}
-          >
-            <Input.Password
-              size="large"
-              prefix={<LockOutlined />}
-              placeholder="Masukkan kata sandi"
-            />
-          </Form.Item>
+              <Form.Item label="Kode Autentikasi (6 Digit / Recovery Code)" required>
+                <Input
+                  size="large"
+                  prefix={<LockOutlined style={{ color: "#0b56a4" }} />}
+                  placeholder="Contoh: 123456 atau XXXX-XXXX"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  autoFocus
+                  style={{
+                    textAlign: "center",
+                    letterSpacing: "3px",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    borderRadius: "10px",
+                  }}
+                />
+              </Form.Item>
 
-          <div className="login-extra-options">
-            <Form.Item
-              name="remember"
-              valuePropName="checked"
-              initialValue={Boolean(remembered)}
-              noStyle
-            >
-              <Checkbox>Ingat saya</Checkbox>
-            </Form.Item>
-            <span onClick={openForgotModal} className="forgot-link">
-              Lupa Password?
-            </span>
-          </div>
+              {error && (
+                <Alert
+                  message={error}
+                  type="error"
+                  showIcon
+                  style={{ marginBottom: "20px", borderRadius: "12px" }}
+                />
+              )}
 
-          <ReCaptcha 
-            ref={recaptchaRef}
-            onChange={setRecaptchaToken}
-            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
-          />
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                className="login-submit-btn"
+                loading={authLoading}
+                style={{ background: "#0b56a4", borderRadius: 10, height: 46 }}
+              >
+                Verifikasi & Masuk
+              </Button>
 
-          {error && (
-            <Alert
-              message={error}
-              type="error"
-              showIcon
-              style={{ marginBottom: '20px', borderRadius: '12px' }}
-            />
+              <Button
+                type="text"
+                block
+                style={{ marginTop: 12, color: "#64748b" }}
+                onClick={() => {
+                  setMfaStep(false);
+                  setTotpCode('');
+                  setError(null);
+                }}
+              >
+                ← Kembali ke Form Login
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Form.Item
+                name="nip"
+                rules={[
+                  { required: true, message: 'NIP wajib diisi.' },
+                  { pattern: /^\d{18}$/, message: 'Gunakan 18 digit angka NIP.' },
+                ]}
+              >
+                <Input
+                  size="large"
+                  prefix={<IdcardOutlined />}
+                  placeholder="Masukkan NIP Anda"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: 'Kata sandi wajib diisi.' }]}
+              >
+                <Input.Password
+                  size="large"
+                  prefix={<LockOutlined />}
+                  placeholder="Masukkan kata sandi"
+                />
+              </Form.Item>
+
+              <div className="login-extra-options">
+                <Form.Item
+                  name="remember"
+                  valuePropName="checked"
+                  initialValue={Boolean(remembered)}
+                  noStyle
+                >
+                  <Checkbox>Ingat saya</Checkbox>
+                </Form.Item>
+                <span onClick={openForgotModal} className="forgot-link">
+                  Lupa Password?
+                </span>
+              </div>
+
+              <ReCaptcha 
+                ref={recaptchaRef}
+                onChange={setRecaptchaToken}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+              />
+
+              {error && (
+                <Alert
+                  message={error}
+                  type="error"
+                  showIcon
+                  style={{ marginBottom: '20px', borderRadius: '12px' }}
+                />
+              )}
+
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                size="large" 
+                className="login-submit-btn" 
+                loading={authLoading}
+                disabled={!recaptchaToken}
+              >
+                Masuk Sekarang
+              </Button>
+            </>
           )}
-
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            size="large" 
-            className="login-submit-btn" 
-            loading={authLoading}
-            disabled={!recaptchaToken}
-          >
-            Masuk Sekarang
-          </Button>
 
           <button 
             type="button" 

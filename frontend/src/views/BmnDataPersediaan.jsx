@@ -872,7 +872,7 @@ const BmnDataPersediaan = () => {
         <Row gutter={[16, 16]} align="middle" justify="space-between">
           <Col xs={24} md={15}>
             <Space direction="vertical" size={4}>
-              <Typography.Title level={3} className="module-title" style={{ margin: 0 }}>
+              <Typography.Title level={4} className="module-title" style={{ margin: 0 }}>
                 Data Persediaan
               </Typography.Title>
               <Typography.Text className="module-subtitle">

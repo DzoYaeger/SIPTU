@@ -43,7 +43,7 @@ import {
   CheckCircleFilled,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, RadialBarChart, RadialBar } from "recharts";
 import { useAuth } from "../hooks/useAuth.js";
 
 import "./AdminDashboard.css";
@@ -241,6 +241,40 @@ function AdminDashboard() {
     }));
   }, [data]);
 
+  const globalStatusData = useMemo(() => {
+    const services = Object.values(data?.services ?? {});
+    return [
+      { name: "Menunggu", value: services.reduce((sum, item) => sum + Number(item.pending || 0), 0), color: "#ef4444" },
+      { name: "Aktif", value: services.reduce((sum, item) => sum + Number(item.active || 0), 0), color: "#0ea5e9" },
+      { name: "Selesai", value: services.reduce((sum, item) => sum + Number(item.completed || 0), 0), color: "#10b981" },
+    ];
+  }, [data]);
+
+  const roleChartData = useMemo(() => [
+    { name: "Admin", value: Number(data?.roles?.admin || 0), color: "#6366f1" },
+    { name: "Operator", value: Number(data?.roles?.operator || 0), color: "#0ea5e9" },
+    { name: "Validator", value: Number(data?.roles?.validator || 0), color: "#10b981" },
+  ], [data]);
+
+  const completionChartData = useMemo(() => Object.entries(data?.completion ?? {})
+    .map(([key, value]) => ({
+      name: MODULE_META[key]?.title || key.replaceAll("_", " "),
+      value: Number(value || 0),
+      color: MODULE_META[key]?.gradient ? "#6366f1" : "#94a3b8",
+    }))
+    .sort((a, b) => b.value - a.value), [data]);
+
+  const moduleRanking = useMemo(() => Object.entries(data?.services ?? {})
+    .map(([key, item]) => ({
+      key,
+      name: MODULE_META[key]?.title || key.replaceAll("_", " "),
+      total: Number(item.total || 0),
+      pending: Number(item.pending || 0),
+      active: Number(item.active || 0),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5), [data]);
+
   const kpiDetails = useMemo(() => {
     return {
       services_total: { target: 1000, rate: "+12.4%", label: "vs bln lalu", positive: true },
@@ -275,7 +309,7 @@ function AdminDashboard() {
       {/* ─── Header Section ─────────────────────────────────────── */}
       <div className="module-toolbar" style={{ marginBottom: 16 }}>
         <div>
-          <Title level={3} className="module-title">Dashboard Operasional Administrasi</Title>
+          <Title level={4} className="module-title">Dashboard Operasional Administrasi</Title>
           <Text className="module-subtitle">
             Pusat Kendali & Analitik Layanan SIPTU | Pengguna: <strong>{user?.name ?? "-"}</strong> | Terakhir Diperbarui: <strong>{data?.generated_at ? new Date(data.generated_at).toLocaleString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Memuat..."}</strong>
           </Text>
@@ -548,6 +582,67 @@ function AdminDashboard() {
           })}
         </Row>
       </Card>
+
+      {/* ─── Visual Analytics Overview ─────────────────────────────── */}
+      {!loading && data && (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={10}>
+            <Card className="admin-dashboard__panel admin-dashboard__chart-panel" variant="borderless">
+              <div className="admin-dashboard__panel-head">
+                <Title level={4}><LineChartOutlined style={{ marginRight: 8 }} />Status Operasional Global</Title>
+                <Text type="secondary">Distribusi seluruh aktivitas layanan SIPTU.</Text>
+              </div>
+              <div className="dashboard-donut-wrap">
+                <ResponsiveContainer width="58%" height={220}>
+                  <PieChart>
+                    <Pie data={globalStatusData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} stroke="none">
+                      {globalStatusData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: 10, color: "#fff" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="dashboard-donut-center">
+                  <strong>{globalStatusData.reduce((sum, item) => sum + item.value, 0)}</strong>
+                  <span>Total Aktivitas</span>
+                </div>
+                <div className="dashboard-legend-list">
+                  {globalStatusData.map((item) => <div className="dashboard-legend-row" key={item.name}><i style={{ background: item.color }} /><span>{item.name}</span><strong>{item.value}</strong></div>)}
+                </div>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} lg={7}>
+            <Card className="admin-dashboard__panel admin-dashboard__chart-panel" variant="borderless">
+              <div className="admin-dashboard__panel-head">
+                <Title level={4}><TeamOutlined style={{ marginRight: 8 }} />Distribusi Role</Title>
+                <Text type="secondary">Komposisi akun pengguna.</Text>
+              </div>
+              <div className="dashboard-role-chart">
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <Pie data={roleChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={76} paddingAngle={3} stroke="none">
+                      {roleChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: 10, color: "#fff" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="dashboard-role-legend">{roleChartData.map((item) => <div key={item.name}><i style={{ background: item.color }} />{item.name}<strong>{item.value}</strong></div>)}</div>
+            </Card>
+          </Col>
+          <Col xs={24} lg={7}>
+            <Card className="admin-dashboard__panel admin-dashboard__chart-panel" variant="borderless">
+              <div className="admin-dashboard__panel-head">
+                <Title level={4}><CheckCircleFilled style={{ marginRight: 8, color: "#10b981" }} />Capaian Modul</Title>
+                <Text type="secondary">Persentase layanan selesai.</Text>
+              </div>
+              <div className="dashboard-completion-list">
+                {completionChartData.map((item) => <div className="dashboard-completion-row" key={item.name}><div><span>{item.name}</span><strong>{item.value.toFixed(0)}%</strong></div><Progress percent={Math.min(100, item.value)} showInfo={false} strokeColor={item.value >= 75 ? "#10b981" : item.value >= 40 ? "#f59e0b" : "#ef4444"} size="small" /></div>)}
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* ─── AI Audit Results ───────────────────────────────────── */}
       {(auditLoading || auditData) && (
@@ -844,6 +939,30 @@ function AdminDashboard() {
           </Card>
         </Col>
       </Row>
+
+      {!loading && data && (
+        <Card className="admin-dashboard__panel admin-dashboard__ranking-panel" variant="borderless">
+          <div className="admin-dashboard__panel-head">
+            <Title level={4}><ThunderboltOutlined style={{ marginRight: 8 }} />Top Modul Terpadat</Title>
+            <Text type="secondary">Ranking modul berdasarkan total volume layanan dan risiko antrean.</Text>
+          </div>
+          <div className="dashboard-ranking-grid">
+            {moduleRanking.map((module, idx) => (
+              <div className="dashboard-ranking-card" key={module.key} onClick={() => MODULE_META[module.key]?.route && navigate(MODULE_META[module.key].route)}>
+                <span className="dashboard-ranking-no">#{idx + 1}</span>
+                <div className="dashboard-ranking-main">
+                  <strong>{module.name}</strong>
+                  <span>{module.total} total layanan</span>
+                </div>
+                <div className="dashboard-ranking-metrics">
+                  <Tag color={module.pending > 0 ? "red" : "default"}>Pending {module.pending}</Tag>
+                  <Tag color="blue">Aktif {module.active}</Tag>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

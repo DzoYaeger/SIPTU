@@ -296,7 +296,7 @@ const DataPegawai = () => {
           <Avatar shape="square" size="large" icon={<UserOutlined />} src={record.avatarUrl} style={{ backgroundColor: '#1890ff' }} />
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{record.nama}</Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>{record.nip}</Typography.Text>
+            <Typography.Text type="secondary" className="text-xs">{record.nip}</Typography.Text>
           </Space>
         </Space>
       )
@@ -307,7 +307,7 @@ const DataPegawai = () => {
       render: (_, record) => (
         <Space direction="vertical" size={2}>
           <Tag color="geekblue">{record.jabatan}</Tag>
-          <Typography.Text style={{ fontSize: 12 }}>{record.pangkat}</Typography.Text>
+          <Typography.Text className="text-sm">{record.pangkat}</Typography.Text>
         </Space>
       )
     },
@@ -359,7 +359,7 @@ const DataPegawai = () => {
       {/* Header & Stats */}
       <div className="module-toolbar">
         <div>
-          <Typography.Title level={3} className="module-title">Data Pegawai</Typography.Title>
+          <Typography.Title level={4} className="module-title">Data Pegawai</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola database pegawai, kepangkatan, dan unit kerja.</Typography.Text>
         </div>
         <Space>
@@ -481,9 +481,9 @@ const DataPegawai = () => {
                     title={<Typography.Text strong ellipsis={{ tooltip: item.nama }}>{item.nama}</Typography.Text>}
                     description={
                       <Space direction="vertical" size={1} style={{ width: '100%' }}>
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>{item.nip}</Typography.Text>
+                        <Typography.Text type="secondary" className="text-sm">{item.nip}</Typography.Text>
                         <Tag color="geekblue" style={{ margin: '4px 0', width: 'fit-content' }}>{item.jabatan}</Tag>
-                        <div style={{ fontSize: 12 }}><BankOutlined /> {item.fungsiBidang || '-'}</div>
+                        <div className="text-sm"><BankOutlined /> {item.fungsiBidang || '-'}</div>
                       </Space>
                     }
                   />
@@ -524,7 +524,7 @@ const DataPegawai = () => {
                     {mode === 'edit' ? (
                       <Row gutter={24} align="middle" style={{ marginBottom: 16 }}>
                         <Col xs={24} sm={8} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <Typography.Text type="secondary" style={{ fontSize: 12, marginBottom: 8, fontWeight: 500 }}>
+                          <Typography.Text type="secondary" style={{ marginBottom: 8 }} className="text-sm">
                             Foto Pegawai
                           </Typography.Text>
                           <div style={{ position: 'relative', width: 96, height: 96 }}>
@@ -594,7 +594,7 @@ const DataPegawai = () => {
                     ) : (
                       <>
                         <div style={{ background: '#f8fafc', padding: '8px 16px', borderRadius: 8, marginBottom: 16, border: '1px solid #f1f5f9' }}>
-                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          <Typography.Text type="secondary" className="text-sm">
                             💡 Foto pegawai dapat diunggah setelah data pegawai baru disimpan.
                           </Typography.Text>
                         </div>

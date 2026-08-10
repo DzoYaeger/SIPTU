@@ -290,7 +290,7 @@ export default function PengelolaPegawaiPdtt() {
         <div className="module-section">
             <div className="module-toolbar">
                 <div>
-                    <Title level={3} className="module-title">
+                    <Title level={4} className="module-title">
                         Pengelola Pengajuan PDTT
                     </Title>
                     <Text className="module-subtitle">

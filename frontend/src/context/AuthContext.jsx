@@ -232,13 +232,21 @@ export function AuthProvider({ children }) {
       try {
         let response = await fetch(url, config);
 
-        // If unauthorized, clear session (except when error is password verification failure)
+        // If unauthorized, clear session (except when error is password or MFA verification failure)
         if (response.status === 401) {
           try {
             const clone = response.clone();
             const errData = await clone.json();
             const msg = String(errData?.message || errData?.error || "").toLowerCase();
-            if (msg.includes("password") || msg.includes("salah")) {
+            if (
+              msg.includes("password") ||
+              msg.includes("salah") ||
+              msg.includes("mfa") ||
+              msg.includes("autentikasi") ||
+              msg.includes("kode") ||
+              msg.includes("totp") ||
+              msg.includes("recovery")
+            ) {
               return response;
             }
           } catch {
@@ -282,10 +290,43 @@ export function AuthProvider({ children }) {
         }
 
         const data = await response.json();
+        if (data.requires_mfa) {
+          return data; // Return { requires_mfa: true, mfa_token } without applying session yet
+        }
+
+        applyUser(data.user, data.token);
+        return data;
+      } catch (error) {
+        console.error("Login error:", error);
+        throw error;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [apiFetch, applyUser],
+  );
+
+  const verifyMfa = useCallback(
+    async (mfaToken, totpCode) => {
+      setAuthLoading(true);
+      try {
+        const response = await apiFetch("/mfa/verify", {
+          method: "POST",
+          body: JSON.stringify({ mfa_token: mfaToken, totp_code: totpCode }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          const error = new Error(errorData.message || "Verifikasi MFA gagal.");
+          error.errors = errorData.errors;
+          throw error;
+        }
+
+        const data = await response.json();
         applyUser(data.user, data.token);
         return data.user;
       } catch (error) {
-        console.error("Login error:", error);
+        console.error("MFA verification error:", error);
         throw error;
       } finally {
         setAuthLoading(false);
@@ -585,6 +626,7 @@ export function AuthProvider({ children }) {
       resetPassword,
       updateProfile,
       changePassword,
+      verifyMfa,
     }),
     [
       token,
@@ -603,6 +645,7 @@ export function AuthProvider({ children }) {
       apiFetch,
       requestPasswordReset,
       resetPassword,
+      verifyMfa,
     ],
   );
 

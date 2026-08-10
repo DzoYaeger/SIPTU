@@ -142,6 +142,10 @@ class ArchiveLoanController extends Controller
             return response()->json(['message' => 'Password admin salah.'], 401);
         }
 
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+        }
+
         $loan->update([
             'status' => 'dipinjam',
             'approved_at' => now(),
@@ -165,6 +169,10 @@ class ArchiveLoanController extends Controller
 
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Password admin salah.'], 401);
+        }
+
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         $loan->update([
@@ -214,6 +222,10 @@ class ArchiveLoanController extends Controller
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
         }
 
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->totp_code)) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
+        }
+
         $loan->update([
             'status' => 'menunggu_paraf_kembali',
             'return_borrower_signed_at' => now(),
@@ -257,6 +269,10 @@ class ArchiveLoanController extends Controller
 
         if (!Hash::check($payload['password'], $user->password)) {
             return response()->json(['message' => 'Password SIPTU salah.'], 401);
+        }
+
+        if ($user->has_mfa && !app(\App\Services\TotpService::class)->verifyCodeOrRecovery($user, (string)$request->input('totp_code', ''))) {
+            return response()->json(['message' => 'Kode autentikasi MFA salah atau kadaluarsa. Pastikan Anda memasukkan 6 digit kode terbaru dari aplikasi Authenticator.'], 422);
         }
 
         $loan = ArchiveLoan::create([

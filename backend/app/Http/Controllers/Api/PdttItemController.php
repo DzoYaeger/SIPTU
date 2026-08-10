@@ -68,6 +68,7 @@ class PdttItemController extends Controller
                 'brand' => $payload['brand'] ?? null,
                 'satuan' => $payload['satuan'] ?? null,
                 'jumlah' => $payload['jumlah'] ?? null,
+                'is_requestable' => true,
                 'created_by' => $user->id,
             ]);
 

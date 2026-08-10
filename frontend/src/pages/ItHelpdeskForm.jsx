@@ -96,6 +96,7 @@ const ItHelpdeskForm = () => {
         report_type: values.report_type,
         problem_details: values.problem_details,
         password: values.password,
+        totp_code: values.totp_code,
         employee_nip: values.nip,
         employee_name: values.nama,
         function_area: values.fungsi,
@@ -325,8 +326,13 @@ const ItHelpdeskForm = () => {
                     key={option.value}
                     className={`option-card ${selectedType === option.value ? "selected" : ""}`}
                     onClick={() => handleTypeSelect(option.value)}
+                    role="button"
+                    tabIndex={0}
+                    aria-selected={selectedType === option.value}
                   >
-                    <div className="option-icon">{option.icon}</div>
+                    <div className="option-icon-bg">
+                      <span className="option-icon">{option.icon}</span>
+                    </div>
                     <div className="option-label">{option.label}</div>
                   </div>
                 ))}
@@ -354,16 +360,29 @@ const ItHelpdeskForm = () => {
                 name="password"
                 label={<span style={{ fontWeight: 600, color: "#334155" }}>Konfirmasi Password SIPTU</span>}
                 rules={[{ required: true, message: "Password SIPTU diperlukan sebagai TTE" }]}
-                extra={
-                  <Typography.Text type="secondary" style={{ fontSize: 11, color: "#94a3b8" }}>
-                    *Gunakan password akun SIPTU Anda untuk menandatangani dan memvalidasi laporan ini secara elektronik (TTE).
-                  </Typography.Text>
-                }
               >
                 <Input.Password
                   className="custom-input"
                   placeholder="Masukkan password login SIPTU Anda"
                   prefix={<SafetyCertificateOutlined style={{ color: "#94a3b8" }} />}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="totp_code"
+                label={<span style={{ fontWeight: 600, color: "#334155" }}>Kode Autentikasi MFA (6 Digit / Recovery Code)</span>}
+                rules={[{ required: true, message: "Kode MFA diperlukan" }]}
+                extra={
+                  <Typography.Text type="secondary" style={{ fontSize: 11, color: "#94a3b8" }}>
+                    *Gunakan password akun SIPTU & kode MFA Anda untuk menandatangani dan memvalidasi laporan ini secara elektronik (TTE).
+                  </Typography.Text>
+                }
+              >
+                <Input
+                  className="custom-input"
+                  placeholder="Contoh: 123456 atau XXXX-XXXX"
+                  prefix={<SafetyCertificateOutlined style={{ color: "#0b56a4" }} />}
+                  style={{ fontWeight: 700, letterSpacing: '1px' }}
                 />
               </Form.Item>
 

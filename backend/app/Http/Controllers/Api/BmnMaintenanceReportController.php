@@ -130,10 +130,14 @@ class BmnMaintenanceReportController extends Controller
         $payload = $request->validate([
             'report_type' => ['required', 'in:pemeliharaan,keluhan'],
             'asset_id' => ['nullable', 'integer', 'exists:assets,id'],
+            'asset_ids' => ['nullable', 'array'],
+            'asset_ids.*' => ['integer', 'exists:assets,id'],
             'report_details' => ['required', 'string'],
         ]);
 
-        if ($payload['report_type'] === 'pemeliharaan' && empty($payload['asset_id'])) {
+        $assetIds = array_filter(array_map('intval', (array)($payload['asset_ids'] ?? ($payload['asset_id'] ? [$payload['asset_id']] : []))));
+
+        if ($payload['report_type'] === 'pemeliharaan' && empty($assetIds)) {
             return response()->json(['message' => 'Aset BMN wajib dipilih untuk laporan pemeliharaan.'], 422);
         }
 
@@ -142,16 +146,35 @@ class BmnMaintenanceReportController extends Controller
             $employee = Employee::where('nip', $user->nip)->first();
         }
 
-        $asset = null;
-        if (!empty($payload['asset_id'])) {
-            $asset = Asset::find($payload['asset_id']);
+        $assets = collect();
+        if (!empty($assetIds)) {
+            $assets = Asset::whereIn('id', $assetIds)->get();
         }
+
+        $firstAsset = $assets->first();
+        $assetNamesStr = $assets->map(function ($a) {
+            $codeStr = $a->asset_code ? " (" . $a->asset_code . ")" : "";
+            return $a->name . $codeStr;
+        })->implode(', ');
+
+        $assetsDataJson = $assets->map(function ($a) {
+            return [
+                'id' => $a->id,
+                'name' => $a->name,
+                'asset_code' => $a->asset_code,
+                'brand' => $a->brand,
+                'model' => $a->model,
+                'location' => $a->location,
+            ];
+        })->values()->toArray();
 
         $report = BmnMaintenanceReport::create([
             'report_number' => $this->generateReportNumber(),
             'report_type' => $payload['report_type'],
-            'asset_id' => $asset?->id,
-            'asset_name' => $asset?->name,
+            'asset_id' => $firstAsset?->id,
+            'asset_name' => \Illuminate\Support\Str::limit($assetNamesStr ?: ($firstAsset?->name ?? 'Beberapa Aset BMN'), 245),
+            'asset_ids' => array_values($assetIds),
+            'assets_data' => $assetsDataJson,
             'report_details' => $payload['report_details'],
             'status' => 'new',
             'reporter_id' => $employee?->id,
