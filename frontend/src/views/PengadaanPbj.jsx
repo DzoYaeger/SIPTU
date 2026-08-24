@@ -11,11 +11,10 @@ import {
     Button,
     Modal,
     Form,
-    Drawer,
     Upload,
-    Popconfirm,
-    Segmented,
     Dropdown,
+    Tabs,
+    Radio,
 } from 'antd';
 import {
     CalendarOutlined,
@@ -29,7 +28,6 @@ import {
     ArrowLeftOutlined,
     ClockCircleOutlined,
     CheckCircleOutlined,
-    DollarOutlined,
     ReloadOutlined,
     AppstoreOutlined,
     UnorderedListOutlined,
@@ -37,13 +35,15 @@ import {
     ShopOutlined,
     FileTextOutlined,
     UploadOutlined,
-    PaperClipOutlined,
     FileDoneOutlined,
     FileProtectOutlined,
-    FilterOutlined,
     ClearOutlined,
     SyncOutlined,
     MoreOutlined,
+    BoxPlotOutlined,
+    RightOutlined,
+    LeftOutlined,
+    CloseOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
@@ -59,127 +59,71 @@ const DATE_UI = 'DD/MM/YYYY';
 
 // Corporate BPOM Harmonized Palette Configuration
 const STATUS_CONFIG = {
-    'Proses Negosiasi': { step: 1, percent: 20, color: '#d97706', bg: '#fffbeb', border: '#fef3c7', tagColor: 'warning', label: 'Negosiasi' },
-    'Proses PPK': { step: 2, percent: 40, color: '#0284c7', bg: '#f0f9ff', border: '#e0f2fe', tagColor: 'processing', label: 'PPK' },
-    'Proses pengiriman': { step: 3, percent: 60, color: '#4338ca', bg: '#eef2ff', border: '#e0e7ff', tagColor: 'geekblue', label: 'Pengiriman' },
-    'Proses Pembayaran': { step: 4, percent: 80, color: '#6d28d9', bg: '#f5f3ff', border: '#ede9fe', tagColor: 'purple', label: 'Pembayaran' },
-    'Selesai': { step: 5, percent: 100, color: '#047857', bg: '#ecfdf5', border: '#d1fae5', tagColor: 'success', label: 'Selesai' },
+    'Proses Negosiasi': { step: 1, percent: 20, color: '#d97706', bg: '#fffbeb', border: '#fde68a', label: 'Negosiasi' },
+    'Proses PPK': { step: 2, percent: 40, color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', label: 'Proses PPK' },
+    'Proses pengiriman': { step: 3, percent: 60, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'Pengiriman' },
+    'Proses Pembayaran': { step: 4, percent: 80, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', label: 'Pembayaran' },
+    'Selesai': { step: 5, percent: 100, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', label: 'Selesai' },
 };
 
-function StatusProgress({ status }) {
-    const config = STATUS_CONFIG[status] || { step: 1, percent: 20, color: '#64748b', bg: '#f1f5f9', border: '#e2e8f0' };
+const STAGES = [
+    { title: 'Negosiasi', pct: '20%' },
+    { title: 'PPK', pct: '40%' },
+    { title: 'Pengiriman', pct: '60%' },
+    { title: 'Pembayaran', pct: '80%' },
+    { title: 'Selesai', pct: '100%' },
+];
+
+/* ── Initials & Avatar Tone Helper (Facebook-style) ──────────────── */
+function getInitials(name) {
+    if (!name) return 'PD';
+    const parts = String(name)
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    if (parts.length === 0) return 'PD';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function vendorTone(jenis) {
+    if (jenis === 'E-Purchasing') return 'blue';
+    if (jenis === 'Langsung') return 'green';
+    return 'slate';
+}
+
+/* ── Vendor Avatar Circle (Facebook Style) ───────────────────────── */
+function VendorAvatar({ name, jenis }) {
     return (
-        <div className="pbj-progress-mini">
-            <div className="pbj-progress-mini__label">
-                <span style={{ fontWeight: 600, color: config.color, fontSize: 12 }}>{status || '—'}</span>
-                <span className="pbj-progress-mini__pct" style={{ backgroundColor: config.bg, color: config.color, borderColor: config.border }}>
-                    {config.percent}%
-                </span>
-            </div>
-            <div className="pbj-progress-mini__bar">
-                <div
-                    className="pbj-progress-mini__fill"
-                    style={{ width: `${config.percent}%`, backgroundColor: config.color }}
-                />
-            </div>
-        </div>
+        <span className={`pbj-vendor-avatar pbj-vendor-avatar--${vendorTone(jenis)}`} title={name || 'Penyedia'}>
+            {getInitials(name)}
+        </span>
     );
 }
 
-function StatusStepper({ currentStatus }) {
-    const config = STATUS_CONFIG[currentStatus] || { step: 1, color: '#0F5B99' };
-    const currentStep = config.step;
-    const steps = ['Negosiasi', 'PPK', 'Pengiriman', 'Pembayaran', 'Selesai'];
-
+/* ── Clean Dot Status Indicator (AGENTS.md Rule 1) ──────────────── */
+function DotStatusIndicator({ status }) {
+    const config = STATUS_CONFIG[status] || { step: 1, color: '#64748b', label: status || '—' };
     return (
-        <div className="pbj-stepper">
-            {steps.map((label, idx) => {
-                const stepNum = idx + 1;
-                const isCompleted = stepNum < currentStep;
-                const isActive = stepNum === currentStep;
-
-                let style = {
-                    background: '#f8fafc',
-                    color: '#94a3b8',
-                    border: '1px solid #cbd5e1',
-                };
-
-                if (isCompleted) {
-                    style = {
-                        background: config.color,
-                        color: '#ffffff',
-                        border: `1px solid ${config.color}`,
-                    };
-                } else if (isActive) {
-                    style = {
-                        background: config.color,
-                        color: '#ffffff',
-                        border: `1px solid ${config.color}`,
-                        boxShadow: `0 0 0 3px ${config.color}33`,
-                        transform: 'scale(1.12)',
-                    };
-                }
-
-                return (
-                    <Tooltip key={label} title={`Tahap ${stepNum}: ${label} (${stepNum * 20}%)`}>
-                        <div className="pbj-stepper-step" style={style}>
-                            {isCompleted ? <CheckOutlined style={{ fontSize: 9 }} /> : stepNum}
-                        </div>
-                    </Tooltip>
-                );
-            })}
-        </div>
+        <span className="pbj-status-dot-indicator">
+            <span className="pbj-status-dot" style={{ backgroundColor: config.color }} />
+            <span className="pbj-status-text">{status || '—'}</span>
+        </span>
     );
 }
 
-function BigStatusStepper({ currentStatus }) {
-    const config = STATUS_CONFIG[currentStatus] || { step: 1, color: '#0F5B99' };
-    const currentStep = config.step;
-    const stages = [
-        { title: 'Negosiasi', pct: '20%', desc: 'Harga & Negosiasi' },
-        { title: 'Proses PPK', pct: '40%', desc: 'SK & Surat Pesanan' },
-        { title: 'Pengiriman', pct: '60%', desc: 'Pengiriman Barang' },
-        { title: 'Pembayaran', pct: '80%', desc: 'Verifikasi SPM/SP2D' },
-        { title: 'Selesai', pct: '100%', desc: 'BAST & Serah Terima' },
-    ];
-
-    return (
-        <div className="pbj-big-stepper">
-            {stages.map((st, idx) => {
-                const stepNum = idx + 1;
-                const isCompleted = stepNum < currentStep;
-                const isActive = stepNum === currentStep;
-
-                let stateClass = 'pbj-big-stepper__item';
-                if (isCompleted) stateClass += ' pbj-big-stepper__item--completed';
-                if (isActive) stateClass += ' pbj-big-stepper__item--active';
-
-                return (
-                    <div key={st.title} className={stateClass}>
-                        <div className="pbj-big-stepper__circle">
-                            {isCompleted ? <CheckOutlined /> : stepNum}
-                        </div>
-                        <div className="pbj-big-stepper__content">
-                            <div className="pbj-big-stepper__title">{st.title}</div>
-                            <div className="pbj-big-stepper__pct">{st.pct}</div>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
+/* ── Date Badge ─────────────────────────────────────────────────── */
 function DateBadge({ value }) {
     if (!value) return <span style={{ color: '#94a3b8' }}>—</span>;
     return (
-        <span className="pbj-code-badge" style={{ background: '#FFFFFF', borderColor: '#e2e8f0' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#475569', fontSize: 12 }}>
             <CalendarOutlined style={{ fontSize: 11, color: '#0F5B99' }} />{' '}
             {dayjs(value).format('DD MMM YYYY')}
         </span>
     );
 }
 
+/* ── Format Rupiah (Semantic Green #059669) ─────────────────────── */
 function FormatRupiah({ amount }) {
     if (amount === undefined || amount === null || isNaN(amount)) {
         return <span style={{ color: '#94a3b8' }}>—</span>;
@@ -190,6 +134,117 @@ function FormatRupiah({ amount }) {
             <span className="pbj-price-currency">Rp</span>
             <span className="pbj-price-num">{val.toLocaleString('id-ID')}</span>
         </span>
+    );
+}
+
+/* ── Expanded Row Component: Detail Rincian Barang ── */
+function ExpandedItemsDetail({ record }) {
+    const rawItems = Array.isArray(record.items) ? record.items : [];
+    const totalItemValue = rawItems.reduce((acc, it) => acc + (Number(it.total_harga) || (Number(it.jumlah) * Number(it.harga_satuan)) || 0), 0);
+
+    return (
+        <div className="pbj-expanded-detail">
+            <div className="pbj-expanded-header">
+                <div className="pbj-expanded-title">
+                    <ShopOutlined style={{ color: '#0F5B99', fontSize: 14 }} />
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>Rincian Barang / Jasa</span>
+                    <span className="pbj-expanded-count-tag">{rawItems.length} Item</span>
+                </div>
+
+                <div className="pbj-expanded-meta-right">
+                    {totalItemValue > 0 && (
+                        <div className="pbj-expanded-total-box">
+                            <span className="lbl">Total Nilai Barang:</span>
+                            <span className="val">Rp {totalItemValue.toLocaleString('id-ID')}</span>
+                        </div>
+                    )}
+                    {record.nominal && (
+                        <div className="pbj-expanded-total-box" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+                            <span className="lbl">Nilai Kontrak:</span>
+                            <span className="val" style={{ color: '#0F5B99' }}>Rp {Number(record.nominal).toLocaleString('id-ID')}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {rawItems.length > 0 ? (
+                <div className="pbj-expanded-table-wrap">
+                    <table className="pbj-expanded-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: 40, textAlign: 'center' }}>NO</th>
+                                <th style={{ width: 140 }}>KODE BARANG</th>
+                                <th>NAMA BARANG / DESKRIPSI</th>
+                                <th style={{ width: 90, textAlign: 'center' }}>JUMLAH</th>
+                                <th style={{ width: 140, textAlign: 'right' }}>HARGA SATUAN</th>
+                                <th style={{ width: 150, textAlign: 'right' }}>TOTAL HARGA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rawItems.map((it, idx) => {
+                                const qty = Number(it.jumlah) || 0;
+                                const unitPrice = Number(it.harga_satuan) || 0;
+                                const totalPrice = Number(it.total_harga) || (qty * unitPrice);
+                                return (
+                                    <tr key={it.key || idx}>
+                                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{idx + 1}</td>
+                                        <td>
+                                            {it.kode_barang ? (
+                                                <code className="pbj-item-code-badge">{it.kode_barang}</code>
+                                            ) : (
+                                                <span style={{ color: '#94a3b8', fontSize: 11 }}>—</span>
+                                            )}
+                                        </td>
+                                        <td style={{ fontWeight: 600, color: '#1e293b' }}>
+                                            {it.nama_barang || <span style={{ color: '#94a3b8' }}>Item tanpa nama</span>}
+                                        </td>
+                                        <td style={{ textAlign: 'center', fontWeight: 600, color: '#0F5B99' }}>
+                                            {qty.toLocaleString('id-ID')}
+                                        </td>
+                                        <td style={{ textAlign: 'right', color: '#475569' }}>
+                                            Rp {unitPrice.toLocaleString('id-ID')}
+                                        </td>
+                                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                                            Rp {totalPrice.toLocaleString('id-ID')}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <div className="pbj-expanded-empty">
+                    <CodeSandboxOutlined style={{ fontSize: 20, color: '#94a3b8' }} />
+                    <span>Belum ada daftar rincian item barang spesifik pada data pengadaan ini.</span>
+                </div>
+            )}
+
+            {/* Lampiran Dokumen Cepat */}
+            {(record.file_surat_pesanan_url || record.file_bast_url || record.file_invoice_url) && (
+                <div className="pbj-expanded-docs">
+                    <span className="docs-label">Lampiran Berkas:</span>
+                    {record.file_surat_pesanan_url && (
+                        <a href={record.file_surat_pesanan_url} target="_blank" rel="noopener noreferrer" className="pbj-doc-pill">
+                            <FileTextOutlined style={{ color: '#0284c7' }} />
+                            <span>Surat Pesanan (SP/SPK)</span>
+                        </a>
+                    )}
+                    {record.file_bast_url && (
+                        <a href={record.file_bast_url} target="_blank" rel="noopener noreferrer" className="pbj-doc-pill">
+                            <FileDoneOutlined style={{ color: '#10b981' }} />
+                            <span>Berita Acara (BAST)</span>
+                        </a>
+                    )}
+                    {record.file_invoice_url && (
+                        <a href={record.file_invoice_url} target="_blank" rel="noopener noreferrer" className="pbj-doc-pill">
+                            <FileProtectOutlined style={{ color: '#8b5cf6' }} />
+                            <span>Invoice / Bukti Bayar</span>
+                        </a>
+                    )}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -210,13 +265,17 @@ function PengadaanPbjInner() {
     const [jenisFilter, setJenisFilter] = useState('ALL');
     const [viewMode, setViewMode] = useState('table');
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+    const [expandedRowKeys, setExpandedRowKeys] = useState([]);
 
-    // Modal & Drawer State
+    // Modal & Tab State
     const [form] = Form.useForm();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('create');
+    const [modalActiveTab, setModalActiveTab] = useState('1');
     const [editingRecord, setEditingRecord] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+
+    const [itemList, setItemList] = useState([]);
 
     const [fileSuratPesanan, setFileSuratPesanan] = useState(null);
     const [fileBast, setFileBast] = useState(null);
@@ -227,6 +286,50 @@ function PengadaanPbjInner() {
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [detailRecord, setDetailRecord] = useState(null);
+
+    const handleAddItem = () => {
+        setItemList((prev) => [
+            ...prev,
+            {
+                key: String(Date.now() + Math.random()),
+                kode_barang: '',
+                nama_barang: '',
+                jumlah: 1,
+                harga_satuan: 0,
+                total_harga: 0,
+            },
+        ]);
+    };
+
+    const handleRemoveItem = (index) => {
+        setItemList((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleItemChange = (index, field, value) => {
+        setItemList((prev) =>
+            prev.map((item, i) => {
+                if (i !== index) return item;
+                const updated = { ...item, [field]: value };
+                const qty = Number(field === 'jumlah' ? value : updated.jumlah) || 0;
+                const price = Number(field === 'harga_satuan' ? value : updated.harga_satuan) || 0;
+                updated.total_harga = qty * price;
+                return updated;
+            })
+        );
+    };
+
+    const grandTotalItems = useMemo(() => {
+        return itemList.reduce((acc, curr) => acc + (Number(curr.total_harga) || 0), 0);
+    }, [itemList]);
+
+    const handleSyncNominalFromItems = () => {
+        if (grandTotalItems > 0) {
+            form.setFieldsValue({ nominal: grandTotalItems });
+            notification.success({ message: 'Nominal anggaran berhasil disinkronkan dengan total harga barang.' });
+        } else {
+            notification.warning({ message: 'Tidak ada item barang dengan total harga untuk disinkronkan.' });
+        }
+    };
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -249,7 +352,9 @@ function PengadaanPbjInner() {
     // Modal Handlers
     const handleOpenCreate = () => {
         setModalMode('create');
+        setModalActiveTab('1');
         setEditingRecord(null);
+        setItemList([]);
         setFileSuratPesanan(null);
         setFileBast(null);
         setFileInvoice(null);
@@ -267,7 +372,27 @@ function PengadaanPbjInner() {
 
     const handleOpenEdit = (record) => {
         setModalMode('edit');
+        setModalActiveTab('1');
         setEditingRecord(record);
+        const mappedItems = (Array.isArray(record.items) ? record.items : []).map((item, idx) => {
+            const qty = Number(item.jumlah) || 1;
+            const price =
+                item.harga_satuan !== undefined && item.harga_satuan !== null
+                    ? Number(item.harga_satuan)
+                    : item.total_harga
+                    ? Number(item.total_harga) / qty
+                    : 0;
+            const total = qty * price;
+            return {
+                key: String(idx) + '-' + Date.now(),
+                kode_barang: item.kode_barang || '',
+                nama_barang: item.nama_barang || '',
+                jumlah: qty,
+                harga_satuan: price,
+                total_harga: total,
+            };
+        });
+        setItemList(mappedItems);
         setFileSuratPesanan(null);
         setFileBast(null);
         setFileInvoice(null);
@@ -310,6 +435,7 @@ function PengadaanPbjInner() {
             if (values.no_bast) formData.append('no_bast', values.no_bast);
             if (values.tanggal_bast) formData.append('tanggal_bast', values.tanggal_bast.format(DATE_API));
             formData.append('status_barang', values.status_barang || 'Proses Negosiasi');
+            formData.append('items', JSON.stringify(itemList));
 
             if (fileSuratPesanan) formData.append('file_surat_pesanan', fileSuratPesanan);
             if (fileBast) formData.append('file_bast', fileBast);
@@ -371,18 +497,23 @@ function PengadaanPbjInner() {
         });
     }, [dataRows, search, statusFilter, jenisFilter]);
 
-    // KPI Aggregation
-    const kpiStats = useMemo(() => {
-        const total = dataRows.length;
-        const negosiasi = dataRows.filter((r) => r.status_barang === 'Proses Negosiasi').length;
-        const ppk = dataRows.filter((r) => r.status_barang === 'Proses PPK').length;
-        const kirim = dataRows.filter((r) => r.status_barang === 'Proses pengiriman').length;
-        const bayar = dataRows.filter((r) => r.status_barang === 'Proses Pembayaran').length;
-        const inProgress = dataRows.filter((r) => r.status_barang !== 'Selesai').length;
-        const finished = dataRows.filter((r) => r.status_barang === 'Selesai').length;
-        const totalAmount = dataRows.reduce((acc, r) => acc + (Number(r.nominal) || 0), 0);
-
-        return { total, negosiasi, ppk, kirim, bayar, inProgress, finished, totalAmount };
+    // Total stage counts & summary nominal (Facebook-style live metrics)
+    const summaryStats = useMemo(() => {
+        const totalNominal = dataRows.reduce((acc, curr) => acc + (Number(curr.nominal) || 0), 0);
+        const counts = {
+            ALL: dataRows.length,
+            'Proses Negosiasi': 0,
+            'Proses PPK': 0,
+            'Proses pengiriman': 0,
+            'Proses Pembayaran': 0,
+            'Selesai': 0,
+        };
+        dataRows.forEach((r) => {
+            if (counts[r.status_barang] !== undefined) {
+                counts[r.status_barang]++;
+            }
+        });
+        return { totalNominal, counts };
     }, [dataRows]);
 
     // PDF Export
@@ -403,7 +534,7 @@ function PengadaanPbjInner() {
             const pageWidth = doc.internal.pageSize.getWidth();
             const margin = 14;
 
-            // --- KOP SURAT ---
+            // Kop Surat
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(14);
             doc.text('BADAN PENGAWAS OBAT DAN MAKANAN', pageWidth / 2, 16, { align: 'center' });
@@ -419,13 +550,11 @@ function PengadaanPbjInner() {
                 { align: 'center' }
             );
 
-            // Garis pembatas kop
             doc.setLineWidth(0.8);
             doc.line(margin, 34, pageWidth - margin, 34);
             doc.setLineWidth(0.3);
             doc.line(margin, 35.5, pageWidth - margin, 35.5);
 
-            // --- JUDUL DOKUMEN ---
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.text('LAPORAN PROSES PENGADAAN BARANG/JASA (PBJ)', pageWidth / 2, 45, { align: 'center' });
@@ -511,7 +640,6 @@ function PengadaanPbjInner() {
                 },
             });
 
-            // Signature block
             const finalY = doc.lastAutoTable.finalY + 15;
             if (finalY + 40 > doc.internal.pageSize.getHeight()) {
                 doc.addPage();
@@ -546,39 +674,37 @@ function PengadaanPbjInner() {
         {
             title: 'NO',
             key: 'no',
-            width: 50,
+            width: 44,
             align: 'center',
             render: (_, __, i) => (
-                <span style={{ fontWeight: 600, color: '#94a3b8', fontSize: 12 }}>
+                <span className="pbj-row-index">
                     {(pagination.current - 1) * pagination.pageSize + i + 1}
                 </span>
             ),
         },
         {
-            title: 'PENGADAAN & PENYEDIA',
+            title: 'PAKET PENGADAAN & PENYEDIA',
             dataIndex: 'nama_pengadaan',
             key: 'nama_pengadaan',
-            width: 340,
             render: (v, r) => {
-                const isEPurchasing = r.jenis_pengadaan === 'E-Purchasing';
                 return (
-                    <div className="pbj-item-meta">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span className={`pbj-jenis-pill ${isEPurchasing ? 'pbj-jenis-pill--ep' : 'pbj-jenis-pill--direct'}`}>
-                                {r.jenis_pengadaan || 'Langsung'}
-                            </span>
-                            {r.tanggal_pengadaan && (
-                                <span className="pbj-sub-date">
-                                    <CalendarOutlined style={{ fontSize: 10 }} /> {dayjs(r.tanggal_pengadaan).format('DD MMM YYYY')}
-                                </span>
-                            )}
-                        </div>
-                        <div className="pbj-title-text" onClick={() => handleOpenDetail(r)} title="Klik untuk lihat rincian">
-                            {v || '—'}
-                        </div>
-                        <div className="pbj-vendor-sub">
-                            <ShopOutlined style={{ color: '#64748b', fontSize: 11 }} /> {r.nama_penyedia || 'Penyedia belum diisi'}
-                            {r.no_kontrak && <span className="pbj-contract-pill">SP: {r.no_kontrak}</span>}
+                    <div className="pbj-table-item-cell">
+                        <VendorAvatar name={r.nama_penyedia} jenis={r.jenis_pengadaan} />
+                        <div className="pbj-table-item-info">
+                            <div className="pbj-table-title" onClick={() => handleOpenDetail(r)} title="Klik untuk lihat rincian">
+                                {v || '—'}
+                            </div>
+                            <div className="pbj-table-meta-sub">
+                                <span style={{ fontWeight: 600, color: '#050505' }}>{r.nama_penyedia || 'Penyedia belum diisi'}</span>
+                                <span>•</span>
+                                <span style={{ color: '#0F5B99', fontWeight: 600 }}>{r.jenis_pengadaan || 'Pengadaan Langsung'}</span>
+                                {r.no_kontrak && (
+                                    <>
+                                        <span>•</span>
+                                        <span style={{ fontFamily: 'monospace', fontSize: 11 }}>SP: {r.no_kontrak}</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 );
@@ -588,55 +714,58 @@ function PengadaanPbjInner() {
             title: 'NOMINAL ANGGARAN',
             dataIndex: 'nominal',
             key: 'nominal',
-            width: 170,
+            width: 160,
+            align: 'right',
             render: (v) => <FormatRupiah amount={v} />,
         },
         {
-            title: 'TAHAP & STATUS SIKLUS',
+            title: 'TAHAPAN ALUR & STATUS',
             dataIndex: 'status_barang',
             key: 'status_barang',
-            width: 230,
-            render: (v) => (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <StatusProgress status={v} />
-                    <StatusStepper currentStatus={v} />
-                </div>
-            ),
+            width: 200,
+            render: (v) => {
+                const conf = STATUS_CONFIG[v] || { step: 1, percent: 20, color: '#64748b' };
+                return (
+                    <div className="pbj-table-stage-cell">
+                        <DotStatusIndicator status={v} />
+                        <div className="pbj-table-mini-bar">
+                            <div
+                                className="pbj-table-mini-fill"
+                                style={{ width: `${conf.percent}%`, backgroundColor: conf.color }}
+                            />
+                        </div>
+                    </div>
+                );
+            },
         },
         {
-            title: 'DOKUMEN LAMPIRAN',
+            title: 'DOKUMEN',
             key: 'dokumen',
-            width: 210,
+            width: 170,
             render: (_, r) => (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                     {r.file_surat_pesanan_url ? (
-                        <a href={r.file_surat_pesanan_url} target="_blank" rel="noreferrer">
-                            <span className="pbj-doc-pill pbj-doc-pill--active-sp">
-                                <FileTextOutlined style={{ fontSize: 11 }} /> SP
-                            </span>
+                        <a href={r.file_surat_pesanan_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available" title="Surat Pesanan">
+                            SP
                         </a>
                     ) : (
-                        <span className="pbj-doc-pill pbj-doc-pill--empty">SP</span>
+                        <span className="pbj-fb-doc-pill is-empty">SP</span>
                     )}
 
                     {r.file_bast_url ? (
-                        <a href={r.file_bast_url} target="_blank" rel="noreferrer">
-                            <span className="pbj-doc-pill pbj-doc-pill--active-bast">
-                                <FileDoneOutlined style={{ fontSize: 11 }} /> BAST
-                            </span>
+                        <a href={r.file_bast_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available" title="Berita Acara Serah Terima">
+                            BAST
                         </a>
                     ) : (
-                        <span className="pbj-doc-pill pbj-doc-pill--empty">BAST</span>
+                        <span className="pbj-fb-doc-pill is-empty">BAST</span>
                     )}
 
                     {r.file_invoice_url ? (
-                        <a href={r.file_invoice_url} target="_blank" rel="noreferrer">
-                            <span className="pbj-doc-pill pbj-doc-pill--active-inv">
-                                <FileProtectOutlined style={{ fontSize: 11 }} /> Invoice
-                            </span>
+                        <a href={r.file_invoice_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available" title="Invoice / Kuitansi">
+                            Invoice
                         </a>
                     ) : (
-                        <span className="pbj-doc-pill pbj-doc-pill--empty">Invoice</span>
+                        <span className="pbj-fb-doc-pill is-empty">Invoice</span>
                     )}
                 </div>
             ),
@@ -644,14 +773,14 @@ function PengadaanPbjInner() {
         {
             title: 'AKSI',
             key: 'aksi',
-            width: 70,
+            width: 60,
             align: 'center',
             render: (_, r) => {
                 const items = [
                     {
                         key: 'detail',
-                        label: 'Lihat Rincian',
-                        icon: <EyeOutlined style={{ color: '#1e293b' }} />,
+                        label: 'Lihat Rincian Lengkap',
+                        icon: <EyeOutlined />,
                         onClick: () => handleOpenDetail(r),
                     },
                 ];
@@ -660,7 +789,7 @@ function PengadaanPbjInner() {
                     items.push({
                         key: 'edit',
                         label: 'Edit Data Pengadaan',
-                        icon: <EditOutlined style={{ color: '#1e293b' }} />,
+                        icon: <EditOutlined />,
                         onClick: () => handleOpenEdit(r),
                     });
                     items.push({
@@ -673,8 +802,8 @@ function PengadaanPbjInner() {
                         onClick: () => {
                             Modal.confirm({
                                 title: 'Hapus Data Pengadaan',
-                                content: `Apakah Anda yakin ingin menghapus data "${r.nama_pengadaan}"? Seluruh dokumen lampiran Nextcloud juga akan dihapus.`,
-                                okText: 'Ya, Hapus',
+                                content: `Hapus data pengadaan "${r.nama_pengadaan}"? Berkas Nextcloud terkait juga akan dihapus.`,
+                                okText: 'Hapus',
                                 cancelText: 'Batal',
                                 okButtonProps: { danger: true },
                                 onOk: () => handleDelete(r.id),
@@ -685,7 +814,7 @@ function PengadaanPbjInner() {
 
                 return (
                     <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
-                        <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+                        <Button type="text" shape="circle" size="small" icon={<MoreOutlined style={{ color: '#65676b', fontSize: 16 }} />} />
                     </Dropdown>
                 );
             },
@@ -693,215 +822,251 @@ function PengadaanPbjInner() {
     ];
 
     return (
-        <div className="pbj-page-wrapper">
-            {/* Header Title & Subtitle */}
-            <div className="pbj-header">
-                <div className="pbj-header__left">
-                    <Button
-                        type="text"
-                        icon={<ArrowLeftOutlined />}
-                        className="pbj-back-btn"
-                        onClick={() => navigate(-1)}
-                    />
-                    <div>
-                        <div className="pbj-header__title-row">
-                            <h1 className="pbj-header__title">Proses Pengadaan Barang & Jasa (PBJ)</h1>
-                            <span className="pbj-header__badge">SIPTU ULTRA</span>
-                        </div>
-                        <p className="pbj-header__subtitle">
-                            Kelola siklus pengadaan (Negosiasi ➔ PPK ➔ Logistik ➔ Pembayaran ➔ Selesai) dan lampiran dokumen Nextcloud.
-                        </p>
-                    </div>
-                </div>
-                <div className="pbj-header__actions">
-                    <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-                        Refresh
-                    </Button>
-                    <Button icon={<FilePdfOutlined />} onClick={exportToPdf} style={{ borderColor: '#ef4444', color: '#ef4444' }}>
-                        Cetak PDF
-                    </Button>
-                    {isAdmin && (
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={handleOpenCreate}
-                            style={{ background: '#0F5B99', borderColor: '#0F5B99', fontWeight: 600 }}
-                        >
-                            Tambah Data PBJ
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            {/* Metric KPI Summary Cards (Interactive) */}
-            <div className="pbj-kpi-grid">
-                {/* 1. Total Pengadaan */}
-                <div
-                    className={`pbj-kpi-card ${statusFilter === 'ALL' ? 'pbj-kpi-card--active' : ''}`}
-                    onClick={() => setStatusFilter('ALL')}
-                    title="Klik untuk memfilter semua pengadaan"
-                >
-                    <div className="pbj-kpi-card__icon pbj-kpi-card__icon--blue">
-                        <CodeSandboxOutlined />
-                    </div>
-                    <div className="pbj-kpi-card__body">
-                        <span className="pbj-kpi-card__label">Total Pengadaan</span>
-                        <span className="pbj-kpi-card__val">{kpiStats.total}</span>
-                        <span className="pbj-kpi-card__sub">Seluruh item pengadaan</span>
-                    </div>
-                </div>
-
-                {/* 2. Dalam Proses */}
-                <div
-                    className={`pbj-kpi-card ${statusFilter === 'IN_PROGRESS' ? 'pbj-kpi-card--active' : ''}`}
-                    onClick={() => setStatusFilter('IN_PROGRESS')}
-                    title="Klik untuk memfilter pengadaan yang sedang berjalan"
-                >
-                    <div className="pbj-kpi-card__icon pbj-kpi-card__icon--amber">
-                        <ClockCircleOutlined />
-                    </div>
-                    <div className="pbj-kpi-card__body">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span className="pbj-kpi-card__label">Dalam Proses</span>
-                            <span className="pbj-live-dot" />
-                        </div>
-                        <span className="pbj-kpi-card__val" style={{ color: '#d97706' }}>{kpiStats.inProgress}</span>
-                        <span className="pbj-kpi-card__sub">Sedang berjalan (Tahap 1-4)</span>
-                    </div>
-                </div>
-
-                {/* 3. Pengadaan Selesai */}
-                <div
-                    className={`pbj-kpi-card ${statusFilter === 'Selesai' ? 'pbj-kpi-card--active' : ''}`}
-                    onClick={() => setStatusFilter('Selesai')}
-                    title="Klik untuk memfilter pengadaan yang telah selesai"
-                >
-                    <div className="pbj-kpi-card__icon pbj-kpi-card__icon--emerald">
-                        <CheckCircleOutlined />
-                    </div>
-                    <div className="pbj-kpi-card__body">
-                        <span className="pbj-kpi-card__label">Pengadaan Selesai</span>
-                        <span className="pbj-kpi-card__val" style={{ color: '#047857' }}>{kpiStats.finished}</span>
-                        <span className="pbj-kpi-card__sub">Tuntas & Serah Terima BAST</span>
-                    </div>
-                </div>
-
-                {/* 4. Total Nilai Pengadaan */}
-                <div className="pbj-kpi-card pbj-kpi-card--static">
-                    <div className="pbj-kpi-card__icon pbj-kpi-card__icon--purple">
-                        <DollarOutlined />
-                    </div>
-                    <div className="pbj-kpi-card__body">
-                        <span className="pbj-kpi-card__label">Total Nilai Anggaran</span>
-                        <span className="pbj-kpi-card__val pbj-kpi-card__val--price">
-                            Rp {(kpiStats.totalAmount / 1000000).toFixed(1)} Jt
-                        </span>
-                        <span className="pbj-kpi-card__sub">Akumulasi nominal PBJ</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Quick Status Stage Tabs & Search Filter Bar */}
-            <div className="pbj-filter-card">
-                <div className="pbj-stage-tabs">
-                    <div className="pbj-stage-tabs__label">
-                        <FilterOutlined /> Tahap Siklus:
-                    </div>
-                    <div className="pbj-stage-tabs__scroll">
+        <div className="pbj-module-root">
+            {/* ── 1. FACEBOOK ENTERPRISE TOP NAVBAR ── */}
+            <header className="pbj-fb-header">
+                <div className="pbj-fb-header__inner">
+                    {/* Left: Navigation & Brand */}
+                    <div className="pbj-fb-header__left">
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'ALL' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className="pbj-fb-back-btn"
+                            onClick={() => navigate('/app/layanan-mandiri')}
+                            title="Kembali ke Layanan Mandiri"
+                        >
+                            <ArrowLeftOutlined />
+                            <span className="pbj-fb-back-text">Layanan Mandiri</span>
+                        </button>
+
+                        <div className="pbj-fb-divider" />
+
+                        <div className="pbj-fb-brand" onClick={() => navigate('/app/pengadaan-pbj')}>
+                            <div className="pbj-fb-brand-icon">
+                                <ShopOutlined />
+                            </div>
+                            <div className="pbj-fb-brand-text">
+                                <span className="pbj-fb-brand-title">Pengadaan Barang & Jasa (PBJ)</span>
+                                <span className="pbj-fb-brand-subtitle">Balai POM di Palopo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Center: Facebook-style Pill Search Box */}
+                    <div className="pbj-fb-header__center">
+                        <div className="pbj-fb-search-wrap">
+                            <SearchOutlined className="pbj-fb-search-icon" />
+                            <input
+                                type="text"
+                                className="pbj-fb-search-input"
+                                placeholder="Cari nama pengadaan, penyedia, SPK, no BAST..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    className="pbj-fb-search-clear"
+                                    onClick={() => setSearch('')}
+                                    title="Hapus pencarian"
+                                >
+                                    <CloseOutlined style={{ fontSize: 11 }} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Action Buttons, Live Counter, & Profile */}
+                    <div className="pbj-fb-header__right">
+                        {/* Live Data Counter */}
+                        <div className="pbj-fb-chip pbj-fb-chip--data" title="Jumlah data pengadaan sesuai filter">
+                            <span className="pbj-fb-chip-dot" />
+                            <span>{filteredRows.length} Data</span>
+                        </div>
+
+                        {/* Total Nominal Realisasi */}
+                        {summaryStats.totalNominal > 0 && (
+                            <div className="pbj-fb-chip pbj-fb-chip--nominal" title="Total akumulasi nominal paket PBJ">
+                                <span className="pbj-fb-chip-curr">Rp</span>
+                                <span className="pbj-fb-chip-val">{summaryStats.totalNominal.toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
+
+                        {/* Export PDF Button */}
+                        <Tooltip title="Cetak Laporan Rekapitulasi PBJ ke Dokumen PDF Resmi">
+                            <button
+                                type="button"
+                                className="pbj-fb-action-btn"
+                                onClick={exportToPdf}
+                            >
+                                <FilePdfOutlined />
+                                <span className="btn-label">Cetak PDF</span>
+                            </button>
+                        </Tooltip>
+
+                        {/* Reload Button */}
+                        <Tooltip title="Segarkan Data Real-Time">
+                            <button
+                                type="button"
+                                className="pbj-fb-action-btn pbj-fb-action-btn--icon"
+                                onClick={fetchData}
+                                disabled={loading}
+                            >
+                                <ReloadOutlined spin={loading} />
+                            </button>
+                        </Tooltip>
+
+                        {/* View Mode Toggle (Table / Card Feed) */}
+                        <div className="pbj-fb-view-toggle">
+                            <button
+                                type="button"
+                                className={`pbj-fb-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                                onClick={() => setViewMode('table')}
+                                title="Tampilan Tabel Detail"
+                            >
+                                <UnorderedListOutlined />
+                            </button>
+                            <button
+                                type="button"
+                                className={`pbj-fb-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                                onClick={() => setViewMode('grid')}
+                                title="Tampilan Kartu Facebook Feed"
+                            >
+                                <AppstoreOutlined />
+                            </button>
+                        </div>
+
+                        {/* Add Procurement Button (Admin only) */}
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                className="pbj-fb-primary-btn"
+                                onClick={handleOpenCreate}
+                                title="Tambah Pengadaan Barang/Jasa Baru"
+                            >
+                                <PlusOutlined />
+                                <span>Tambah Pengadaan</span>
+                            </button>
+                        )}
+
+                        {/* Profile Avatar */}
+                        <div className="pbj-fb-profile-pill" title={`${user?.name || 'User'} (${user?.base_role || 'Pegawai'})`}>
+                            <div className="pbj-fb-avatar">
+                                {getInitials(user?.name || 'User')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* ── 2. SUB-TOOLBAR: STAGE FILTER PILLS & CRITERIA ── */}
+            <div className="pbj-fb-toolbar">
+                <div className="pbj-fb-toolbar__inner">
+                    {/* Left: Facebook-style Stage Filter Tabs */}
+                    <div className="pbj-fb-stage-tabs">
+                        <button
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'ALL' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('ALL')}
                         >
-                            Semua ({kpiStats.total})
+                            <span>Semua Tahap</span>
+                            <span className="pbj-fb-pill-badge">{summaryStats.counts.ALL}</span>
                         </button>
+
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'Proses Negosiasi' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'Proses Negosiasi' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('Proses Negosiasi')}
                         >
-                            <span className="pbj-stage-dot" style={{ background: '#d97706' }} />
-                            Negosiasi ({kpiStats.negosiasi})
+                            <span className="stage-dot" style={{ background: STATUS_CONFIG['Proses Negosiasi'].color }} />
+                            <span>Negosiasi</span>
+                            {summaryStats.counts['Proses Negosiasi'] > 0 && (
+                                <span className="pbj-fb-pill-badge">{summaryStats.counts['Proses Negosiasi']}</span>
+                            )}
                         </button>
+
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'Proses PPK' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'Proses PPK' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('Proses PPK')}
                         >
-                            <span className="pbj-stage-dot" style={{ background: '#0284c7' }} />
-                            PPK ({kpiStats.ppk})
+                            <span className="stage-dot" style={{ background: STATUS_CONFIG['Proses PPK'].color }} />
+                            <span>Proses PPK</span>
+                            {summaryStats.counts['Proses PPK'] > 0 && (
+                                <span className="pbj-fb-pill-badge">{summaryStats.counts['Proses PPK']}</span>
+                            )}
                         </button>
+
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'Proses pengiriman' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'Proses pengiriman' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('Proses pengiriman')}
                         >
-                            <span className="pbj-stage-dot" style={{ background: '#4338ca' }} />
-                            Pengiriman ({kpiStats.kirim})
+                            <span className="stage-dot" style={{ background: STATUS_CONFIG['Proses pengiriman'].color }} />
+                            <span>Pengiriman</span>
+                            {summaryStats.counts['Proses pengiriman'] > 0 && (
+                                <span className="pbj-fb-pill-badge">{summaryStats.counts['Proses pengiriman']}</span>
+                            )}
                         </button>
+
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'Proses Pembayaran' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'Proses Pembayaran' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('Proses Pembayaran')}
                         >
-                            <span className="pbj-stage-dot" style={{ background: '#6d28d9' }} />
-                            Pembayaran ({kpiStats.bayar})
+                            <span className="stage-dot" style={{ background: STATUS_CONFIG['Proses Pembayaran'].color }} />
+                            <span>Pembayaran</span>
+                            {summaryStats.counts['Proses Pembayaran'] > 0 && (
+                                <span className="pbj-fb-pill-badge">{summaryStats.counts['Proses Pembayaran']}</span>
+                            )}
                         </button>
+
                         <button
-                            className={`pbj-stage-btn ${statusFilter === 'Selesai' ? 'pbj-stage-btn--active' : ''}`}
+                            type="button"
+                            className={`pbj-fb-stage-pill ${statusFilter === 'Selesai' ? 'active' : ''}`}
                             onClick={() => setStatusFilter('Selesai')}
                         >
-                            <span className="pbj-stage-dot" style={{ background: '#047857' }} />
-                            Selesai ({kpiStats.finished})
+                            <span className="stage-dot" style={{ background: STATUS_CONFIG['Selesai'].color }} />
+                            <span>Selesai</span>
+                            {summaryStats.counts['Selesai'] > 0 && (
+                                <span className="pbj-fb-pill-badge">{summaryStats.counts['Selesai']}</span>
+                            )}
                         </button>
                     </div>
-                </div>
 
-                <div className="pbj-toolbar">
-                    <Input
-                        placeholder="Cari pengadaan, penyedia, no. kontrak, BAST..."
-                        prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        allowClear
-                        className="pbj-search-input"
-                    />
-
-                    <Select
-                        value={jenisFilter}
-                        onChange={setJenisFilter}
-                        className="pbj-jenis-select"
-                        style={{ width: 170 }}
-                    >
-                        <Select.Option value="ALL">Semua Jenis PBJ</Select.Option>
-                        <Select.Option value="E-Purchasing">E-Purchasing</Select.Option>
-                        <Select.Option value="Langsung">Pengadaan Langsung</Select.Option>
-                    </Select>
-
-                    {(search || statusFilter !== 'ALL' || jenisFilter !== 'ALL') && (
-                        <Button
-                            icon={<ClearOutlined />}
-                            onClick={() => {
-                                setSearch('');
-                                setStatusFilter('ALL');
-                                setJenisFilter('ALL');
-                            }}
-                            type="text"
-                            danger
+                    {/* Right: Jenis PBJ Selector & Reset Filter */}
+                    <div className="pbj-fb-toolbar__right">
+                        <Select
+                            value={jenisFilter}
+                            onChange={setJenisFilter}
+                            className="pbj-fb-select"
+                            style={{ width: 175 }}
+                            placeholder="Jenis PBJ"
                         >
-                            Reset Filter
-                        </Button>
-                    )}
+                            <Select.Option value="ALL">Semua Jenis PBJ</Select.Option>
+                            <Select.Option value="E-Purchasing">● E-Purchasing</Select.Option>
+                            <Select.Option value="Langsung">● Pengadaan Langsung</Select.Option>
+                        </Select>
 
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <Segmented
-                            value={viewMode}
-                            onChange={setViewMode}
-                            options={[
-                                { value: 'table', icon: <UnorderedListOutlined />, label: 'Tabel' },
-                                { value: 'grid', icon: <AppstoreOutlined />, label: 'Kartu' },
-                            ]}
-                        />
+                        {(search || statusFilter !== 'ALL' || jenisFilter !== 'ALL') && (
+                            <button
+                                type="button"
+                                className="pbj-fb-reset-btn"
+                                onClick={() => {
+                                    setSearch('');
+                                    setStatusFilter('ALL');
+                                    setJenisFilter('ALL');
+                                }}
+                                title="Reset semua filter ke kondisi awal"
+                            >
+                                <ClearOutlined />
+                                <span>Reset Filter</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Content Display: Table or Grid */}
+            {/* ── CONTENT AREA: Table or Facebook-Style Card Feed ── */}
             <div className="pbj-content-area">
                 {viewMode === 'table' ? (
                     <div className="pbj-table-container">
@@ -909,113 +1074,88 @@ function PengadaanPbjInner() {
                             dataSource={filteredRows}
                             columns={columns}
                             loading={loading}
+                            rowKey="id"
+                            expandedRowKeys={expandedRowKeys}
+                            onExpandedRowsChange={setExpandedRowKeys}
+                            onRow={(record) => ({
+                                onClick: (e) => {
+                                    if (e?.target?.closest?.('.ant-dropdown-trigger, .ant-btn, button, a, input, select, svg, path')) {
+                                        return;
+                                    }
+                                    const key = record.id;
+                                    setExpandedRowKeys((prev) =>
+                                        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+                                    );
+                                },
+                                className: expandedRowKeys.includes(record.id) ? 'pbj-row-expanded-active' : 'pbj-row-clickable',
+                                title: 'Klik baris untuk membuka / menutup detail rincian barang',
+                            })}
+                            expandable={{
+                                expandedRowRender: (record) => <ExpandedItemsDetail record={record} />,
+                                rowExpandable: () => true,
+                                expandRowByClick: false,
+                            }}
                             pagination={{
                                 ...pagination,
                                 total: filteredRows.length,
                                 showSizeChanger: true,
                                 pageSizeOptions: ['10', '20', '50'],
-                                showTotal: (t, range) => `${range[0]}-${range[1]} dari ${t} pengadaan`,
+                                showTotal: (t, range) => `Menampilkan ${range[0]}-${range[1]} dari ${t} pengadaan`,
                                 onChange: (page, pSize) => setPagination({ current: page, pageSize: pSize }),
                             }}
-                            size="middle"
-                            rowKey="id"
+                            className="pbj-table pbj-table-expandable"
+                            scroll={{ x: 920 }}
                         />
                     </div>
                 ) : (
-                    /* Grid Cards View */
-                    <div className="pbj-grid-cards">
+                    /* Facebook-Style Card Grid Feed */
+                    <div className="pbj-fb-grid">
                         {loading ? (
-                            <div className="pbj-loading-box">
+                            <div style={{ gridColumn: '1 / -1', padding: '40px 0', textAlign: 'center', background: '#fff', borderRadius: 8, border: '1px solid #e4e6eb' }}>
                                 <SyncOutlined spin style={{ fontSize: 24, color: '#0F5B99' }} />
-                                <span>Memuat data pengadaan...</span>
+                                <div style={{ marginTop: 8, fontSize: 13, color: '#65676b' }}>Memuat data pengadaan...</div>
                             </div>
                         ) : filteredRows.length === 0 ? (
-                            <div className="pbj-empty-box">
-                                <CodeSandboxOutlined style={{ fontSize: 40, color: '#cbd5e1' }} />
-                                <p>Tidak ada data pengadaan yang sesuai filter.</p>
+                            <div style={{ gridColumn: '1 / -1', padding: '40px 0', textAlign: 'center', background: '#fff', borderRadius: 8, border: '1px solid #e4e6eb' }}>
+                                <CodeSandboxOutlined style={{ fontSize: 36, color: '#cbd5e1' }} />
+                                <p style={{ marginTop: 8, color: '#65676b', fontSize: 13 }}>Tidak ada data pengadaan yang sesuai filter.</p>
                             </div>
                         ) : (
                             filteredRows.map((record) => {
-                                const statusCfg = STATUS_CONFIG[record.status_barang] || { color: '#64748b', label: record.status_barang };
-                                const isEPurchasing = record.jenis_pengadaan === 'E-Purchasing';
-
+                                const currentStep = (STATUS_CONFIG[record.status_barang] || { step: 1 }).step;
                                 return (
-                                    <div key={record.id} className="pbj-card-item">
-                                        <div className="pbj-card-item__top-bar" style={{ backgroundColor: statusCfg.color }} />
-                                        <div className="pbj-card-item__header">
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                                                <span className={`pbj-jenis-pill ${isEPurchasing ? 'pbj-jenis-pill--ep' : 'pbj-jenis-pill--direct'}`}>
-                                                    {record.jenis_pengadaan || 'Langsung'}
-                                                </span>
-                                                <Tag color={statusCfg.tagColor} style={{ borderRadius: 12, fontWeight: 600, margin: 0 }}>
-                                                    {record.status_barang}
-                                                </Tag>
-                                            </div>
-                                            <h3 className="pbj-card-item__title" onClick={() => handleOpenDetail(record)}>
-                                                {record.nama_pengadaan}
-                                            </h3>
-                                        </div>
-
-                                        <div className="pbj-card-item__body">
-                                            <div className="pbj-card-vendor">
-                                                <ShopOutlined style={{ color: '#0F5B99' }} />
-                                                <span>{record.nama_penyedia || 'Penyedia belum diisi'}</span>
-                                            </div>
-
-                                            <div className="pbj-card-price">
-                                                <span className="pbj-card-price__label">Nominal Anggaran</span>
-                                                <FormatRupiah amount={record.nominal} />
-                                            </div>
-
-                                            <div style={{ margin: '8px 0' }}>
-                                                <StatusProgress status={record.status_barang} />
-                                            </div>
-
-                                            {/* Attached Documents Tags */}
-                                            <div className="pbj-card-docs">
-                                                <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>Dokumen:</span>
-                                                <div style={{ display: 'flex', gap: 4 }}>
-                                                    {record.file_surat_pesanan_url ? (
-                                                        <a href={record.file_surat_pesanan_url} target="_blank" rel="noreferrer">
-                                                            <span className="pbj-doc-pill pbj-doc-pill--active-sp">SP</span>
-                                                        </a>
-                                                    ) : (
-                                                        <span className="pbj-doc-pill pbj-doc-pill--empty">SP</span>
-                                                    )}
-                                                    {record.file_bast_url ? (
-                                                        <a href={record.file_bast_url} target="_blank" rel="noreferrer">
-                                                            <span className="pbj-doc-pill pbj-doc-pill--active-bast">BAST</span>
-                                                        </a>
-                                                    ) : (
-                                                        <span className="pbj-doc-pill pbj-doc-pill--empty">BAST</span>
-                                                    )}
-                                                    {record.file_invoice_url ? (
-                                                        <a href={record.file_invoice_url} target="_blank" rel="noreferrer">
-                                                            <span className="pbj-doc-pill pbj-doc-pill--active-inv">Invoice</span>
-                                                        </a>
-                                                    ) : (
-                                                        <span className="pbj-doc-pill pbj-doc-pill--empty">Invoice</span>
-                                                    )}
+                                    <div key={record.id} className="pbj-fb-card">
+                                        {/* Card Header (FB Author Style) */}
+                                        <div className="pbj-fb-card__header">
+                                            <div className="pbj-fb-card__author">
+                                                <VendorAvatar name={record.nama_penyedia} jenis={record.jenis_pengadaan} />
+                                                <div className="pbj-fb-card__meta">
+                                                    <div className="pbj-fb-card__vendor-name">{record.nama_penyedia || 'Penyedia Belum Diisi'}</div>
+                                                    <div className="pbj-fb-card__submeta">
+                                                        <span className="pbj-fb-badge-jenis">{record.jenis_pengadaan || 'Pengadaan Langsung'}</span>
+                                                        {record.tanggal_pengadaan && (
+                                                            <>
+                                                                <span className="pbj-fb-bullet">•</span>
+                                                                <span>{dayjs(record.tanggal_pengadaan).format('DD MMM YYYY')}</span>
+                                                            </>
+                                                        )}
+                                                        {record.no_kontrak && (
+                                                            <>
+                                                                <span className="pbj-fb-bullet">•</span>
+                                                                <span className="pbj-fb-contract">SP: {record.no_kontrak}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div className="pbj-card-item__footer">
-                                            <Button
-                                                size="small"
-                                                icon={<EyeOutlined style={{ color: '#1e293b' }} />}
-                                                onClick={() => handleOpenDetail(record)}
-                                            >
-                                                Lihat Rincian
-                                            </Button>
 
                                             <Dropdown
                                                 menu={{
                                                     items: [
                                                         {
                                                             key: 'detail',
-                                                            label: 'Lihat Rincian',
-                                                            icon: <EyeOutlined style={{ color: '#1e293b' }} />,
+                                                            label: 'Lihat Rincian Lengkap',
+                                                            icon: <EyeOutlined />,
                                                             onClick: () => handleOpenDetail(record),
                                                         },
                                                         ...(isAdmin
@@ -1023,7 +1163,7 @@ function PengadaanPbjInner() {
                                                                   {
                                                                       key: 'edit',
                                                                       label: 'Edit Data Pengadaan',
-                                                                      icon: <EditOutlined style={{ color: '#1e293b' }} />,
+                                                                      icon: <EditOutlined />,
                                                                       onClick: () => handleOpenEdit(record),
                                                                   },
                                                                   { type: 'divider' },
@@ -1034,8 +1174,8 @@ function PengadaanPbjInner() {
                                                                       onClick: () => {
                                                                           Modal.confirm({
                                                                               title: 'Hapus Data Pengadaan',
-                                                                              content: `Apakah Anda yakin ingin menghapus data "${record.nama_pengadaan}"?`,
-                                                                              okText: 'Ya, Hapus',
+                                                                              content: `Hapus data pengadaan "${record.nama_pengadaan}"? Berkas Nextcloud terkait juga akan dihapus.`,
+                                                                              okText: 'Hapus',
                                                                               cancelText: 'Batal',
                                                                               okButtonProps: { danger: true },
                                                                               onOk: () => handleDelete(record.id),
@@ -1049,8 +1189,97 @@ function PengadaanPbjInner() {
                                                 trigger={['click']}
                                                 placement="bottomRight"
                                             >
-                                                <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#1e293b', fontSize: 16 }} />} />
+                                                <Button type="text" shape="circle" className="pbj-fb-more-btn" icon={<MoreOutlined style={{ fontSize: 16 }} />} />
                                             </Dropdown>
+                                        </div>
+
+                                        {/* Card Body */}
+                                        <div className="pbj-fb-card__body">
+                                            <h3 className="pbj-fb-card__title" onClick={() => handleOpenDetail(record)}>
+                                                {record.nama_pengadaan}
+                                            </h3>
+
+                                            {/* Budget Row */}
+                                            <div className="pbj-fb-budget-row">
+                                                <span className="pbj-fb-budget-label">Nominal Anggaran:</span>
+                                                <FormatRupiah amount={record.nominal} />
+                                            </div>
+
+                                            {/* Visual Alur Proses (5-Segment Stage Pipeline) */}
+                                            <div className="pbj-fb-pipeline">
+                                                <div className="pbj-fb-pipeline__header">
+                                                    <span className="pbj-fb-pipeline__label">Tahapan Alur:</span>
+                                                    <DotStatusIndicator status={record.status_barang} />
+                                                </div>
+                                                <div className="pbj-fb-pipeline__bar">
+                                                    {STAGES.map((st, sIdx) => {
+                                                        const stepNum = sIdx + 1;
+                                                        const isCompleted = stepNum <= currentStep;
+                                                        const isCurrent = stepNum === currentStep;
+                                                        return (
+                                                            <div
+                                                                key={st.title}
+                                                                className={`pbj-fb-pipeline__segment ${isCompleted ? 'is-active' : ''} ${isCurrent ? 'is-current' : ''}`}
+                                                                title={`Tahap ${stepNum}: ${st.title} (${st.pct})`}
+                                                            >
+                                                                <div className="pbj-fb-pipeline__segment-fill" />
+                                                                <span className="pbj-fb-pipeline__segment-text">{st.title}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Attached Documents Row */}
+                                            <div className="pbj-fb-docs-row">
+                                                <span className="pbj-fb-docs-label">Lampiran:</span>
+                                                <div className="pbj-fb-docs-list">
+                                                    {record.file_surat_pesanan_url ? (
+                                                        <a href={record.file_surat_pesanan_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                            <FileTextOutlined /> SP
+                                                        </a>
+                                                    ) : (
+                                                        <span className="pbj-fb-doc-pill is-empty">SP</span>
+                                                    )}
+                                                    {record.file_bast_url ? (
+                                                        <a href={record.file_bast_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                            <FileDoneOutlined /> BAST
+                                                        </a>
+                                                    ) : (
+                                                        <span className="pbj-fb-doc-pill is-empty">BAST</span>
+                                                    )}
+                                                    {record.file_invoice_url ? (
+                                                        <a href={record.file_invoice_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                            <FileProtectOutlined /> Invoice
+                                                        </a>
+                                                    ) : (
+                                                        <span className="pbj-fb-doc-pill is-empty">Invoice</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Card Footer (Action Bar) */}
+                                        <div className="pbj-fb-card__footer">
+                                            <Button
+                                                type="text"
+                                                className="pbj-fb-action-btn"
+                                                icon={<EyeOutlined />}
+                                                onClick={() => handleOpenDetail(record)}
+                                            >
+                                                Lihat Rincian
+                                            </Button>
+
+                                            {isAdmin && (
+                                                <Button
+                                                    type="text"
+                                                    className="pbj-fb-action-btn"
+                                                    icon={<EditOutlined />}
+                                                    onClick={() => handleOpenEdit(record)}
+                                                >
+                                                    Edit
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -1060,498 +1289,623 @@ function PengadaanPbjInner() {
                 )}
             </div>
 
-            {/* Modal Add & Edit Form */}
+            {/* ── MODAL CREATE / EDIT (Compact & Non-Bloated) ── */}
             <Modal
                 className="pbj-modal"
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 footer={null}
-                width={760}
+                width={720}
                 destroyOnClose
-                title={
-                    <div className="pbj-modal-title">
-                        <div className="pbj-modal-title__icon">
-                            {modalMode === 'create' ? <PlusOutlined /> : <EditOutlined />}
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#0F5B99' }}>
-                                {modalMode === 'create' ? 'Tambah Data Pengadaan PBJ' : 'Edit Data Pengadaan PBJ'}
-                            </div>
-                            <div style={{ fontSize: 12, fontWeight: 400, color: '#64748b' }}>
-                                Isi rincian data pengadaan, nominal anggaran, dan berkas lampiran Nextcloud.
-                            </div>
-                        </div>
-                    </div>
-                }
+                title={null}
             >
-                <Form form={form} layout="vertical" onFinish={handleSaveForm} style={{ marginTop: 16 }}>
-                    {/* Section 1: Informasi Utama */}
-                    <div className="pbj-form-section">
-                        <div className="pbj-form-section__title">
-                            <CodeSandboxOutlined /> 1. Informasi Utama Pengadaan
-                        </div>
-                        <Form.Item
-                            name="nama_pengadaan"
-                            label="Nama Paket Pengadaan / Pekerjaan"
-                            rules={[{ required: true, message: 'Nama pengadaan wajib diisi!' }]}
-                        >
-                            <Input placeholder="Contoh: Pengadaan Alat Ultrasonik dan Mikroskop Laboratory" size="large" />
-                        </Form.Item>
+                <div className="pbj-modal-header">
+                    <div style={{ width: 32, height: 32, borderRadius: 6, background: '#eff6ff', color: '#0F5B99', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                        {modalMode === 'create' ? <PlusOutlined /> : <EditOutlined />}
+                    </div>
+                    <div>
+                        <h3 className="pbj-modal-header__title">
+                            {modalMode === 'create' ? 'Tambah Data Pengadaan PBJ' : 'Edit Data Pengadaan PBJ'}
+                        </h3>
+                        <div className="pbj-modal-header__sub">Isi informasi pengadaan barang dan jasa dengan benar.</div>
+                    </div>
+                </div>
 
-                        <div className="pbj-form-grid-2">
-                            <Form.Item name="jenis_pengadaan" label="Jenis Metode Pengadaan">
-                                <Select size="large">
-                                    <Select.Option value="Langsung">Pengadaan Langsung</Select.Option>
-                                    <Select.Option value="E-Purchasing">E-Purchasing (E-Katalog)</Select.Option>
-                                </Select>
-                            </Form.Item>
+                <Form form={form} layout="vertical" onFinish={handleSaveForm}>
+                    <div className="pbj-modal-body">
+                        <Tabs
+                            activeKey={modalActiveTab}
+                            onChange={setModalActiveTab}
+                            size="small"
+                            items={[
+                                {
+                                    key: '1',
+                                    label: <span><CodeSandboxOutlined /> 1. Paket & Penyedia</span>,
+                                    children: (
+                                        <>
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title">
+                                                    <CodeSandboxOutlined /> Informasi Paket
+                                                </div>
+                                                <Form.Item
+                                                    name="nama_pengadaan"
+                                                    label="Nama Paket Pengadaan / Pekerjaan"
+                                                    rules={[{ required: true, message: 'Nama pengadaan wajib diisi!' }]}
+                                                    style={{ marginBottom: 10 }}
+                                                >
+                                                    <Input placeholder="Contoh: Pengadaan Alat Ultrasonik Laboratory" />
+                                                </Form.Item>
 
-                            <Form.Item name="tanggal_pengadaan" label="Tanggal Pengadaan / SPK">
-                                <DatePicker format={DATE_UI} style={{ width: '100%' }} size="large" />
-                            </Form.Item>
-                        </div>
+                                                <div className="pbj-form-grid-2">
+                                                    <Form.Item name="jenis_pengadaan" label="Jenis Metode Pengadaan" style={{ marginBottom: 10 }}>
+                                                        <Select>
+                                                            <Select.Option value="Langsung">Pengadaan Langsung</Select.Option>
+                                                            <Select.Option value="E-Purchasing">E-Purchasing (E-Katalog)</Select.Option>
+                                                        </Select>
+                                                    </Form.Item>
+
+                                                    <Form.Item name="tanggal_pengadaan" label="Tanggal Pengadaan / SPK" style={{ marginBottom: 10 }}>
+                                                        <DatePicker format={DATE_UI} style={{ width: '100%' }} />
+                                                    </Form.Item>
+                                                </div>
+                                            </div>
+
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title">
+                                                    <ShopOutlined /> Penyedia & Nilai Anggaran
+                                                </div>
+                                                <div className="pbj-form-grid-2">
+                                                    <Form.Item name="nama_penyedia" label="Nama Penyedia / Vendor" style={{ marginBottom: 10 }}>
+                                                        <Input placeholder="Contoh: PT. Scientia Medika" />
+                                                    </Form.Item>
+
+                                                    <Form.Item name="no_kontrak" label="Nomor Kontrak / SPK" style={{ marginBottom: 10 }}>
+                                                        <Input placeholder="Contoh: 027/SP/BPOM-PLP/2026" />
+                                                    </Form.Item>
+                                                </div>
+
+                                                <Form.Item name="nominal" label="Nominal Anggaran (Rp)" style={{ marginBottom: 0 }}>
+                                                    <InputNumber
+                                                        style={{ width: '100%' }}
+                                                        formatter={(value) => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                                                        parser={(value) => value.replace(/Rp\s?|(\.*)/g, '')}
+                                                        placeholder="Contoh: 150.000.000"
+                                                    />
+                                                </Form.Item>
+                                            </div>
+                                        </>
+                                    ),
+                                },
+                                {
+                                    key: '2',
+                                    label: <span><ClockCircleOutlined /> 2. Logistik & Tahapan</span>,
+                                    children: (
+                                        <>
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title">
+                                                    <CalendarOutlined /> Timeline Pengiriman & BAST
+                                                </div>
+                                                <div className="pbj-form-grid-2">
+                                                    <Form.Item name="tanggal_kirim" label="Tanggal Kirim Penyedia" style={{ marginBottom: 10 }}>
+                                                        <DatePicker format={DATE_UI} style={{ width: '100%' }} />
+                                                    </Form.Item>
+
+                                                    <Form.Item name="tanggal_sampai" label="Tanggal Sampai di Kantor" style={{ marginBottom: 10 }}>
+                                                        <DatePicker format={DATE_UI} style={{ width: '100%' }} />
+                                                    </Form.Item>
+                                                </div>
+
+                                                <div className="pbj-form-grid-2">
+                                                    <Form.Item name="no_bast" label="Nomor BAST" style={{ marginBottom: 10 }}>
+                                                        <Input placeholder="Contoh: BAST/BPOM-PLP/05/2026" />
+                                                    </Form.Item>
+
+                                                    <Form.Item name="tanggal_bast" label="Tanggal BAST" style={{ marginBottom: 10 }}>
+                                                        <DatePicker format={DATE_UI} style={{ width: '100%' }} />
+                                                    </Form.Item>
+                                                </div>
+                                            </div>
+
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title">
+                                                    <ClockCircleOutlined /> Tahap Siklus Pengadaan
+                                                </div>
+                                                <Form.Item
+                                                    name="status_barang"
+                                                    label="Status Tahap Terkini"
+                                                    rules={[{ required: true, message: 'Status wajib dipilih!' }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Select>
+                                                        <Select.Option value="Proses Negosiasi">Proses Negosiasi (20%)</Select.Option>
+                                                        <Select.Option value="Proses PPK">Proses PPK (40%)</Select.Option>
+                                                        <Select.Option value="Proses pengiriman">Proses Pengiriman (60%)</Select.Option>
+                                                        <Select.Option value="Proses Pembayaran">Proses Pembayaran (80%)</Select.Option>
+                                                        <Select.Option value="Selesai">Selesai (100%)</Select.Option>
+                                                    </Select>
+                                                </Form.Item>
+                                            </div>
+                                        </>
+                                    ),
+                                },
+                                {
+                                    key: '3',
+                                    label: <span><FileTextOutlined /> 3. Berkas & Rincian Barang</span>,
+                                    children: (
+                                        <>
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title">
+                                                    <FileTextOutlined /> Dokumen Pendukung Nextcloud
+                                                </div>
+
+                                                {/* Surat Pesanan */}
+                                                <div className="pbj-upload-row">
+                                                    <div className="pbj-upload-row__info">
+                                                        <FileTextOutlined style={{ color: '#2563eb', fontSize: 16 }} />
+                                                        <div>
+                                                            <div className="pbj-upload-row__title">Surat Pesanan (SP)</div>
+                                                            <div className="pbj-upload-row__sub">Dokumen SPK / Surat Pesanan</div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        {fileSuratPesanan ? (
+                                                            <Tag closable onClose={() => setFileSuratPesanan(null)} color="blue">
+                                                                {fileSuratPesanan.name}
+                                                            </Tag>
+                                                        ) : editingRecord?.file_surat_pesanan_url && !removeSuratPesanan ? (
+                                                            <Tag closable onClose={() => setRemoveSuratPesanan(true)} color="green">
+                                                                SP Terunggah
+                                                            </Tag>
+                                                        ) : (
+                                                            <Upload
+                                                                beforeUpload={(file) => {
+                                                                    setFileSuratPesanan(file);
+                                                                    setRemoveSuratPesanan(false);
+                                                                    return false;
+                                                                }}
+                                                                showUploadList={false}
+                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                            >
+                                                                <Button icon={<UploadOutlined />} size="small">
+                                                                    Upload SP
+                                                                </Button>
+                                                            </Upload>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* BAST */}
+                                                <div className="pbj-upload-row">
+                                                    <div className="pbj-upload-row__info">
+                                                        <FileDoneOutlined style={{ color: '#059669', fontSize: 16 }} />
+                                                        <div>
+                                                            <div className="pbj-upload-row__title">Berita Acara (BAST)</div>
+                                                            <div className="pbj-upload-row__sub">Dokumen Serah Terima BAST</div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        {fileBast ? (
+                                                            <Tag closable onClose={() => setFileBast(null)} color="blue">
+                                                                {fileBast.name}
+                                                            </Tag>
+                                                        ) : editingRecord?.file_bast_url && !removeBast ? (
+                                                            <Tag closable onClose={() => setRemoveBast(true)} color="green">
+                                                                BAST Terunggah
+                                                            </Tag>
+                                                        ) : (
+                                                            <Upload
+                                                                beforeUpload={(file) => {
+                                                                    setFileBast(file);
+                                                                    setRemoveBast(false);
+                                                                    return false;
+                                                                }}
+                                                                showUploadList={false}
+                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                            >
+                                                                <Button icon={<UploadOutlined />} size="small">
+                                                                    Upload BAST
+                                                                </Button>
+                                                            </Upload>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Invoice */}
+                                                <div className="pbj-upload-row">
+                                                    <div className="pbj-upload-row__info">
+                                                        <FileProtectOutlined style={{ color: '#7c3aed', fontSize: 16 }} />
+                                                        <div>
+                                                            <div className="pbj-upload-row__title">Invoice / Faktur</div>
+                                                            <div className="pbj-upload-row__sub">Tagihan / Kuitansi</div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        {fileInvoice ? (
+                                                            <Tag closable onClose={() => setFileInvoice(null)} color="blue">
+                                                                {fileInvoice.name}
+                                                            </Tag>
+                                                        ) : editingRecord?.file_invoice_url && !removeInvoice ? (
+                                                            <Tag closable onClose={() => setRemoveInvoice(true)} color="green">
+                                                                Invoice Terunggah
+                                                            </Tag>
+                                                        ) : (
+                                                            <Upload
+                                                                beforeUpload={(file) => {
+                                                                    setFileInvoice(file);
+                                                                    setRemoveInvoice(false);
+                                                                    return false;
+                                                                }}
+                                                                showUploadList={false}
+                                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                            >
+                                                                <Button icon={<UploadOutlined />} size="small">
+                                                                    Upload Invoice
+                                                                </Button>
+                                                            </Upload>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Rincian Barang */}
+                                            <div className="pbj-form-section">
+                                                <div className="pbj-form-section__title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span><BoxPlotOutlined /> Rincian Item Barang (Opsional)</span>
+                                                    <Button
+                                                        type="dashed"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={handleAddItem}
+                                                        size="small"
+                                                        style={{ borderColor: '#0F5B99', color: '#0F5B99', fontWeight: 600 }}
+                                                    >
+                                                        Tambah Item
+                                                    </Button>
+                                                </div>
+
+                                                {itemList.length === 0 ? (
+                                                    <div style={{ textAlign: 'center', padding: '16px', color: '#8c939d', fontSize: 12, background: '#fff', border: '1px dashed #e4e6eb', borderRadius: 6 }}>
+                                                        Belum ada rincian item barang.
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e4e6eb', borderRadius: 6 }}>
+                                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                                                <thead>
+                                                                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e4e6eb', textAlign: 'left', color: '#65676b' }}>
+                                                                        <th style={{ padding: '6px 8px' }}>KODE</th>
+                                                                        <th style={{ padding: '6px 8px' }}>NAMA BARANG</th>
+                                                                        <th style={{ padding: '6px 8px', width: 70 }}>JML</th>
+                                                                        <th style={{ padding: '6px 8px', width: 120 }}>HARGA</th>
+                                                                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>TOTAL</th>
+                                                                        <th style={{ padding: '6px 8px', width: 30 }} />
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {itemList.map((item, idx) => (
+                                                                        <tr key={item.key || idx} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                                                            <td style={{ padding: '4px 6px' }}>
+                                                                                <Input
+                                                                                    size="small"
+                                                                                    placeholder="Kode"
+                                                                                    value={item.kode_barang}
+                                                                                    onChange={(e) => handleItemChange(idx, 'kode_barang', e.target.value)}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '4px 6px' }}>
+                                                                                <Input
+                                                                                    size="small"
+                                                                                    placeholder="Nama barang"
+                                                                                    value={item.nama_barang}
+                                                                                    onChange={(e) => handleItemChange(idx, 'nama_barang', e.target.value)}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '4px 6px' }}>
+                                                                                <InputNumber
+                                                                                    size="small"
+                                                                                    min={1}
+                                                                                    style={{ width: '100%' }}
+                                                                                    value={item.jumlah}
+                                                                                    onChange={(val) => handleItemChange(idx, 'jumlah', val)}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '4px 6px' }}>
+                                                                                <InputNumber
+                                                                                    size="small"
+                                                                                    min={0}
+                                                                                    style={{ width: '100%' }}
+                                                                                    formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                                                                                    parser={(val) => val.replace(/\./g, '')}
+                                                                                    value={item.harga_satuan}
+                                                                                    onChange={(val) => handleItemChange(idx, 'harga_satuan', val)}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                                                                                Rp {(item.total_harga || 0).toLocaleString('id-ID')}
+                                                                            </td>
+                                                                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                                                                <Button
+                                                                                    type="text"
+                                                                                    danger
+                                                                                    size="small"
+                                                                                    icon={<DeleteOutlined />}
+                                                                                    onClick={() => handleRemoveItem(idx)}
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                                                            <span style={{ fontSize: 12, fontWeight: 700, color: '#050505' }}>
+                                                                Total: Rp {grandTotalItems.toLocaleString('id-ID')}
+                                                            </span>
+                                                            <Button
+                                                                type="dashed"
+                                                                size="small"
+                                                                onClick={handleSyncNominalFromItems}
+                                                                style={{ fontSize: 11, borderColor: '#059669', color: '#059669', fontWeight: 600 }}
+                                                            >
+                                                                Sync ke Nominal
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </>
+                                    ),
+                                },
+                            ]}
+                        />
                     </div>
 
-                    {/* Section 2: Penyedia & Kontrak */}
-                    <div className="pbj-form-section">
-                        <div className="pbj-form-section__title">
-                            <ShopOutlined /> 2. Penyedia & Dokumen Kontrak
-                        </div>
-                        <div className="pbj-form-grid-2">
-                            <Form.Item name="nama_penyedia" label="Nama Penyedia / Vendor">
-                                <Input placeholder="Contoh: PT. Scientia Medika Utama" size="large" />
-                            </Form.Item>
-
-                            <Form.Item name="no_kontrak" label="Nomor Kontrak / SPK">
-                                <Input placeholder="Contoh: 027/SP/BPOM-PLP/2026" size="large" />
-                            </Form.Item>
-                        </div>
-
-                        <Form.Item name="nominal" label="Nominal Anggaran (Rp)">
-                            <InputNumber
-                                style={{ width: '100%' }}
-                                formatter={(value) => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                                parser={(value) => value.replace(/Rp\s?|(\.*)/g, '')}
-                                placeholder="Contoh: 150.000.000"
-                                size="large"
-                            />
-                        </Form.Item>
-                    </div>
-
-                    {/* Section 3: Logistik & BAST */}
-                    <div className="pbj-form-section">
-                        <div className="pbj-form-section__title">
-                            <CalendarOutlined /> 3. Timeline Logistik & BAST
-                        </div>
-                        <div className="pbj-form-grid-2">
-                            <Form.Item name="tanggal_kirim" label="Tanggal Kirim Penyedia">
-                                <DatePicker format={DATE_UI} style={{ width: '100%' }} size="large" />
-                            </Form.Item>
-
-                            <Form.Item name="tanggal_sampai" label="Tanggal Sampai di Kantor">
-                                <DatePicker format={DATE_UI} style={{ width: '100%' }} size="large" />
-                            </Form.Item>
+                    <div className="pbj-modal-footer">
+                        <div>
+                            {modalActiveTab !== '1' && (
+                                <Button
+                                    icon={<LeftOutlined />}
+                                    onClick={() => setModalActiveTab(String(Number(modalActiveTab) - 1))}
+                                    size="small"
+                                >
+                                    Sebelumnya
+                                </Button>
+                            )}
+                            {modalActiveTab !== '3' && (
+                                <Button
+                                    icon={<RightOutlined />}
+                                    onClick={() => setModalActiveTab(String(Number(modalActiveTab) + 1))}
+                                    size="small"
+                                    style={{ marginLeft: 6, color: '#0F5B99', fontWeight: 600 }}
+                                >
+                                    Berikutnya
+                                </Button>
+                            )}
                         </div>
 
-                        <div className="pbj-form-grid-2">
-                            <Form.Item name="no_bast" label="Nomor BAST">
-                                <Input placeholder="Contoh: BAST/BPOM-PLP/05/2026" size="large" />
-                            </Form.Item>
-
-                            <Form.Item name="tanggal_bast" label="Tanggal BAST">
-                                <DatePicker format={DATE_UI} style={{ width: '100%' }} size="large" />
-                            </Form.Item>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <Button onClick={() => setIsModalOpen(false)}>
+                                Batal
+                            </Button>
+                            <Button type="primary" htmlType="submit" loading={submitting} icon={<CheckCircleOutlined />} style={{ backgroundColor: '#0F5B99' }}>
+                                {modalMode === 'create' ? 'Simpan Pengadaan' : 'Perbarui Data'}
+                            </Button>
                         </div>
-                    </div>
-
-                    {/* Section 4: Status Siklus */}
-                    <div className="pbj-form-section">
-                        <div className="pbj-form-section__title">
-                            <ClockCircleOutlined /> 4. Status Siklus Pengadaan
-                        </div>
-                        <Form.Item
-                            name="status_barang"
-                            label="Tahap Status Terkini"
-                            rules={[{ required: true, message: 'Status wajib dipilih!' }]}
-                        >
-                            <Select size="large">
-                                <Select.Option value="Proses Negosiasi">Proses Negosiasi (20%)</Select.Option>
-                                <Select.Option value="Proses PPK">Proses PPK (40%)</Select.Option>
-                                <Select.Option value="Proses pengiriman">Proses Pengiriman (60%)</Select.Option>
-                                <Select.Option value="Proses Pembayaran">Proses Pembayaran (80%)</Select.Option>
-                                <Select.Option value="Selesai">Selesai (100%)</Select.Option>
-                            </Select>
-                        </Form.Item>
-                    </div>
-
-                    {/* Section 5: Upload Dokumen Pendukung (Nextcloud) */}
-                    <div className="pbj-form-section">
-                        <div className="pbj-form-section__title">
-                            <PaperClipOutlined /> 5. Upload Dokumen Pendukung Nextcloud (SP, BAST, Invoice)
-                        </div>
-                        <div className="pbj-upload-grid">
-                            {/* 1. Surat Pesanan (SP) */}
-                            <div className="pbj-upload-row">
-                                <div className="pbj-upload-row__info">
-                                    <FileTextOutlined className="pbj-upload-row__icon pbj-upload-row__icon--sp" />
-                                    <div>
-                                        <div className="pbj-upload-row__title">Surat Pesanan (SP)</div>
-                                        <div className="pbj-upload-row__sub">Dokumen SPK / Surat Pesanan dari PPK</div>
-                                    </div>
-                                </div>
-                                <div className="pbj-upload-row__action">
-                                    {fileSuratPesanan ? (
-                                        <div className="pbj-file-tag">
-                                            <Tooltip title={fileSuratPesanan.name}>
-                                                <span className="pbj-file-tag__name">📄 {fileSuratPesanan.name}</span>
-                                            </Tooltip>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setFileSuratPesanan(null)}
-                                            />
-                                        </div>
-                                    ) : editingRecord?.file_surat_pesanan_url && !removeSuratPesanan ? (
-                                        <div className="pbj-file-tag pbj-file-tag--existing">
-                                            <a href={editingRecord.file_surat_pesanan_url} target="_blank" rel="noreferrer" className="pbj-file-tag__link">
-                                                📄 Lihat SP Terunggah
-                                            </a>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setRemoveSuratPesanan(true)}
-                                                title="Hapus / Ganti File"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <Upload
-                                            beforeUpload={(file) => {
-                                                setFileSuratPesanan(file);
-                                                setRemoveSuratPesanan(false);
-                                                return false;
-                                            }}
-                                            showUploadList={false}
-                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                        >
-                                            <Button icon={<UploadOutlined />} size="small" type="dashed">
-                                                Pilih File SP
-                                            </Button>
-                                        </Upload>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 2. Berita Acara Serah Terima (BAST) */}
-                            <div className="pbj-upload-row">
-                                <div className="pbj-upload-row__info">
-                                    <FileDoneOutlined className="pbj-upload-row__icon pbj-upload-row__icon--bast" />
-                                    <div>
-                                        <div className="pbj-upload-row__title">Berita Acara (BAST)</div>
-                                        <div className="pbj-upload-row__sub">Dokumen BAST penyelesaian barang/jasa</div>
-                                    </div>
-                                </div>
-                                <div className="pbj-upload-row__action">
-                                    {fileBast ? (
-                                        <div className="pbj-file-tag">
-                                            <Tooltip title={fileBast.name}>
-                                                <span className="pbj-file-tag__name">📑 {fileBast.name}</span>
-                                            </Tooltip>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setFileBast(null)}
-                                            />
-                                        </div>
-                                    ) : editingRecord?.file_bast_url && !removeBast ? (
-                                        <div className="pbj-file-tag pbj-file-tag--existing">
-                                            <a href={editingRecord.file_bast_url} target="_blank" rel="noreferrer" className="pbj-file-tag__link">
-                                                📑 Lihat BAST Terunggah
-                                            </a>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setRemoveBast(true)}
-                                                title="Hapus / Ganti File"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <Upload
-                                            beforeUpload={(file) => {
-                                                setFileBast(file);
-                                                setRemoveBast(false);
-                                                return false;
-                                            }}
-                                            showUploadList={false}
-                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                        >
-                                            <Button icon={<UploadOutlined />} size="small" type="dashed">
-                                                Pilih File BAST
-                                            </Button>
-                                        </Upload>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 3. Invoice / Faktur */}
-                            <div className="pbj-upload-row">
-                                <div className="pbj-upload-row__info">
-                                    <FileProtectOutlined className="pbj-upload-row__icon pbj-upload-row__icon--inv" />
-                                    <div>
-                                        <div className="pbj-upload-row__title">Invoice / Faktur</div>
-                                        <div className="pbj-upload-row__sub">Kuitansi / Tagihan pembayaran penyedia</div>
-                                    </div>
-                                </div>
-                                <div className="pbj-upload-row__action">
-                                    {fileInvoice ? (
-                                        <div className="pbj-file-tag">
-                                            <Tooltip title={fileInvoice.name}>
-                                                <span className="pbj-file-tag__name">🧾 {fileInvoice.name}</span>
-                                            </Tooltip>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setFileInvoice(null)}
-                                            />
-                                        </div>
-                                    ) : editingRecord?.file_invoice_url && !removeInvoice ? (
-                                        <div className="pbj-file-tag pbj-file-tag--existing">
-                                            <a href={editingRecord.file_invoice_url} target="_blank" rel="noreferrer" className="pbj-file-tag__link">
-                                                🧾 Lihat Invoice Terunggah
-                                            </a>
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => setRemoveInvoice(true)}
-                                                title="Hapus / Ganti File"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <Upload
-                                            beforeUpload={(file) => {
-                                                setFileInvoice(file);
-                                                setRemoveInvoice(false);
-                                                return false;
-                                            }}
-                                            showUploadList={false}
-                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                        >
-                                            <Button icon={<UploadOutlined />} size="small" type="dashed">
-                                                Pilih Invoice
-                                            </Button>
-                                        </Upload>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
-                        <Button onClick={() => setIsModalOpen(false)}>Batal</Button>
-                        <Button type="primary" htmlType="submit" loading={submitting} style={{ background: '#0F5B99', borderColor: '#0F5B99' }}>
-                            {modalMode === 'create' ? 'Simpan Pengadaan' : 'Perbarui Data'}
-                        </Button>
                     </div>
                 </Form>
             </Modal>
 
-            {/* Slide-over Detail Drawer */}
-            <Drawer
-                className="pbj-drawer"
+            {/* ── DETAIL MODAL (Clean, Focused, Non-Bloated) ── */}
+            <Modal
+                className="pbj-detail-modal"
                 open={isDrawerOpen}
-                onClose={() => setIsDrawerOpen(false)}
-                width={640}
-                title={
-                    detailRecord && (
-                        <div className="pbj-drawer-header">
-                            <div>
-                                <div className="pbj-drawer-title">{detailRecord.nama_pengadaan}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                    <span className={`pbj-jenis-pill ${detailRecord.jenis_pengadaan === 'E-Purchasing' ? 'pbj-jenis-pill--ep' : 'pbj-jenis-pill--direct'}`}>
-                                        {detailRecord.jenis_pengadaan || 'Langsung'}
-                                    </span>
-                                    <Tag color={STATUS_CONFIG[detailRecord.status_barang]?.tagColor}>
-                                        {detailRecord.status_barang}
-                                    </Tag>
-                                </div>
-                            </div>
-                        </div>
-                    )
-                }
+                onCancel={() => setIsDrawerOpen(false)}
+                centered
+                width={780}
+                destroyOnClose
+                title={null}
+                footer={null}
             >
                 {detailRecord && (
-                    <div className="pbj-drawer-body">
-                        {/* Big Lifecycle Stepper */}
-                        <div className="pbj-drawer-section">
-                            <div className="pbj-drawer-section__title">
-                                <ClockCircleOutlined /> Visualisasi Progress Siklus Pengadaan
-                            </div>
-                            <BigStatusStepper currentStatus={detailRecord.status_barang} />
-                        </div>
-
-                        {/* Card 1: Main Info */}
-                        <div className="pbj-detail-card">
-                            <div className="pbj-detail-card__heading">
-                                <CodeSandboxOutlined /> Informasi Utama
-                            </div>
-                            <div className="pbj-detail-grid">
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Nama Paket Pengadaan</span>
-                                    <span className="pbj-detail-item__val">{detailRecord.nama_pengadaan}</span>
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Nominal Anggaran</span>
-                                    <span className="pbj-detail-item__val" style={{ color: '#0F5B99', fontWeight: 700 }}>
-                                        <FormatRupiah amount={detailRecord.nominal} />
-                                    </span>
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Jenis Pengadaan</span>
-                                    <span className="pbj-detail-item__val">{detailRecord.jenis_pengadaan || 'Langsung'}</span>
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Tanggal Pengadaan</span>
-                                    <DateBadge value={detailRecord.tanggal_pengadaan} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 2: Vendor & Contract */}
-                        <div className="pbj-detail-card">
-                            <div className="pbj-detail-card__heading">
-                                <ShopOutlined /> Penyedia & Dokumen Kontrak
-                            </div>
-                            <div className="pbj-detail-grid">
-                                <div className="pbj-detail-item" style={{ gridColumn: '1 / -1' }}>
-                                    <span className="pbj-detail-item__label">Nama Penyedia / Vendor</span>
-                                    <span className="pbj-detail-item__val">{detailRecord.nama_penyedia || '—'}</span>
-                                </div>
-                                <div className="pbj-detail-item" style={{ gridColumn: '1 / -1' }}>
-                                    <span className="pbj-detail-item__label">Nomor Kontrak / SPK</span>
-                                    <span className="pbj-code-badge" style={{ fontSize: 13, display: 'inline-block', marginTop: 4 }}>
-                                        {detailRecord.no_kontrak || '—'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 3: Delivery & BAST */}
-                        <div className="pbj-detail-card">
-                            <div className="pbj-detail-card__heading">
-                                <CalendarOutlined /> Timeline Logistik & BAST
-                            </div>
-                            <div className="pbj-detail-grid">
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Tanggal Kirim</span>
-                                    <DateBadge value={detailRecord.tanggal_kirim} />
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Tanggal Sampai</span>
-                                    <DateBadge value={detailRecord.tanggal_sampai} />
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Nomor BAST</span>
-                                    <span className="pbj-code-badge" style={{ marginTop: 4 }}>
-                                        {detailRecord.no_bast || '—'}
-                                    </span>
-                                </div>
-                                <div className="pbj-detail-item">
-                                    <span className="pbj-detail-item__label">Tanggal BAST</span>
-                                    <DateBadge value={detailRecord.tanggal_bast} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Attached Files Card */}
-                        <div className="pbj-detail-card">
-                            <div className="pbj-detail-card__heading">
-                                <PaperClipOutlined /> Dokumen Lampiran (Nextcloud)
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                                <div className="pbj-doc-attachment-item">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <FileTextOutlined style={{ color: '#0F5B99', fontSize: 16 }} />
-                                        <span style={{ fontWeight: 600, fontSize: 13 }}>Surat Pesanan (SP)</span>
+                    <>
+                        <div className="pbj-modal-header" style={{ justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <VendorAvatar name={detailRecord.nama_penyedia} jenis={detailRecord.jenis_pengadaan} />
+                                <div>
+                                    <h3 className="pbj-modal-header__title">{detailRecord.nama_pengadaan}</h3>
+                                    <div className="pbj-modal-header__sub">
+                                        {detailRecord.nama_penyedia || 'Penyedia Belum Diisi'} • <span style={{ color: '#0F5B99', fontWeight: 600 }}>{detailRecord.jenis_pengadaan || 'Langsung'}</span>
                                     </div>
-                                    {detailRecord.file_surat_pesanan_url ? (
-                                        <a href={detailRecord.file_surat_pesanan_url} target="_blank" rel="noreferrer">
-                                            <Button type="primary" size="small" ghost icon={<EyeOutlined />}>
-                                                Buka SP
-                                            </Button>
-                                        </a>
-                                    ) : (
-                                        <Tag color="default">Belum diunggah</Tag>
-                                    )}
-                                </div>
-
-                                <div className="pbj-doc-attachment-item">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <FileDoneOutlined style={{ color: '#047857', fontSize: 16 }} />
-                                        <span style={{ fontWeight: 600, fontSize: 13 }}>Berita Acara (BAST)</span>
-                                    </div>
-                                    {detailRecord.file_bast_url ? (
-                                        <a href={detailRecord.file_bast_url} target="_blank" rel="noreferrer">
-                                            <Button type="primary" size="small" ghost icon={<EyeOutlined />}>
-                                                Buka BAST
-                                            </Button>
-                                        </a>
-                                    ) : (
-                                        <Tag color="default">Belum diunggah</Tag>
-                                    )}
-                                </div>
-
-                                <div className="pbj-doc-attachment-item">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <FileProtectOutlined style={{ color: '#6d28d9', fontSize: 16 }} />
-                                        <span style={{ fontWeight: 600, fontSize: 13 }}>Invoice / Faktur</span>
-                                    </div>
-                                    {detailRecord.file_invoice_url ? (
-                                        <a href={detailRecord.file_invoice_url} target="_blank" rel="noreferrer">
-                                            <Button type="primary" size="small" ghost icon={<EyeOutlined />}>
-                                                Buka Invoice
-                                            </Button>
-                                        </a>
-                                    ) : (
-                                        <Tag color="default">Belum diunggah</Tag>
-                                    )}
                                 </div>
                             </div>
+                            <DotStatusIndicator status={detailRecord.status_barang} />
                         </div>
 
-                        {isAdmin && (
-                            <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
-                                <Button
-                                    type="primary"
-                                    block
-                                    icon={<EditOutlined />}
-                                    style={{ background: '#0F5B99', borderColor: '#0F5B99' }}
-                                    onClick={() => {
-                                        setIsDrawerOpen(false);
-                                        handleOpenEdit(detailRecord);
-                                    }}
-                                >
-                                    Edit Data Pengadaan Ini
-                                </Button>
+                        <div className="pbj-modal-body">
+                            {/* Budget & Stage Visual Tracker */}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e4e6eb', borderRadius: 8, padding: '12px 14px', marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                                    <div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#65676b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL NOMINAL ANGGARAN</div>
+                                        <div style={{ fontSize: 20, fontWeight: 800, color: '#059669', marginTop: 2 }}>
+                                            <FormatRupiah amount={detailRecord.nominal} />
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', fontSize: 12, color: '#65676b' }}>
+                                        {detailRecord.no_kontrak && <div>SP: <b style={{ fontFamily: 'monospace' }}>{detailRecord.no_kontrak}</b></div>}
+                                        {detailRecord.tanggal_pengadaan && <div>SPK: <b>{dayjs(detailRecord.tanggal_pengadaan).format('DD MMM YYYY')}</b></div>}
+                                    </div>
+                                </div>
+
+                                {/* 5-Stage Stepper Progress */}
+                                <div className="pbj-fb-pipeline" style={{ background: '#fff', border: '1px solid #ced0d4', padding: '8px 12px' }}>
+                                    <div className="pbj-fb-pipeline__header">
+                                        <span className="pbj-fb-pipeline__label">Tahapan Pengadaan:</span>
+                                        <span style={{ fontWeight: 700, color: STATUS_CONFIG[detailRecord.status_barang]?.color || '#0F5B99', fontSize: 12 }}>
+                                            {STATUS_CONFIG[detailRecord.status_barang]?.percent || 20}%
+                                        </span>
+                                    </div>
+                                    <div className="pbj-fb-pipeline__bar">
+                                        {STAGES.map((st, sIdx) => {
+                                            const stepNum = sIdx + 1;
+                                            const currentStep = (STATUS_CONFIG[detailRecord.status_barang] || { step: 1 }).step;
+                                            const isCompleted = stepNum <= currentStep;
+                                            const isCurrent = stepNum === currentStep;
+                                            return (
+                                                <div
+                                                    key={st.title}
+                                                    className={`pbj-fb-pipeline__segment ${isCompleted ? 'is-active' : ''} ${isCurrent ? 'is-current' : ''}`}
+                                                    title={`Tahap ${stepNum}: ${st.title} (${st.pct})`}
+                                                >
+                                                    <div className="pbj-fb-pipeline__segment-fill" />
+                                                    <span className="pbj-fb-pipeline__segment-text">{st.title}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Key Value Details Grid */}
+                            <div className="pbj-form-section">
+                                <div className="pbj-form-section__title">
+                                    <CalendarOutlined /> Rincian Logistik & Dokumen BAST
+                                </div>
+                                <div className="pbj-form-grid-2">
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#65676b', fontWeight: 600 }}>TANGGAL KIRIM:</span>
+                                        <div style={{ marginTop: 2 }}><DateBadge value={detailRecord.tanggal_kirim} /></div>
+                                    </div>
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#65676b', fontWeight: 600 }}>TANGGAL SAMPAI:</span>
+                                        <div style={{ marginTop: 2 }}><DateBadge value={detailRecord.tanggal_sampai} /></div>
+                                    </div>
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#65676b', fontWeight: 600 }}>NOMOR BAST:</span>
+                                        <div style={{ fontWeight: 600, color: '#050505', fontSize: 12.5, marginTop: 2 }}>{detailRecord.no_bast || '—'}</div>
+                                    </div>
+                                    <div>
+                                        <span style={{ fontSize: 11, color: '#65676b', fontWeight: 600 }}>TANGGAL BAST:</span>
+                                        <div style={{ marginTop: 2 }}><DateBadge value={detailRecord.tanggal_bast} /></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Documents Nextcloud */}
+                            <div className="pbj-form-section">
+                                <div className="pbj-form-section__title">
+                                    <FileTextOutlined /> Dokumen Lampiran Berkas
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div className="pbj-upload-row">
+                                        <div className="pbj-upload-row__info">
+                                            <FileTextOutlined style={{ color: '#2563eb', fontSize: 15 }} />
+                                            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Surat Pesanan (SP / SPK)</span>
+                                        </div>
+                                        {detailRecord.file_surat_pesanan_url ? (
+                                            <a href={detailRecord.file_surat_pesanan_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                Buka Berkas SP
+                                            </a>
+                                        ) : (
+                                            <span className="pbj-fb-doc-pill is-empty">Belum Diunggah</span>
+                                        )}
+                                    </div>
+
+                                    <div className="pbj-upload-row">
+                                        <div className="pbj-upload-row__info">
+                                            <FileDoneOutlined style={{ color: '#059669', fontSize: 15 }} />
+                                            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Berita Acara Serah Terima (BAST)</span>
+                                        </div>
+                                        {detailRecord.file_bast_url ? (
+                                            <a href={detailRecord.file_bast_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                Buka Berkas BAST
+                                            </a>
+                                        ) : (
+                                            <span className="pbj-fb-doc-pill is-empty">Belum Diunggah</span>
+                                        )}
+                                    </div>
+
+                                    <div className="pbj-upload-row">
+                                        <div className="pbj-upload-row__info">
+                                            <FileProtectOutlined style={{ color: '#7c3aed', fontSize: 15 }} />
+                                            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Invoice / Kuitansi Tagihan</span>
+                                        </div>
+                                        {detailRecord.file_invoice_url ? (
+                                            <a href={detailRecord.file_invoice_url} target="_blank" rel="noreferrer" className="pbj-fb-doc-pill is-available">
+                                                Buka Berkas Invoice
+                                            </a>
+                                        ) : (
+                                            <span className="pbj-fb-doc-pill is-empty">Belum Diunggah</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detail Items if any */}
+                            {Array.isArray(detailRecord.items) && detailRecord.items.length > 0 && (
+                                <div className="pbj-form-section" style={{ marginBottom: 0 }}>
+                                    <div className="pbj-form-section__title">
+                                        <BoxPlotOutlined /> Rincian Item Barang ({detailRecord.items.length} item)
+                                    </div>
+                                    <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e4e6eb', borderRadius: 6 }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                            <thead>
+                                                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e4e6eb', textAlign: 'left', color: '#65676b' }}>
+                                                    <th style={{ padding: '6px 8px' }}>KODE</th>
+                                                    <th style={{ padding: '6px 8px' }}>NAMA BARANG</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>JML</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>HARGA</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>TOTAL</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {detailRecord.items.map((it, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                                        <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{it.kode_barang || '—'}</td>
+                                                        <td style={{ padding: '6px 8px', fontWeight: 600 }}>{it.nama_barang || '—'}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>{it.jumlah || 1}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>Rp {Number(it.harga_satuan || 0).toLocaleString('id-ID')}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                                                            Rp {Number(it.total_harga || 0).toLocaleString('id-ID')}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pbj-modal-footer">
+                            <div>
+                                {isAdmin && (
+                                    <Button
+                                        icon={<EditOutlined />}
+                                        onClick={() => {
+                                            setIsDrawerOpen(false);
+                                            handleOpenEdit(detailRecord);
+                                        }}
+                                    >
+                                        Edit Data
+                                    </Button>
+                                )}
+                            </div>
+                            <Button type="primary" onClick={() => setIsDrawerOpen(false)} style={{ backgroundColor: '#0F5B99' }}>
+                                Tutup
+                            </Button>
+                        </div>
+                    </>
                 )}
-            </Drawer>
+            </Modal>
         </div>
     );
 }
 
 export default function PengadaanPbj() {
-    return <PengadaanPbjInner />;
+    return (
+        <AntdApp>
+            <PengadaanPbjInner />
+        </AntdApp>
+    );
 }

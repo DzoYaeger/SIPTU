@@ -80,9 +80,25 @@ class User extends Authenticatable
     }
 
     /**
-     * Append has_mfa to JSON serialization.
+     * Accessor: Check if MFA session is currently active (within 20 minutes).
      */
-    protected $appends = ['has_mfa'];
+    public function getMfaSessionActiveAttribute(): bool
+    {
+        return app(\App\Services\TotpService::class)->isSessionActive($this);
+    }
+
+    /**
+     * Accessor: Remaining seconds for MFA session.
+     */
+    public function getMfaSessionTtlAttribute(): int
+    {
+        return app(\App\Services\TotpService::class)->getSessionTtl($this);
+    }
+
+    /**
+     * Append has_mfa and mfa_session_active to JSON serialization.
+     */
+    protected $appends = ['has_mfa', 'mfa_session_active', 'mfa_session_ttl'];
 
     /**
      * Relationship with Assets (created)

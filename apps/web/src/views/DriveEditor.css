@@ -1,0 +1,89 @@
+/* ── DriveEditor.css ── */
+.drive-editor-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f8f9fa;
+  overflow: hidden;
+}
+
+.drive-editor-header {
+  height: 64px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #dadce0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.drive-editor-back-btn.ant-btn {
+  font-size: 18px;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drive-editor-save-btn.ant-btn {
+  border-radius: 20px !important;
+  font-weight: 600;
+  height: 38px;
+  background-color: #1a73e8 !important;
+  border-color: #1a73e8 !important;
+}
+
+.drive-editor-save-btn.ant-btn:hover {
+  background-color: #1765cc !important;
+}
+
+.drive-editor-body {
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.drive-editor-loading-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Word Workspace (Canvas-Editor layout) */
+.drive-word-workspace {
+  width: 100%;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.drive-word-canvas-wrapper {
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  min-height: 842px; /* standard A4 ratio */
+  width: 794px; /* A4 width standard */
+  padding: 40px; /* Internal sheet padding */
+}
+
+/* Custom styling override to center A4 Canvas inside Editor */
+.drive-word-canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Force hide Luckysheet loading mask if it gets stuck */
+.luckysheet-loading-mask {
+  display: none !important;
+}

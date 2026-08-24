@@ -1,0 +1,359 @@
+/* ══════════════════════════════════════════════
+   404 Page — SIPTUULTRA Elegant Minimalist
+   Theme: Glassmorphic White/Slate/Vivid Indigo
+   ══════════════════════════════════════════════ */
+
+.not-found-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 100% 100%, var(--color-primary-light) 0%, var(--color-bg-subtle) 100%);
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    font-family: var(--ff-body);
+}
+
+/* Animated floating particles (Indigo color in light mode) */
+.nf-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.nf-particle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(79, 70, 229, 0.12);
+    animation: nf-float linear infinite;
+}
+
+.nf-particle:nth-child(1) {
+    width: 6px;
+    height: 6px;
+    left: 10%;
+    animation-duration: 18s;
+    animation-delay: 0s;
+}
+
+.nf-particle:nth-child(2) {
+    width: 10px;
+    height: 10px;
+    left: 25%;
+    animation-duration: 22s;
+    animation-delay: 2s;
+}
+
+.nf-particle:nth-child(3) {
+    width: 4px;
+    height: 4px;
+    left: 40%;
+    animation-duration: 15s;
+    animation-delay: 4s;
+}
+
+.nf-particle:nth-child(4) {
+    width: 8px;
+    height: 8px;
+    left: 55%;
+    animation-duration: 20s;
+    animation-delay: 1s;
+}
+
+.nf-particle:nth-child(5) {
+    width: 5px;
+    height: 5px;
+    left: 70%;
+    animation-duration: 17s;
+    animation-delay: 3s;
+}
+
+.nf-particle:nth-child(6) {
+    width: 12px;
+    height: 12px;
+    left: 85%;
+    animation-duration: 24s;
+    animation-delay: 5s;
+}
+
+.nf-particle:nth-child(7) {
+    width: 7px;
+    height: 7px;
+    left: 15%;
+    animation-duration: 19s;
+    animation-delay: 6s;
+}
+
+.nf-particle:nth-child(8) {
+    width: 9px;
+    height: 9px;
+    left: 50%;
+    animation-duration: 21s;
+    animation-delay: 7s;
+}
+
+@keyframes nf-float {
+    0% {
+        transform: translateY(100vh) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-10vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Main content card with Premium Glassmorphism */
+.nf-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 48px 40px;
+    max-width: 520px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    animation: nf-card-enter 0.5s var(--ease-out);
+}
+
+@keyframes nf-card-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Big 404 number with glitch effect & Indigo gradient */
+.nf-code {
+    font-size: clamp(100px, 20vw, 180px);
+    font-weight: 900;
+    line-height: 1;
+    margin: 0 0 8px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, #3b82f6 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: nf-gradient-shift 4s ease infinite, nf-glitch 6s ease-in-out infinite;
+    position: relative;
+    letter-spacing: -4px;
+    user-select: none;
+    font-family: var(--ff-heading);
+}
+
+@keyframes nf-gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes nf-glitch {
+    0%, 94%, 100% {
+        transform: translate(0);
+        filter: none;
+    }
+
+    95% {
+        transform: translate(-3px, 2px) skewX(-2deg);
+        filter: hue-rotate(45deg);
+    }
+
+    96% {
+        transform: translate(3px, -1px) skewX(1deg);
+        filter: hue-rotate(-45deg);
+    }
+
+    97% {
+        transform: translate(-2px, 0) skewX(0deg);
+        filter: none;
+    }
+
+    98% {
+        transform: translate(2px, 1px) skewX(-1deg);
+        filter: hue-rotate(25deg);
+    }
+
+    99% {
+        transform: translate(0, -2px);
+        filter: none;
+    }
+}
+
+/* Subtitle text */
+.nf-title {
+    color: var(--color-text);
+    font-size: var(--fs-h2);
+    font-weight: 700;
+    font-family: var(--ff-heading);
+    margin: 0 0 12px;
+    animation: nf-fade-up 0.8s ease 0.2s both;
+}
+
+.nf-description {
+    color: var(--color-text-secondary);
+    font-size: var(--fs-body);
+    margin: 0 0 12px;
+    line-height: var(--lh-body);
+    animation: nf-fade-up 0.8s ease 0.4s both;
+}
+
+.nf-redirect-note {
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    margin: 0 0 30px;
+    animation: nf-fade-up 0.8s ease 0.5s both;
+}
+
+.nf-redirect-note strong {
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes nf-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Animated divider line */
+.nf-divider {
+    width: 80px;
+    height: 3px;
+    margin: 0 auto 32px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--color-primary), #3b82f6);
+    background-size: 200% 100%;
+    animation: nf-gradient-shift 3s ease infinite, nf-fade-up 0.8s ease 0.3s both;
+}
+
+/* Buttons */
+.nf-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    animation: nf-fade-up 0.8s ease 0.6s both;
+}
+
+.nf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    text-decoration: none;
+    border: none;
+    outline: none;
+    font-family: var(--ff-body);
+}
+
+.nf-btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+    color: #fff;
+    box-shadow: 0 4px 14px var(--color-primary-ring);
+}
+
+.nf-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--color-primary-ring);
+    color: #fff;
+}
+
+.nf-btn-ghost {
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-xs);
+}
+
+.nf-btn-ghost:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+    transform: translateY(-2px);
+    border-color: var(--color-text-muted);
+}
+
+/* Astronaut floating SVG */
+.nf-astronaut {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 24px;
+    animation: nf-astronaut-float 6s ease-in-out infinite, nf-fade-up 1s ease both;
+}
+
+.nf-astronaut svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 20px var(--color-primary-ring));
+}
+
+@keyframes nf-astronaut-float {
+    0%, 100% {
+        transform: translateY(0) rotate(-3deg);
+    }
+    50% {
+        transform: translateY(-16px) rotate(3deg);
+    }
+}
+
+/* Scan line overlay for CRT effect (softened for light mode) */
+.nf-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: repeating-linear-gradient(0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.015) 2px,
+            rgba(0, 0, 0, 0.015) 4px);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .nf-content {
+        padding: 32px 20px;
+    }
+
+    .nf-actions {
+        flex-direction: column;
+    }
+
+    .nf-btn {
+        justify-content: center;
+    }
+}

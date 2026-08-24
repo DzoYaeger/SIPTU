@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\NotificationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class ExitPermitController extends Controller
@@ -353,7 +354,15 @@ class ExitPermitController extends Controller
             'returning_ids.*' => 'integer',
         ]);
 
-        $permit = ExitPermit::findOrFail($id);
+        $permit = retry(3, function () use ($id) {
+            try {
+                return ExitPermit::findOrFail($id);
+            } catch (\Throwable $e) {
+                DB::reconnect();
+                throw $e;
+            }
+        }, 100);
+
         $nip = trim((string) $validated['nip']);
 
         if ((string) $permit->nip !== $nip) {
@@ -384,15 +393,22 @@ class ExitPermitController extends Controller
         $durationSeconds = $this->calculateEffectiveSeconds($permit->date, $exitTime, $now);
         $durationMinutes = (int) floor($durationSeconds / 60);
 
-        $permit->update([
-            'return_time' => $now->format('H:i:s'),
-            'duration_seconds' => $durationSeconds,
-            'duration_minutes' => $durationMinutes,
-            'status' => 'returned',
-            'return_recorded_by_admin' => false,
-            'return_recorded_by_user_id' => null,
-            'return_recorded_note' => null,
-        ]);
+        retry(3, function () use ($permit, $now, $durationSeconds, $durationMinutes) {
+            try {
+                $permit->update([
+                    'return_time' => $now->format('H:i:s'),
+                    'duration_seconds' => $durationSeconds,
+                    'duration_minutes' => $durationMinutes,
+                    'status' => 'returned',
+                    'return_recorded_by_admin' => false,
+                    'return_recorded_by_user_id' => null,
+                    'return_recorded_note' => null,
+                ]);
+            } catch (\Throwable $e) {
+                DB::reconnect();
+                throw $e;
+            }
+        }, 100);
 
         $returnedPermits = [$permit->fresh()];
 
@@ -927,6 +943,133 @@ class ExitPermitController extends Controller
                 'top_employee' => $topEmployee,
                 'pribadi_count' => $monthlyPribadi,
                 'kantor_count' => $monthlyKantor,
+            ],
+        ]);
+    }
+
+    /**
+     * PROTECTED: Analytics data for Monitoring Izin Keluar.
+     * Provides weekly trends, hourly exit distribution, top-by-hour and
+     * employee pattern detection (frequent exits at the same hour).
+     */
+    public function analytics(Request $request)
+    {
+        $month = (int) ($request->input('month', Carbon::now('Asia/Makassar')->format('m')));
+        $year = (int) ($request->input('year', Carbon::now('Asia/Makassar')->format('Y')));
+
+        // ---------- Weekly (last 7 days, relative to today) ----------
+        $today = Carbon::now('Asia/Makassar')->startOfDay();
+        $weekly = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = $today->copy()->subDays($i);
+            $dayStr = $day->format('Y-m-d');
+            $dayPermits = ExitPermit::where('date', $dayStr)->get();
+            $weekly[] = [
+                'date' => $dayStr,
+                'label' => $day->format('d MMM'),
+                'total' => $dayPermits->count(),
+                'kantor' => $dayPermits->where('permit_type', 'Kantor')->count(),
+                'pribadi' => $dayPermits->where('permit_type', 'Pribadi')->count(),
+            ];
+        }
+
+        // ---------- Hourly distribution (exit_time hour) ----------
+        $monthPermits = ExitPermit::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->get();
+
+        $hourly = [];
+        for ($h = 0; $h < 24; $h++) {
+            $hourly[] = [
+                'hour' => $h,
+                'label' => sprintf('%02d:00', $h),
+                'total' => 0,
+            ];
+        }
+
+        foreach ($monthPermits as $permit) {
+            if (!$permit->exit_time) continue;
+            $hour = (int) explode(':', $permit->exit_time)[0];
+            if ($hour >= 0 && $hour < 24 && isset($hourly[$hour])) {
+                $hourly[$hour]['total']++;
+            }
+        }
+
+        $maxHourTotal = max(array_column($hourly, 'total'));
+        foreach ($hourly as &$hItem) {
+            $hItem['is_peak'] = $maxHourTotal > 0 && $hItem['total'] === $maxHourTotal;
+        }
+        unset($hItem);
+
+        // ---------- Top employee by hour (pattern detection) ----------
+        $comboCounts = [];
+        foreach ($monthPermits as $permit) {
+            if (!$permit->exit_time) continue;
+            $hour = (int) explode(':', $permit->exit_time)[0];
+            $key = ($permit->employee_id ?: $permit->nip) . '|' . $hour;
+            if (!isset($comboCounts[$key])) {
+                $comboCounts[$key] = [
+                    'employee_id' => $permit->employee_id,
+                    'employee_name' => $permit->employee_name ?: 'Pegawai',
+                    'nip' => $permit->nip,
+                    'hour' => $hour,
+                    'hour_label' => sprintf('%02d:00 - %02d:59', $hour, $hour),
+                    'count' => 0,
+                ];
+            }
+            $comboCounts[$key]['count']++;
+        }
+
+        $topByHour = collect($comboCounts)
+            ->sortByDesc('count')
+            ->take(5)
+            ->values()
+            ->all();
+
+        // Pattern: employee exited >= 3 times at the exact same hour this month
+        $patterns = collect($comboCounts)
+            ->filter(fn ($combo) => $combo['count'] >= 3)
+            ->sortByDesc('count')
+            ->values()
+            ->take(8)
+            ->all();
+
+        // Monthly summary reuse
+        $monthlyTotal = $monthPermits->count();
+        $monthlyReturnedCollection = $monthPermits->where('status', 'returned')->values();
+        $monthlyAvgDurationSeconds = (int) round(
+            $monthlyReturnedCollection
+                ->map(fn ($permit) => $permit->duration_seconds_effective)
+                ->filter(fn ($seconds) => $seconds !== null)
+                ->avg() ?? 0
+        );
+
+        $topEmployee = $monthPermits->groupBy('employee_id')
+            ->map(function ($items) {
+                $totalSeconds = (int) $items
+                    ->map(fn ($permit) => $permit->duration_seconds_effective ?? 0)
+                    ->sum();
+                return [
+                    'employee_name' => $items->first()->employee_name,
+                    'nip' => $items->first()->nip,
+                    'count' => $items->count(),
+                    'total_seconds' => $totalSeconds,
+                    'total_minutes' => (int) floor($totalSeconds / 60),
+                ];
+            })
+            ->sortByDesc('count')
+            ->first();
+
+        return response()->json([
+            'weekly' => $weekly,
+            'hourly' => $hourly,
+            'top_by_hour' => $topByHour,
+            'patterns' => $patterns,
+            'monthly' => [
+                'total' => $monthlyTotal,
+                'avg_duration' => (int) round($monthlyAvgDurationSeconds / 60),
+                'avg_duration_seconds' => $monthlyAvgDurationSeconds,
+                'top_employee' => $topEmployee,
             ],
         ]);
     }

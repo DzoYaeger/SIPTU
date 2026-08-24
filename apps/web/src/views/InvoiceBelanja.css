@@ -1,0 +1,250 @@
+/* ── INVOICE BELANJA COMPACT STANDAR STYLES ── */
+
+.inv-data-table .ant-table-thead > tr > th {
+  background: #fafafa !important;
+  color: #262626 !important;
+  font-weight: 600 !important;
+  font-size: 11.5px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 10px 12px !important;
+  white-space: nowrap;
+}
+
+.inv-data-table .ant-table-tbody > tr > td {
+  padding: 10px 12px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  font-size: 12px !important;
+}
+
+.inv-no-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.inv-no-text-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inv-no-code {
+  font-weight: 600;
+  color: #1890ff;
+  font-size: 12px;
+}
+
+.inv-no-meta {
+  font-size: 10.5px;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+}
+
+.inv-mak-badge {
+  border-radius: 4px !important;
+  padding: 0 6px !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  line-height: 20px !important;
+}
+
+.inv-desc-text {
+  font-size: 12px;
+  color: #262626;
+  line-height: 1.35;
+}
+
+.inv-gross-val {
+  font-weight: 600;
+  color: #262626;
+  font-size: 12px;
+}
+
+.inv-tax-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inv-tax-chip {
+  background: #fffbe6;
+  color: #d46b08;
+  border: 1px solid #ffe58f;
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 10.5px;
+  line-height: 18px;
+  display: inline-block;
+}
+
+.inv-tax-none {
+  color: #bfbfbf;
+  font-size: 11.5px;
+  font-style: italic;
+}
+
+.inv-net-badge {
+  font-weight: 600;
+  color: #389e0d;
+  font-size: 12px;
+  background: #f6ffed;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #b7eb8f;
+  display: inline-block;
+}
+
+.inv-creator-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-creator-name {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: #262626;
+}
+
+.inv-creator-sub {
+  font-size: 10.5px;
+  color: #8c8c8c;
+}
+
+/* Preset Chips in Form */
+.inv-presets-wrapper {
+  margin-bottom: 14px;
+  background: #fafafa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.inv-preset-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #595959;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.inv-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inv-preset-chip {
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  color: #595959;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inv-preset-chip:hover {
+  background: #e6f7ff;
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.inv-tax-row-card {
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.inv-sign-box {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.inv-sign-box-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #434343;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Calculation summary box */
+.inv-calc-box {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.inv-calc-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #434343;
+  margin-bottom: 4px;
+}
+
+.inv-calc-row-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inv-net-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #237804;
+}
+
+.inv-net-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #389e0d;
+}
+
+.inv-terbilang-box {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px dashed #b7eb8f;
+  font-size: 11.5px;
+  color: #237804;
+  font-style: italic;
+}
+
+.inv-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inv-form-section {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.inv-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+}

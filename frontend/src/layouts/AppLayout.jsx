@@ -70,6 +70,7 @@ import LayananMandiri from "../views/LayananMandiri.jsx";
 import Kgb from "../views/Kgb.jsx";
 import KepegawaianKalender from "../views/KepegawaianKalender.jsx";
 import KepegawaianSuratTugas from "../views/KepegawaianSuratTugas.jsx";
+import PemeriksaanKesehatan from "../views/PemeriksaanKesehatan.jsx";
 import KeuanganLpj from "../views/KeuanganLpj.jsx";
 import KeuanganPejabat from "../views/KeuanganPejabat.jsx";
 import Anggaran from "../views/Anggaran.jsx";
@@ -105,6 +106,7 @@ import PengadaanPbj from "../views/PengadaanPbj.jsx";
 import KearsipanArsipVital from "../views/KearsipanArsipVital.jsx";
 import PelatihanPegawai from "../views/PelatihanPegawai.jsx";
 import EInvitationModule from "../views/EInvitationModule.jsx";
+import KanbanWork from "../views/KanbanWork.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import "./AppLayout.css";
 import MobileAppShell from "./MobileAppShell.jsx";
@@ -231,6 +233,7 @@ function mapSlugToPath(slug) {
     "kepegawaian-kalender": "/app/kepegawaian-kalender",
     "kepegawaian-surat-tugas": "/app/kepegawaian-surat-tugas",
     "kepegawaian-bangkom": "/app/kepegawaian-bangkom",
+    "pemeriksaan-kesehatan": "/app/pemeriksaan-kesehatan",
     "zoom-generator": "/app/zoom-generator",
     "rispeg-ruh": "/app/rispeg-ruh",
     "rispeg-dashboard": "/app/rispeg-dashboard",
@@ -277,6 +280,7 @@ function mapSlugToPath(slug) {
     "kepegawaian-pelatihan": "/app/kepegawaian-bangkom",
     "e-invitation": "/app/e-invitation",
     "simkeu": "/app/simkeu",
+    "kanban-work": "/app/kanban-work",
   };
   return routes[slug] ?? null;
 }
@@ -536,6 +540,7 @@ function AppLayout() {
 
     createModule("layanan-mandiri", "Layanan Mandiri");
     createModule("riwayat-layanan", "Riwayat Layanan");
+    createModule("kanban-work", "Kanban Work");
 
     createModule("antrian-kontrol", "Manajemen UPP");
 
@@ -914,6 +919,10 @@ function AppLayout() {
               }
             />
             <Route
+              path="kanban-work"
+              element={<KanbanWork />}
+            />
+            <Route
               path="pengadaan-pdtt-katalog"
               element={
                 <ProtectedRoute moduleSlug="pengadaan-pdtt-katalog">
@@ -949,6 +958,7 @@ function AppLayout() {
               path="antrian-kontrol"
               element={<AdminQueueControl />}
             />
+            <Route path="pemeriksaan-kesehatan" element={<PemeriksaanKesehatan />} />
             <Route path="layanan-mandiri" element={<LayananMandiri />} />
             <Route path="berita/:slug" element={<NewsDetail />} />
             <Route path="riwayat-layanan" element={<RiwayatLayanan />} />

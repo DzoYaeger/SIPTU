@@ -53,4 +53,11 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
     ],
 
+    'opencode' => [
+        'api_key' => env('OPENCODE_API_KEY', ''),
+        'base_url' => env('OPENCODE_BASE_URL', 'https://api.opencode.ai/v1'),
+        'model' => env('OPENCODE_MODEL', 'deepseek/deepseek-chat:free'),
+    ],
+
+
 ];

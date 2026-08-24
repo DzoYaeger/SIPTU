@@ -152,6 +152,8 @@ Route::middleware('throttle:public-api')->group(function () {
     Route::get('/procurement-pbjs', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'index']);
     Route::get('/procurement-pbjs/{id}/file/{fileType}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'viewFile']);
     Route::get('/public/procurement-pbjs/{id}/file/{fileType}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'viewFile']);
+    Route::get('/public/kanban-tasks/subtasks/{subtaskId}/file', [\App\Http\Controllers\Api\KanbanTaskController::class, 'streamSubtaskFile']);
+    Route::get('/public/kanban-tasks/reports/{reportId}/file', [\App\Http\Controllers\Api\KanbanTaskController::class, 'streamReportFile']);
     Route::get('/public/inventory-requests/{token}', [InventoryRequestController::class, 'showPublic']);
     Route::put('/public/inventory-requests/{token}/approve', [InventoryRequestController::class, 'approvePublic']);
     Route::put('/public/inventory-requests/{token}/reject', [InventoryRequestController::class, 'rejectPublic']);
@@ -166,6 +168,7 @@ Route::middleware('throttle:public-api')->group(function () {
 
     // Public Invoice PDF download
     Route::get('/public/invoices/{id}/export-pdf', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
+    Route::get('/public/invoices/{id}/export-pdf-f4', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
 
     // Surat Tugas (public)
     Route::post('/public/surat-tugas', [SuratTugasController::class, 'storePublic']);
@@ -219,11 +222,12 @@ Route::middleware('throttle:queue-polling')->group(function () {
     Route::get('/public/queue-display', [QueueDisplayController::class, 'publicShow']);
 });
 
-// ─── Protected routes (auth:sanctum + password.reset) ────────────────────────────────
-Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
+// ─── Protected routes (auth:sanctum) ────────────────────────────────
+Route::middleware('auth:sanctum')->group(function () {
     // Dashboard stats (requires login)
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/activities', [DashboardController::class, 'recentActivities']);
+    Route::get('/dashboard/my-active-requests', [DashboardController::class, 'myActiveRequests']);
     Route::get('/sidebar/badge-counts', [DashboardController::class, 'badgeCounts']);
     Route::get('/news', [NewsPostController::class, 'publicIndex']);
     Route::get('/news/{slug}', [NewsPostController::class, 'publicShow']);
@@ -237,6 +241,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     // MFA routes
     Route::get('/mfa/setup', [MfaController::class, 'setup']);
     Route::post('/mfa/confirm', [MfaController::class, 'confirm']);
+    Route::get('/mfa/session-status', [MfaController::class, 'sessionStatus']);
     Route::delete('/mfa/disable/{userId}', [MfaController::class, 'adminDisable']);
 
     // Nextcloud Storage routes
@@ -305,6 +310,10 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/hero-slider', [AdminNotificationSettingsController::class, 'updateHeroSlider']);
     Route::post('/hero-slider/upload', [AdminNotificationSettingsController::class, 'uploadHeroSliderImage']);
 
+    // Layanan Mandiri Category & Filter Management
+    Route::get('/layanan-filter-config', [AdminNotificationSettingsController::class, 'getLayananFilterConfig']);
+    Route::put('/layanan-filter-config', [AdminNotificationSettingsController::class, 'updateLayananFilterConfig']);
+
     // Archive Units (for loans)
     Route::get('/archive-units', [ArchiveUnitController::class, 'index']);
 
@@ -353,6 +362,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::post('/exit-permits/geofence-ping', [ExitPermitController::class, 'geofencePing']);
     Route::get('/exit-permits/{id}', [ExitPermitController::class, 'show'])->whereNumber('id');
     Route::get('/exit-permits/stats', [ExitPermitController::class, 'stats']);
+    Route::get('/exit-permits/analytics', [ExitPermitController::class, 'analytics']);
     Route::get('/exit-permits/word-parameters', [ExitPermitController::class, 'wordTemplateParameters']);
     Route::get('/exit-permits/{id}/generate-word', [ExitPermitController::class, 'generateWord'])->whereNumber('id');
     Route::get('/my-service-history', [ServiceHistoryController::class, 'index']);
@@ -399,6 +409,30 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/bmn-maintenance-reports/{id}/approve', [BmnMaintenanceReportController::class, 'approve']);
     Route::put('/bmn-maintenance-reports/{id}/reject', [BmnMaintenanceReportController::class, 'reject']);
     Route::put('/bmn-maintenance-reports/{id}/complete', [BmnMaintenanceReportController::class, 'complete']);
+    Route::delete('/bmn-maintenance-reports/{id}', [BmnMaintenanceReportController::class, 'destroy']);
+
+    // ─── Pemeriksaan Kesehatan (Medical Check-Up / MCU) ──────────────
+    Route::get('/medical-checkup/packages', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'packages']);
+    Route::get('/medical-checkup/my-balance', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'myBalance']);
+    Route::get('/medical-checkup/my-requests', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'myRequests']);
+    Route::post('/medical-checkup/requests', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'store']);
+    Route::delete('/medical-checkup/requests/{id}/cancel', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'cancelMyRequest']);
+
+    // Admin Medical Check-Up routes
+    Route::get('/medical-checkup/admin/requests', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminRequests']);
+    Route::put('/medical-checkup/admin/requests/{id}/status', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'updateStatus']);
+    Route::delete('/medical-checkup/admin/requests/{id}', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'destroy']);
+    Route::get('/medical-checkup/admin/balances', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminBalances']);
+    Route::get('/medical-checkup/admin/employees-options', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'getEmployeeOptions']);
+    Route::post('/medical-checkup/admin/balances', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'setBalance']);
+    Route::delete('/medical-checkup/admin/balances/clear-all', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminClearBalances']);
+    Route::delete('/medical-checkup/admin/balances/{id}', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminDeleteBalance']);
+    Route::post('/medical-checkup/admin/balances/bulk-init', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'bulkInitBalances']);
+    Route::post('/medical-checkup/admin/packages', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminStorePackage']);
+    Route::post('/medical-checkup/admin/packages/seed-defaults', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminSeedDefaultPackages']);
+    Route::delete('/medical-checkup/admin/packages/clear-all', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminClearAllPackages']);
+    Route::put('/medical-checkup/admin/packages/{id}', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminUpdatePackage']);
+    Route::delete('/medical-checkup/admin/packages/{id}', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'adminDeletePackage']);
 
     // Pengadaan PDTT
     Route::get('/pdtt-items', [PdttItemController::class, 'index']);
@@ -438,6 +472,37 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::put('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'update']);
     Route::post('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'update']);
     Route::delete('/procurement-pbjs/{id}', [\App\Http\Controllers\Api\ProcurementPbjController::class, 'destroy']);
+
+    // ─── Kanban Work Workspaces / Groups Management ─────────────────
+    Route::get('/kanban-groups', [\App\Http\Controllers\Api\KanbanTaskController::class, 'listGroups']);
+    Route::post('/kanban-groups', [\App\Http\Controllers\Api\KanbanTaskController::class, 'storeGroup']);
+    Route::put('/kanban-groups/{id}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'updateGroup']);
+    Route::delete('/kanban-groups/{id}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'destroyGroup']);
+
+    // ─── Kanban Work Tasks Management & Nextcloud Storage ───────────
+    Route::get('/kanban-tasks', [\App\Http\Controllers\Api\KanbanTaskController::class, 'index']);
+    Route::get('/kanban-tasks/employees', [\App\Http\Controllers\Api\KanbanTaskController::class, 'listEmployees']);
+    Route::post('/kanban-tasks', [\App\Http\Controllers\Api\KanbanTaskController::class, 'store']);
+    Route::get('/kanban-tasks/{id}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'show']);
+    Route::put('/kanban-tasks/{id}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'update']);
+    Route::put('/kanban-tasks/{id}/status', [\App\Http\Controllers\Api\KanbanTaskController::class, 'updateStatus']);
+    Route::delete('/kanban-tasks/{id}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'destroy']);
+    Route::post('/kanban-tasks/{taskId}/subtasks', [\App\Http\Controllers\Api\KanbanTaskController::class, 'storeSubtask']);
+    Route::put('/kanban-tasks/subtasks/{subtaskId}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'updateSubtask']);
+    Route::post('/kanban-tasks/subtasks/{subtaskId}/evidence', [\App\Http\Controllers\Api\KanbanTaskController::class, 'uploadSubtaskEvidence']);
+    Route::delete('/kanban-tasks/subtasks/{subtaskId}/evidence', [\App\Http\Controllers\Api\KanbanTaskController::class, 'deleteSubtaskEvidence']);
+    Route::delete('/kanban-tasks/subtasks/{subtaskId}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'deleteSubtask']);
+    Route::get('/kanban-tasks/subtasks/{subtaskId}/file', [\App\Http\Controllers\Api\KanbanTaskController::class, 'streamSubtaskFile']);
+
+    // ─── Kanban Work Progress Reports & History ─────────────────────
+    Route::get('/kanban-tasks/{taskId}/reports', [\App\Http\Controllers\Api\KanbanTaskController::class, 'listReports']);
+    Route::post('/kanban-tasks/{taskId}/reports', [\App\Http\Controllers\Api\KanbanTaskController::class, 'storeReport']);
+    Route::delete('/kanban-tasks/reports/{reportId}', [\App\Http\Controllers\Api\KanbanTaskController::class, 'destroyReport']);
+    Route::get('/kanban-tasks/reports/{reportId}/file', [\App\Http\Controllers\Api\KanbanTaskController::class, 'streamReportFile']);
+
+    // ─── Kanban Workspace Activity Logs (Audit Trail) ──────────────
+    Route::get('/kanban-activities', [\App\Http\Controllers\Api\KanbanTaskController::class, 'listActivities']);
+    Route::get('/kanban-groups/{groupId}/activities', [\App\Http\Controllers\Api\KanbanTaskController::class, 'listActivities']);
 
     // Inventory routes
     Route::apiResource('inventories', InventoryController::class);
@@ -543,6 +608,7 @@ Route::middleware(['auth:sanctum', 'password.reset'])->group(function () {
     Route::delete('/invoices/{id}', [\App\Http\Controllers\Api\InvoiceController::class, 'destroy'])->whereNumber('id');
     Route::put('/invoices/{id}/approve', [\App\Http\Controllers\Api\InvoiceController::class, 'approve'])->whereNumber('id');
     Route::get('/invoices/{id}/export-pdf', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
+    Route::get('/invoices/{id}/export-pdf-f4', [\App\Http\Controllers\Api\InvoiceController::class, 'exportPdf'])->whereNumber('id');
 
     // ─── Anggaran & Revisi Anggaran ─────────────
     Route::apiResource('budgets', BudgetController::class);

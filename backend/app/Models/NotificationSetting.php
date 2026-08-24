@@ -19,6 +19,7 @@ class NotificationSetting extends Model
         'popup_config',
         'slider_duration',
         'kepala_balai_settings',
+        'layanan_filter_config',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class NotificationSetting extends Model
             'popup_config' => 'array',
             'slider_duration' => 'integer',
             'kepala_balai_settings' => 'array',
+            'layanan_filter_config' => 'array',
         ];
     }
 

@@ -58,12 +58,12 @@
         .sub-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 2px 0;
+            margin: 0;
         }
         .sub-table td {
             border: none;
-            padding: 1px 0;
-            font-size: 9pt;
+            padding: 2px 0;
+            font-size: 9.5pt;
         }
         .terbilang-box {
             border: 1px solid #000;
@@ -137,68 +137,61 @@
     <table class="main-table">
         <thead>
             <tr>
-                <th style="width: 35px;" class="text-center">No.</th>
-                <th>Perincian Biaya</th>
-                <th style="width: 150px;" class="text-center">Jumlah</th>
-                <th style="width: 150px;" class="text-center">Keterangan</th>
+                <th style="width: 28px;" class="text-center">No.</th>
+                <th class="text-left" style="padding-left: 8px;">Perincian Biaya</th>
+                <th style="width: 110px;" class="text-center">Jumlah</th>
+                <th style="width: 200px;" class="text-center">Keterangan</th>
             </tr>
         </thead>
         <tbody>
             @foreach($itemData['rows'] as $row)
-                <tr>
-                    <td class="text-center" style="vertical-align: top;">{{ $row['no'] }}.</td>
-                    <td style="vertical-align: top;">
-                        @if(empty($row['breakdown']))
-                            {{ $row['title'] }}
-                        @else
-                            <div class="text-bold" style="margin-bottom: 2px;">{{ $row['title'] }}</div>
-                            <table class="sub-table">
-                                @foreach($row['breakdown'] as $bd)
-                                    <tr>
-                                        @if($bd['label'])
-                                            <td style="width: 80px;">{{ $bd['label'] }}</td>
-                                            <td style="width: 15px; text-align: center;">{{ $bd['qty'] }}</td>
-                                            <td style="width: 15px; text-align: center;">x</td>
-                                            <td>Rp {{ number_format($bd['rate'], 0, ',', '.') }}</td>
-                                        @else
-                                            <td colspan="4">
-                                                {{ $bd['qty'] }} 
-                                                @if(str_contains(strtolower($row['title']), 'penginapan'))
-                                                    malam
-                                                @else
-                                                    hari
-                                                @endif
-                                                x Rp {{ number_format($bd['rate'], 0, ',', '.') }}
-                                            </td>
-                                        @endif
-                                    </tr>
-                                @endforeach
-                            </table>
-                        @endif
-                    </td>
-                    <td class="text-right" style="vertical-align: bottom;">
-                        @if(empty($row['breakdown']) || count($row['breakdown']) === 1)
+                @if(empty($row['breakdown']))
+                    <tr>
+                        <td class="text-center" style="vertical-align: top; padding: 6px 4px;">{{ $row['no'] }}.</td>
+                        <td style="vertical-align: top; padding: 6px 8px; line-height: 1.4;">{{ $row['title'] }}</td>
+                        <td class="text-right" style="vertical-align: top; padding: 6px 8px; white-space: nowrap; line-height: 1.4;">
                             Rp {{ number_format($row['total'], 0, ',', '.') }}
-                        @else
-                            <table class="sub-table" style="text-align: right;">
-                                @foreach($row['breakdown'] as $bd)
-                                    <tr>
-                                        <td class="text-right" style="padding: 1px 0;">
-                                            Rp {{ number_format($bd['total'], 0, ',', '.') }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </table>
-                        @endif
-                    </td>
-                    <td style="vertical-align: middle; text-align: left;">{{ $row['keterangan'] }}</td>
-                </tr>
+                        </td>
+                        <td style="vertical-align: top; padding: 6px 8px; text-align: left; font-size: 9pt; line-height: 1.4;">
+                            {{ $row['keterangan'] }}
+                        </td>
+                    </tr>
+                @else
+                    {{-- Baris 1: Header Judul Komponen --}}
+                    <tr>
+                        <td rowspan="{{ count($row['breakdown']) + 1 }}" class="text-center" style="vertical-align: top; padding: 6px 4px;">{{ $row['no'] }}.</td>
+                        <td class="text-bold" style="border-bottom: none; padding: 6px 8px 2px 8px; line-height: 1.4;">{{ $row['title'] }}</td>
+                        <td class="text-right" style="border-bottom: none; padding: 6px 8px 2px 8px;"></td>
+                        <td style="border-bottom: none; padding: 6px 8px 2px 8px;"></td>
+                    </tr>
+                    {{-- Baris-baris Sub-item: Setiap rincian, nominal, dan keterangan berada di tr yang sama --}}
+                    @foreach($row['breakdown'] as $bdIndex => $bd)
+                        <tr>
+                            <td style="border-top: none; {{ $loop->last ? '' : 'border-bottom: none;' }} padding: 2px 8px 4px 8px; vertical-align: top; line-height: 1.4; font-size: 9.5pt;">
+                                @if($bd['label'])
+                                    - {{ $bd['label'] }}
+                                    @if($bd['qty'] > 1)
+                                        <span style="color: #444; font-size: 8.5pt;">({{ $bd['qty'] }} x Rp {{ number_format($bd['rate'], 0, ',', '.') }})</span>
+                                    @endif
+                                @else
+                                    {{ $bd['qty'] }} {{ str_contains(strtolower($row['title']), 'penginapan') ? 'malam' : 'hari' }} x Rp {{ number_format($bd['rate'], 0, ',', '.') }}
+                                @endif
+                            </td>
+                            <td class="text-right" style="border-top: none; {{ $loop->last ? '' : 'border-bottom: none;' }} padding: 2px 8px 4px 8px; vertical-align: top; white-space: nowrap; line-height: 1.4; font-size: 9.5pt;">
+                                Rp {{ number_format($bd['total'], 0, ',', '.') }}
+                            </td>
+                            <td style="border-top: none; {{ $loop->last ? '' : 'border-bottom: none;' }} padding: 2px 8px 4px 8px; vertical-align: top; text-align: left; font-size: 9pt; line-height: 1.4;">
+                                {{ !empty($bd['keterangan']) ? $bd['keterangan'] : ($loop->first ? ($row['keterangan'] ?? '') : '') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                @endif
             @endforeach
 
             <!-- Subtotal Row -->
             <tr class="text-bold">
                 <td colspan="2" class="text-center" style="padding: 8px;">Jumlah</td>
-                <td class="text-right" style="padding: 8px;">Rp {{ number_format($itemData['total'], 0, ',', '.') }}</td>
+                <td class="text-right" style="padding: 8px; white-space: nowrap;">Rp {{ number_format($itemData['total'], 0, ',', '.') }}</td>
                 <td></td>
             </tr>
         </tbody>

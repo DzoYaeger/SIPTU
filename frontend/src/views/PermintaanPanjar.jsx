@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   App as AntdApp,
   Button,
-  Card,
-  Col,
   DatePicker,
-  Divider,
   Dropdown,
   Empty,
   Form,
@@ -13,28 +10,31 @@ import {
   InputNumber,
   Modal,
   Row,
+  Col,
   Select,
   Space,
   Table,
-  Tag,
   Typography,
+  Card,
+  Popover,
+  Tooltip,
 } from 'antd';
 import {
-  BankOutlined,
   CalendarOutlined,
   CheckOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
-  FileDoneOutlined,
-  FilterOutlined,
   MoreOutlined,
   PlusOutlined,
   PrinterOutlined,
   ReloadOutlined,
   SaveOutlined,
   SearchOutlined,
-  WalletOutlined,
+  CloseOutlined,
+  ClockCircleOutlined,
+  FilterOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
@@ -43,15 +43,15 @@ import useDebounce from '../hooks/useDebounce.js';
 import { buildMessageAdapter } from '../utils/notify.js';
 import './PermintaanPanjar.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 dayjs.locale('id');
 
 const STATUS_OPTIONS = [
-  { label: 'Draft', value: 'draft', color: 'default' },
-  { label: 'Diajukan', value: 'submitted', color: 'processing' },
-  { label: 'Disetujui', value: 'approved', color: 'success' },
-  { label: 'Ditolak', value: 'rejected', color: 'error' },
-  { label: 'Dibayar', value: 'paid', color: 'green' },
+  { label: 'Draft', value: 'draft', dot: 'draft' },
+  { label: 'Diajukan', value: 'submitted', dot: 'submitted' },
+  { label: 'Disetujui', value: 'approved', dot: 'approved' },
+  { label: 'Ditolak', value: 'rejected', dot: 'rejected' },
+  { label: 'Dibayar', value: 'paid', dot: 'paid' },
 ];
 
 const STATUS_MAP = STATUS_OPTIONS.reduce((acc, item) => ({ ...acc, [item.value]: item }), {});
@@ -82,6 +82,8 @@ export default function PermintaanPanjar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedTa, setSelectedTa] = useState('ALL');
+  const [dateRange, setDateRange] = useState(null);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
@@ -119,9 +121,14 @@ export default function PermintaanPanjar() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append('per_page', '1000');
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (selectedStatus !== 'ALL') params.append('status', selectedStatus);
       if (selectedTa !== 'ALL') params.append('tahun_anggaran', selectedTa);
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        params.append('start_date', dateRange[0].format('YYYY-MM-DD'));
+        params.append('end_date', dateRange[1].format('YYYY-MM-DD'));
+      }
       const response = await apiFetch(`/panjar-requests?${params.toString()}`);
       const json = await response.json();
       if (!response.ok) throw new Error(json.message || 'Gagal memuat data panjar');
@@ -131,20 +138,18 @@ export default function PermintaanPanjar() {
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, debouncedSearchTerm, selectedStatus, selectedTa, notification]);
+  }, [apiFetch, debouncedSearchTerm, selectedStatus, selectedTa, dateRange, notification]);
 
   useEffect(() => {
     fetchPanjar();
   }, [fetchPanjar]);
 
-  const metrics = useMemo(() => data.reduce((acc, item) => {
-    const nominal = Number(item.nominal_panjar) || 0;
-    acc.totalCount += 1;
-    acc.totalNominal += nominal;
-    if (item.status === 'approved') acc.approvedNominal += nominal;
-    if (item.status === 'submitted') acc.submittedCount += 1;
-    return acc;
-  }, { totalCount: 0, totalNominal: 0, approvedNominal: 0, submittedCount: 0 }), [data]);
+  const handleResetFilter = () => {
+    setSearchTerm('');
+    setSelectedStatus('ALL');
+    setSelectedTa('ALL');
+    setDateRange(null);
+  };
 
   const handleOpenModal = (record = null) => {
     if (record) {
@@ -239,7 +244,7 @@ export default function PermintaanPanjar() {
 
   const handlePrintPdf = async (record) => {
     try {
-      notification.info('Menyiapkan dokumen Form Persetujuan Permintaan Panjar...');
+      notification.info('Menyiapkan Form Persetujuan Panjar...');
       const response = await apiFetch(`/panjar-requests/${record.id}/export-pdf`, {
         method: 'GET',
         headers: { Accept: 'application/pdf' },
@@ -263,68 +268,85 @@ export default function PermintaanPanjar() {
 
   const columns = [
     {
-      title: 'Nomor',
+      title: 'NOMOR PENGAJUAN',
       dataIndex: 'ticket_no',
-      width: 165,
+      width: 170,
       render: (_, record) => (
         <div className="panjar-ticket-cell">
-          <Text strong className="text-sm">{record.panjar_no || record.ticket_no}</Text>
-          <Text className="text-xs">{record.ticket_no}</Text>
+          <span className="panjar-main-no">{record.panjar_no || record.ticket_no}</span>
+          <span className="panjar-sub-no">{record.ticket_no}</span>
         </div>
       ),
     },
     {
-      title: 'Kegiatan',
+      title: 'KEGIATAN & MAK',
       dataIndex: 'kegiatan',
       render: (_, record) => (
         <div className="panjar-activity-cell">
-          <Text strong className="text-sm">{record.kegiatan}</Text>
-          <Text className="text-xs">MAK: {record.mak || '-'}</Text>
+          <span className="panjar-kegiatan-text">{record.kegiatan}</span>
+          <span className="panjar-mak-badge">MAK: {record.mak || '-'}</span>
         </div>
       ),
     },
     {
-      title: 'Penerima',
+      title: 'PENERIMA DANA',
       dataIndex: 'penerima_name',
-      width: 170,
+      width: 180,
       render: (value, record) => (
-        <div className="panjar-activity-cell">
-          <Text className="text-sm">{value || '-'}</Text>
-          <Text className="text-xs">TA {record.tahun_anggaran}</Text>
+        <div className="panjar-receiver-cell">
+          <span className="panjar-receiver-name">{value || '-'}</span>
+          <span className="panjar-ta-badge">TA {record.tahun_anggaran}</span>
         </div>
       ),
     },
     {
-      title: 'Tanggal',
+      title: 'TANGGAL PENGAJUAN',
       dataIndex: 'tanggal_pengajuan',
-      width: 120,
-      render: (value) => <Text className="text-sm">{value ? dayjs(value).format('DD/MM/YYYY') : '-'}</Text>,
+      width: 130,
+      render: (value) => (
+        <span className="panjar-date-text">
+          {value ? dayjs(value).format('DD/MM/YYYY') : '-'}
+        </span>
+      ),
     },
     {
-      title: 'Nominal',
+      title: 'NOMINAL PANJAR',
       dataIndex: 'nominal_panjar',
       align: 'right',
       width: 150,
-      render: (value) => <Text strong style={{ color: '#0F5B99', fontSize: '12px', whiteSpace: 'nowrap' }}>{formatCurrency(value)}</Text>,
+      render: (value) => (
+        <span className="panjar-nominal-value">
+          {formatCurrency(value)}
+        </span>
+      ),
     },
     {
-      title: 'Status',
+      title: 'STATUS',
       dataIndex: 'status',
-      width: 115,
-      render: (value) => <Tag color={STATUS_MAP[value]?.color || 'default'}>{STATUS_MAP[value]?.label || value}</Tag>,
+      width: 120,
+      render: (value) => {
+        const s = STATUS_MAP[value] || STATUS_OPTIONS[0];
+        return (
+          <div className="status-indicator">
+            <span className={`status-dot ${s.dot}`} />
+            <span className="status-text">{s.label}</span>
+          </div>
+        );
+      },
     },
     {
-      title: 'Aksi',
+      title: 'AKSI',
       key: 'action',
-      align: 'right',
-      width: 90,
+      align: 'center',
+      width: 50,
       render: (_, record) => {
         const items = [
-          { key: 'view', label: 'Lihat Detail', icon: <EyeOutlined /> },
-          { key: 'print', label: 'Cetak PDF', icon: <PrinterOutlined /> },
-          { key: 'edit', label: 'Edit', icon: <EditOutlined /> },
-          ...(isAdmin ? [{ key: 'approve', label: 'Setujui', icon: <CheckOutlined /> }] : []),
-          { key: 'delete', label: 'Hapus', icon: <DeleteOutlined />, danger: true },
+          { key: 'view', label: 'Lihat Detail Rincian', icon: <EyeOutlined /> },
+          { key: 'print', label: 'Cetak PDF Persetujuan', icon: <PrinterOutlined /> },
+          { key: 'edit', label: 'Edit Data Panjar', icon: <EditOutlined /> },
+          ...(isAdmin ? [{ key: 'approve', label: 'Setujui Panjar', icon: <CheckOutlined /> }] : []),
+          { type: 'divider' },
+          { key: 'delete', label: 'Hapus Panjar', icon: <DeleteOutlined />, danger: true },
         ];
         return (
           <Dropdown
@@ -339,8 +361,9 @@ export default function PermintaanPanjar() {
               },
             }}
             trigger={['click']}
+            placement="bottomRight"
           >
-            <Button size="small" icon={<MoreOutlined />} />
+            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#64748b', fontSize: 16 }} />} />
           </Dropdown>
         );
       },
@@ -348,129 +371,424 @@ export default function PermintaanPanjar() {
   ];
 
   return (
-    <div className="module-section panjar-page">
-      <div className="module-toolbar">
-        <div>
-          <Title level={4} className="module-title">Permintaan Panjar</Title>
-          <Text className="module-subtitle">Pengajuan uang muka kegiatan dengan rincian kebutuhan dan kontrol status SIMKEU.</Text>
-        </div>
-        <Space wrap>
-          <Button id="panjar-refresh-button" icon={<ReloadOutlined />} onClick={fetchPanjar}>Segarkan</Button>
-          <Button id="panjar-create-button" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>Tambah Panjar</Button>
-        </Space>
-      </div>
+    <div className="panjar-module-container">
+      {/* ── Toolbar & Filter Box (Surat Tugas Standard) ── */}
+      <Card
+        variant="borderless"
+        style={{ borderRadius: 8 }}
+        styles={{ body: { padding: '12px 16px' } }}
+        className="panjar-toolbar-card"
+      >
+        <Row gutter={[10, 10]} align="middle">
+          {/* Search */}
+          <Col xs={24} sm={12} md={6} lg={5}>
+            <Input
+              allowClear
+              prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+              placeholder="Cari nomor panjar, MAK, kegiatan..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Col>
 
-      <Row gutter={[12, 12]} className="panjar-metric-row">
-        <Col xs={24} md={6}><Card className="panjar-metric-card"><WalletOutlined /><div><Text>Total Pengajuan</Text><strong>{metrics.totalCount}</strong></div></Card></Col>
-        <Col xs={24} md={6}><Card className="panjar-metric-card"><BankOutlined /><div><Text>Nilai Panjar</Text><strong>{formatCurrency(metrics.totalNominal)}</strong></div></Card></Col>
-        <Col xs={24} md={6}><Card className="panjar-metric-card"><FileDoneOutlined /><div><Text>Disetujui</Text><strong>{formatCurrency(metrics.approvedNominal)}</strong></div></Card></Col>
-        <Col xs={24} md={6}><Card className="panjar-metric-card"><CalendarOutlined /><div><Text>Menunggu</Text><strong>{metrics.submittedCount}</strong></div></Card></Col>
-      </Row>
+          {/* Date Range Popover */}
+          <Col xs={24} sm={12} md={5} lg={4}>
+            <Popover
+              trigger="click"
+              open={datePopoverOpen}
+              onOpenChange={setDatePopoverOpen}
+              placement="bottomLeft"
+              content={
+                <Space direction="vertical" size={10} style={{ padding: 4 }}>
+                  <Text strong style={{ fontSize: 12 }}>Pilih Range Tanggal Pengajuan</Text>
+                  <DatePicker.RangePicker
+                    format="DD/MM/YYYY"
+                    value={dateRange}
+                    onChange={(val) => setDateRange(val)}
+                    allowClear
+                  />
+                  <Space style={{ justifyContent: 'flex-end', width: '100%' }}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setDateRange(null);
+                        setDatePopoverOpen(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => setDatePopoverOpen(false)}
+                    >
+                      Terapkan
+                    </Button>
+                  </Space>
+                </Space>
+              }
+            >
+              <Button icon={<CalendarOutlined />} style={{ width: '100%' }}>
+                {dateRange && dateRange[0] && dateRange[1]
+                  ? `${dateRange[0].format('DD/MM/YY')} - ${dateRange[1].format('DD/MM/YY')}`
+                  : 'Range Tanggal'}
+              </Button>
+            </Popover>
+          </Col>
 
-      <Card className="panjar-table-card">
-        <div className="panjar-filterbar">
-          <Input id="panjar-search-input" allowClear prefix={<SearchOutlined />} placeholder="Cari nomor, MAK, kegiatan, penerima..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          <Select value={selectedTa} onChange={setSelectedTa} style={{ minWidth: 130 }} options={[{ label: 'Semua TA', value: 'ALL' }, 2026, 2025, 2024].map((v) => typeof v === 'object' ? v : { label: `TA ${v}`, value: String(v) })} />
-          <Select value={selectedStatus} onChange={setSelectedStatus} style={{ minWidth: 145 }} options={[{ label: 'Semua Status', value: 'ALL' }, ...STATUS_OPTIONS]} suffixIcon={<FilterOutlined />} />
-        </div>
+          {/* Tahun Anggaran Dropdown */}
+          <Col xs={24} sm={12} md={4} lg={3}>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'ALL', label: 'Semua TA', onClick: () => setSelectedTa('ALL') },
+                  { key: '2026', label: 'TA 2026', onClick: () => setSelectedTa('2026') },
+                  { key: '2025', label: 'TA 2025', onClick: () => setSelectedTa('2025') },
+                  { key: '2024', label: 'TA 2024', onClick: () => setSelectedTa('2024') },
+                ],
+                selectedKeys: [selectedTa],
+              }}
+              trigger={['click']}
+            >
+              <Button style={{ width: '100%' }}>
+                {selectedTa === 'ALL' ? 'TA: Semua' : `TA: ${selectedTa}`}
+                <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+              </Button>
+            </Dropdown>
+          </Col>
+
+          {/* Status Dropdown */}
+          <Col xs={24} sm={12} md={4} lg={3}>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'ALL', label: 'Semua Status', onClick: () => setSelectedStatus('ALL') },
+                  ...STATUS_OPTIONS.map((opt) => ({
+                    key: opt.value,
+                    label: opt.label,
+                    onClick: () => setSelectedStatus(opt.value),
+                  })),
+                ],
+                selectedKeys: [selectedStatus],
+              }}
+              trigger={['click']}
+            >
+              <Button style={{ width: '100%' }}>
+                {selectedStatus === 'ALL'
+                  ? 'Status: Semua'
+                  : `Status: ${STATUS_MAP[selectedStatus]?.label || selectedStatus}`}
+                <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+              </Button>
+            </Dropdown>
+          </Col>
+
+          {/* Actions & Add Button */}
+          <Col xs={24} sm={24} md={5} lg={9} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <Button
+              icon={<FilterOutlined />}
+              onClick={handleResetFilter}
+            >
+              Reset
+            </Button>
+            <Tooltip title="Segarkan Data">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchPanjar}
+              />
+            </Tooltip>
+            <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+              {data.length} data
+            </Text>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenModal()}
+            >
+              + Tambah Panjar
+            </Button>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* ── Table Card ── */}
+      <Card
+        variant="borderless"
+        style={{ borderRadius: 8 }}
+        styles={{ body: { padding: '8px 8px 0 8px' } }}
+        className="panjar-main-card"
+      >
         <Table
           rowKey="id"
-          className="panjar-data-table"
+          className="panjar-table"
           loading={loading}
           columns={columns}
           dataSource={data}
-          pagination={{ pageSize: 10 }}
+          size="middle"
+          pagination={{
+            defaultPageSize: 10,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '25', '50', '100'],
+            showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
+          }}
           locale={{ emptyText: <Empty description="Belum ada permintaan panjar" /> }}
-          scroll={{ x: 980 }}
         />
       </Card>
 
+      {/* ── Create/Edit Modal ── */}
       <Modal
-        title={mode === 'edit' ? 'Edit Permintaan Panjar' : 'Tambah Permintaan Panjar'}
+        title={null}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
-        width={920}
-        destroyOnHidden
-        footer={[
-          <Button key="cancel" onClick={() => setModalOpen(false)}>Batal</Button>,
-          <Button key="save" type="primary" loading={saving} icon={<SaveOutlined />} onClick={handleSubmit}>Simpan</Button>,
-        ]}
+        width={880}
+        destroyOnClose
+        centered
+        footer={null}
+        className="panjar-modal"
       >
-        <Form layout="vertical" form={form} className="panjar-form">
-          <Row gutter={12}>
-            <Col xs={24} md={8}><Form.Item label="Tahun Anggaran" name="tahun_anggaran"><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-            <Col xs={24} md={8}><Form.Item label="Tanggal Pengajuan" name="tanggal_pengajuan"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item></Col>
-            <Col xs={24} md={8}><Form.Item label="Nomor Panjar" name="panjar_no"><Input placeholder="Auto jika kosong" /></Form.Item></Col>
-          </Row>
-          <Row gutter={12}>
-            <Col xs={24} md={10}><Form.Item label="MAK / Akun" name="mak"><Input placeholder="3165.BKB.053.001.524111" /></Form.Item></Col>
-            <Col xs={24} md={14}><Form.Item label="Penerima" name="penerima_name" rules={[{ required: true, message: 'Pilih penerima dari kepegawaian' }]}>
-              <Select showSearch optionFilterProp="label" placeholder="Pilih pegawai" options={employees.map((e) => ({ label: `${e.name}${e.nip ? ` (${e.nip})` : ''}`, value: e.name }))} />
-            </Form.Item></Col>
-          </Row>
-          <Row gutter={12}>
-            <Col xs={24} md={8}><Form.Item label="Nomor Surat Tugas" name="surat_tugas_no"><Input placeholder="Nomor surat tugas" /></Form.Item></Col>
-            <Col xs={24} md={8}><Form.Item label="Tanggal Mulai Kegiatan" name="tanggal_mulai_kegiatan"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item></Col>
-            <Col xs={24} md={8}><Form.Item label="Tanggal Akhir Kegiatan" name="tanggal_akhir_kegiatan"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item></Col>
-          </Row>
-          <Form.Item label="Kegiatan" name="kegiatan" rules={[{ required: true, message: 'Kegiatan wajib diisi' }]}><Input placeholder="Nama kegiatan yang membutuhkan panjar" /></Form.Item>
-          <Form.Item label="Uraian / Keperluan" name="uraian"><Input.TextArea rows={3} placeholder="Jelaskan kebutuhan panjar" /></Form.Item>
+        <button
+          className="panjar-modal-close"
+          onClick={() => setModalOpen(false)}
+          title="Tutup"
+        >
+          <CloseOutlined />
+        </button>
 
-          <Divider orientation="left">Rincian Kebutuhan</Divider>
-          <Form.List name="items">
-            {(fields, { add, remove }) => (
-              <div className="panjar-items-list">
-                {fields.map(({ key, name, ...restField }) => (
-                  <div className="panjar-item-row panjar-item-row--simple" key={key}>
-                    <Form.Item {...restField} name={[name, 'uraian']} rules={[{ required: true, message: 'Nama rincian wajib' }]}><Input placeholder="Nama rincian" /></Form.Item>
-                    <Form.Item {...restField} name={[name, 'nominal']} rules={[{ required: true, message: 'Nominal wajib' }]}><InputNumber min={0} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={(v) => v?.replace(/\./g, '')} placeholder="Nominal" /></Form.Item>
-                    <Button danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
-                  </div>
-                ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(blankItem)}>Tambah Rincian</Button>
-              </div>
-            )}
-          </Form.List>
-
-          <Row gutter={12} className="panjar-summary-row">
-            <Col xs={24} md={12}><Form.Item label="Nominal Panjar (Otomatis dari Rincian)" name="nominal_panjar"><InputNumber disabled min={0} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={(v) => v?.replace(/\./g, '')} /></Form.Item></Col>
-          </Row>
-          <div className="panjar-calc-box">
-            <span>Total rincian: {formatCurrency(itemsTotal)}</span>
-            <strong>Paling lambat rampung: {tanggalPalingLambatLabel}</strong>
+        <div className="panjar-modal-wrap">
+          <div className="panjar-modal-header">
+            <div>
+              <h3 className="panjar-modal-title">
+                {mode === 'edit' ? 'Edit Permintaan Panjar' : 'Buat Permintaan Panjar Baru'}
+              </h3>
+              <span className="panjar-modal-sub">
+                Isi rincian kebutuhan uang muka kegiatan operasional
+              </span>
+            </div>
           </div>
-        </Form>
+
+          <div className="panjar-modal-body">
+            <Form layout="vertical" form={form}>
+              {/* Section 1: Meta */}
+              <div className="panjar-section-box">
+                <span className="panjar-section-lbl">1. Detail Agenda & Anggaran</span>
+                <Row gutter={12}>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Tahun Anggaran" name="tahun_anggaran">
+                      <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Tanggal Pengajuan" name="tanggal_pengajuan">
+                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Nomor Panjar" name="panjar_no">
+                      <Input placeholder="Auto jika kosong" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={12}>
+                  <Col xs={24} md={10}>
+                    <Form.Item label="Kode MAK" name="mak">
+                      <Input placeholder="Contoh: 3165.BKB.053.001" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={14}>
+                    <Form.Item label="Pegawai Penerima" name="penerima_name" rules={[{ required: true, message: 'Pilih penerima' }]}>
+                      <Select
+                        showSearch
+                        optionFilterProp="label"
+                        placeholder="Pilih pegawai..."
+                        options={employees.map((e) => ({ label: `${e.name}${e.nip ? ` (${e.nip})` : ''}`, value: e.name }))}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={12}>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Nomor Surat Tugas" name="surat_tugas_no">
+                      <Input placeholder="Contoh: ST-2026/08/01" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Mulai Kegiatan" name="tanggal_mulai_kegiatan">
+                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Akhir Kegiatan" name="tanggal_akhir_kegiatan">
+                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Form.Item label="Nama Kegiatan" name="kegiatan" rules={[{ required: true, message: 'Kegiatan wajib diisi' }]}>
+                  <Input placeholder="Nama kegiatan..." />
+                </Form.Item>
+                <Form.Item label="Uraian / Keperluan" name="uraian">
+                  <Input.TextArea rows={2} placeholder="Keterangan kebutuhan panjar..." />
+                </Form.Item>
+              </div>
+
+              {/* Section 2: Items List */}
+              <div className="panjar-section-box">
+                <span className="panjar-section-lbl">2. Rincian Kebutuhan Anggaran</span>
+
+                <Form.List name="items">
+                  {(fields, { add, remove }) => (
+                    <div className="panjar-items-list">
+                      {fields.map(({ key, name, ...restField }) => (
+                        <div className="panjar-item-row" key={key}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'uraian']}
+                            rules={[{ required: true, message: 'Wajib' }]}
+                            style={{ flex: 2, margin: 0 }}
+                          >
+                            <Input placeholder="Pos rincian (contoh: BBM / Tiket)" />
+                          </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'nominal']}
+                            rules={[{ required: true, message: 'Wajib' }]}
+                            style={{ flex: 1, margin: 0 }}
+                          >
+                            <InputNumber
+                              min={0}
+                              style={{ width: '100%' }}
+                              formatter={(v) => `Rp ${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                              parser={(v) => v?.replace(/Rp\s?|[.]/g, '')}
+                              placeholder="Nominal"
+                            />
+                          </Form.Item>
+                          <Button danger type="text" icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                        </div>
+                      ))}
+                      <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(blankItem)}>
+                        + Tambah Rincian
+                      </Button>
+                    </div>
+                  )}
+                </Form.List>
+
+                {/* Summary */}
+                <div className="panjar-sum-box">
+                  <div>
+                    <span className="panjar-sum-lbl">Total Nilai Panjar:</span>
+                    <strong className="panjar-sum-val">{formatCurrency(itemsTotal)}</strong>
+                  </div>
+                  <div className="panjar-sum-due">
+                    <ClockCircleOutlined style={{ marginRight: 4 }} />
+                    Batas LPJ: <strong>{tanggalPalingLambatLabel}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="panjar-modal-footer">
+                <div></div>
+                <Space>
+                  <Button onClick={() => setModalOpen(false)}>Batal</Button>
+                  <Button type="primary" loading={saving} icon={<SaveOutlined />} onClick={handleSubmit}>
+                    Simpan Panjar
+                  </Button>
+                </Space>
+              </div>
+            </Form>
+          </div>
+        </div>
       </Modal>
 
+      {/* ── Detail View Modal ── */}
       <Modal
-        title="Detail Permintaan Panjar"
+        title={null}
         open={viewOpen}
         onCancel={() => setViewOpen(false)}
-        footer={[
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => handlePrintPdf(viewRecord)}>Cetak Form Panjar (PDF)</Button>,
-          <Button key="close" onClick={() => setViewOpen(false)}>Tutup</Button>,
-        ]}
-        width={760}
+        footer={null}
+        width={720}
+        centered
+        destroyOnClose
+        className="panjar-modal"
       >
+        <button
+          className="panjar-modal-close"
+          onClick={() => setViewOpen(false)}
+          title="Tutup"
+        >
+          <CloseOutlined />
+        </button>
+
         {viewRecord && (
-          <div className="panjar-detail">
-            <div className="panjar-detail-hero">
-              <div><Text className="text-xs">Nomor</Text><h3>{viewRecord.panjar_no || viewRecord.ticket_no}</h3></div>
-              <Tag color={STATUS_MAP[viewRecord.status]?.color}>{STATUS_MAP[viewRecord.status]?.label || viewRecord.status}</Tag>
+          <div className="panjar-modal-wrap">
+            <div className="panjar-modal-header">
+              <div>
+                <h3 className="panjar-modal-title">{viewRecord.panjar_no || viewRecord.ticket_no}</h3>
+                <span className="panjar-modal-sub">Detail Permintaan Panjar Kegiatan</span>
+              </div>
+              <div className="status-indicator">
+                <span className={`status-dot ${STATUS_MAP[viewRecord.status]?.dot || 'draft'}`} />
+                <span className="status-text">{STATUS_MAP[viewRecord.status]?.label || viewRecord.status}</span>
+              </div>
             </div>
-            <Row gutter={[12, 12]}>
-              <Col xs={24} md={12}><Text className="text-xs">Kegiatan</Text><p>{viewRecord.kegiatan}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">Nominal</Text><p className="panjar-detail-money">{formatCurrency(viewRecord.nominal_panjar)}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">MAK</Text><p>{viewRecord.mak || '-'}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">Penerima</Text><p>{viewRecord.penerima_name || '-'}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">Nomor Surat Tugas</Text><p>{viewRecord.surat_tugas_no || '-'}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">Periode Kegiatan</Text><p>{viewRecord.tanggal_mulai_kegiatan ? dayjs(viewRecord.tanggal_mulai_kegiatan).format('DD MMMM YYYY') : '-'} s.d. {viewRecord.tanggal_akhir_kegiatan ? dayjs(viewRecord.tanggal_akhir_kegiatan).format('DD MMMM YYYY') : '-'}</p></Col>
-            </Row>
-            <Divider />
-            <Table rowKey="id" size="small" pagination={false} dataSource={viewRecord.items || []} columns={[
-              { title: 'Nama Rincian', dataIndex: 'uraian' },
-              { title: 'Nominal', dataIndex: 'jumlah', align: 'right', render: formatCurrency },
-            ]} />
+
+            <div className="panjar-modal-body">
+              <div className="panjar-section-box">
+                <Row gutter={[12, 10]}>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Nama Kegiatan</Text>
+                    <p className="panjar-meta-v">{viewRecord.kegiatan}</p>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Total Nilai Panjar</Text>
+                    <p className="panjar-meta-v text-green font-bold">{formatCurrency(viewRecord.nominal_panjar)}</p>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Kode MAK</Text>
+                    <p className="panjar-meta-v">{viewRecord.mak || '-'}</p>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Pegawai Penerima</Text>
+                    <p className="panjar-meta-v">{viewRecord.penerima_name || '-'}</p>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Nomor Surat Tugas</Text>
+                    <p className="panjar-meta-v">{viewRecord.surat_tugas_no || '-'}</p>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Text className="panjar-meta-k">Periode Kegiatan</Text>
+                    <p className="panjar-meta-v">
+                      {viewRecord.tanggal_mulai_kegiatan ? dayjs(viewRecord.tanggal_mulai_kegiatan).format('DD/MM/YYYY') : '-'} s.d. {viewRecord.tanggal_akhir_kegiatan ? dayjs(viewRecord.tanggal_akhir_kegiatan).format('DD/MM/YYYY') : '-'}
+                    </p>
+                  </Col>
+                </Row>
+              </div>
+
+              {/* Rincian Table */}
+              <div className="panjar-section-box">
+                <span className="panjar-section-lbl">Rincian Pos Kebutuhan Dana</span>
+                <Table
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  dataSource={viewRecord.items || []}
+                  columns={[
+                    { title: 'Pos Rincian', dataIndex: 'uraian' },
+                    { title: 'Nominal', dataIndex: 'jumlah', align: 'right', render: formatCurrency },
+                  ]}
+                />
+              </div>
+
+              <div className="panjar-modal-footer">
+                <div></div>
+                <Space>
+                  <Button type="primary" icon={<PrinterOutlined />} onClick={() => handlePrintPdf(viewRecord)}>
+                    Cetak Form Panjar PDF
+                  </Button>
+                  <Button onClick={() => setViewOpen(false)}>Tutup</Button>
+                </Space>
+              </div>
+            </div>
           </div>
         )}
       </Modal>

@@ -18,9 +18,20 @@ class PanjarRequestController extends Controller
     {
         $query = PanjarRequest::with(['items', 'creator', 'approver']);
         $user = $request->user();
+        if ($user) {
+            $headerRole = strtolower($request->header('X-Current-Role') ?? '');
+            $inputRole = strtolower($request->input('current_role') ?? '');
+            $baseRole = strtolower($user->base_role ?? 'operator');
+            $currentRole = strtolower($user->current_role ?? $baseRole);
 
-        if ($user && ($user->base_role ?? 'operator') !== 'admin') {
-            $query->where('created_by', $user->id);
+            $isPowerUser = in_array($baseRole, ['admin', 'validator']) ||
+                           in_array($currentRole, ['admin', 'validator']) ||
+                           in_array($headerRole, ['admin', 'validator']) ||
+                           in_array($inputRole, ['admin', 'validator']);
+
+            if (!$isPowerUser) {
+                $query->where('created_by', $user->id);
+            }
         }
 
         if ($request->filled('search')) {

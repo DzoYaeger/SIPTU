@@ -81,4 +81,9 @@ class SuratTugas extends Model
     {
         return $this->belongsTo(User::class, 'signed_kepala_by');
     }
+
+    public function lpjHeader()
+    {
+        return $this->hasOne(LpjHeader::class, 'surat_tugas_id');
+    }
 }

@@ -48,10 +48,20 @@ class ProcurementPbjController extends Controller
             'no_bast' => 'nullable|string|max:255',
             'tanggal_bast' => 'nullable|date',
             'status_barang' => 'required|in:Proses Negosiasi,Proses PPK,Proses pengiriman,Proses Pembayaran,Selesai',
+            'items' => 'nullable',
             'file_surat_pesanan' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
             'file_bast' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
             'file_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
         ]);
+
+        if ($request->has('items')) {
+            $rawItems = $request->input('items');
+            if (is_string($rawItems)) {
+                $validated['items'] = json_decode($rawItems, true) ?: [];
+            } elseif (is_array($rawItems)) {
+                $validated['items'] = $rawItems;
+            }
+        }
 
         foreach (['file_surat_pesanan', 'file_bast', 'file_invoice'] as $fileKey) {
             if ($request->hasFile($fileKey)) {
@@ -94,10 +104,20 @@ class ProcurementPbjController extends Controller
             'no_bast' => 'nullable|string|max:255',
             'tanggal_bast' => 'nullable|date',
             'status_barang' => 'required|in:Proses Negosiasi,Proses PPK,Proses pengiriman,Proses Pembayaran,Selesai',
+            'items' => 'nullable',
             'file_surat_pesanan' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
             'file_bast' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
             'file_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:25600',
         ]);
+
+        if ($request->has('items')) {
+            $rawItems = $request->input('items');
+            if (is_string($rawItems)) {
+                $validated['items'] = json_decode($rawItems, true) ?: [];
+            } elseif (is_array($rawItems)) {
+                $validated['items'] = $rawItems;
+            }
+        }
 
         foreach (['file_surat_pesanan', 'file_bast', 'file_invoice'] as $fileKey) {
             if ($request->hasFile($fileKey)) {

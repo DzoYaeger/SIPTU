@@ -23,6 +23,7 @@ class ProcurementPbj extends Model
         'no_bast',
         'tanggal_bast',
         'status_barang',
+        'items',
         'file_surat_pesanan',
         'file_bast',
         'file_invoice',
@@ -34,6 +35,7 @@ class ProcurementPbj extends Model
         'tanggal_sampai' => 'date',
         'tanggal_bast' => 'date',
         'nominal' => 'decimal:2',
+        'items' => 'array',
     ];
 
     protected $appends = [

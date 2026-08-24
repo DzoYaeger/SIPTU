@@ -1,0 +1,28 @@
+{
+  "name": "siptu-ultra",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SIPTU ULTRA — Monorepo (Web + Core)",
+  "scripts": {
+    "dev:web": "pnpm --filter @siptu/web dev",
+    "build": "turbo run build",
+    "build:web": "pnpm --filter @siptu/web build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "core-js",
+      "@parcel/watcher"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.15.0"
+}

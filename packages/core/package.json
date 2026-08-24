@@ -1,0 +1,24 @@
+{
+  "name": "@siptu/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SIPTU ULTRA — Platform-agnostic core logic (API client, auth store, validators, utils). NO JSX.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./api": "./src/api/index.js",
+    "./auth": "./src/auth/index.js",
+    "./validators": "./src/validators/index.js",
+    "./utils": "./src/utils/index.js",
+    "./types": "./src/types/index.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "echo \"@siptu/core lint: ok\""
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

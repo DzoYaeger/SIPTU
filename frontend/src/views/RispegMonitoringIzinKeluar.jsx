@@ -16,6 +16,7 @@ import {
   Select,
   Badge,
   Space,
+  Avatar,
   Modal,
   Tooltip,
   TimePicker,
@@ -41,10 +42,22 @@ import {
   TeamOutlined,
   MoreOutlined,
   ClearOutlined,
+  BarChartOutlined,
+  AlertOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
 import { buildMessageAdapter } from "../utils/notify.js";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import "./RispegMonitoringIzinKeluar.css";
 
 const { Title, Text } = Typography;
@@ -56,6 +69,8 @@ function RispegMonitoringIzinKeluar() {
 
   const [data, setData] = useState([]);
   const [stats, setStats] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filterDate, setFilterDate] = useState(dayjs());
   const [filterMode, setFilterMode] = useState("date"); // date | month
@@ -132,6 +147,21 @@ function RispegMonitoringIzinKeluar() {
       setLoading(false);
     }
   }, [filterDate, filterMode, search, filterPermitType, token]);
+
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const r = await apiFetch(
+        `/exit-permits/analytics?month=${filterDate.format("M")}&year=${filterDate.format("YYYY")}`,
+      );
+      if (!r.ok) throw new Error("Gagal memuat data analitik.");
+      setAnalytics(await r.json());
+    } catch (e) {
+      console.error("Failed to fetch analytics", e);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [apiFetch, filterDate]);
   
   const fetchBreakSettings = useCallback(async () => {
     try {
@@ -150,8 +180,9 @@ function RispegMonitoringIzinKeluar() {
 
   useEffect(() => {
     fetchData();
+    fetchAnalytics();
     fetchBreakSettings();
-  }, [fetchData, fetchBreakSettings]);
+  }, [fetchData, fetchAnalytics, fetchBreakSettings]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1049,6 +1080,147 @@ function RispegMonitoringIzinKeluar() {
             </Card>
           </Col>
         </Row>
+      </Spin>
+
+      {/* Analytics Section */}
+      <Spin spinning={analyticsLoading}>
+        {analytics && (
+          <div className="mik-analytics">
+            {/* Weekly chart */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Col xs={24} lg={14}>
+                <Card
+                  variant="borderless"
+                  className="mik-chart-card"
+                  title={
+                    <span className="mik-chart-title">
+                      <BarChartOutlined style={{ color: "#4f46e5" }} /> Tren Mingguan (7 Hari Terakhir)
+                    </span>
+                  }
+                  extra={<Text type="secondary" style={{ fontSize: 11 }}>Total: {analytics.weekly.reduce((s, d) => s + (d.total || 0), 0)} izin</Text>}
+                >
+                  <ResponsiveContainer width="100%" height={230} minWidth={0}>
+                    <BarChart data={analytics.weekly} barSize={26} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <RechartsTooltip
+                        cursor={{ fill: "rgba(99, 102, 241, 0.06)" }}
+                        contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(15,23,42,0.08)", fontSize: 12 }}
+                      />
+                      <Bar dataKey="kantor" name="Urusan Kantor" stackId="a" fill="#2563eb" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="pribadi" name="Urusan Pribadi" stackId="a" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+              </Col>
+
+              {/* Hourly chart */}
+              <Col xs={24} lg={10}>
+                <Card
+                  variant="borderless"
+                  className="mik-chart-card"
+                  title={
+                    <span className="mik-chart-title">
+                      <FieldTimeOutlined style={{ color: "#f59e0b" }} /> Distribusi Jam Keluar (Bulan Ini)
+                    </span>
+                  }
+                  extra={
+                    <Tag color="gold" style={{ fontSize: 10.5 }}>
+                      Puncak: {analytics.hourly.find((h) => h.is_peak)?.label || "-"}
+                    </Tag>
+                  }
+                >
+                  <ResponsiveContainer width="100%" height={230} minWidth={0}>
+                    <BarChart data={analytics.hourly.filter((h) => h.hour >= 7 && h.hour <= 18)} barSize={14} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={52} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <RechartsTooltip
+                        cursor={{ fill: "rgba(245, 158, 11, 0.07)" }}
+                        contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(15,23,42,0.08)", fontSize: 12 }}
+                        formatter={(value, name) => [`${value} izin`, "Jam Keluar"]}
+                        labelFormatter={(label) => `Jam ${label}`}
+                      />
+                      <Bar dataKey="total" name="Izin" radius={[5, 5, 0, 0]}>
+                        {analytics.hourly.filter((h) => h.hour >= 7 && h.hour <= 18).map((h, i) => (
+                          <Cell key={i} fill={h.is_peak ? "#ef4444" : h.total >= 5 ? "#f59e0b" : "#93c5fd"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Pattern detection cards */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+              <Col xs={24} lg={12}>
+                <Card
+                  variant="borderless"
+                  className="mik-pattern-card"
+                  title={
+                    <span className="mik-chart-title">
+                      <AlertOutlined style={{ color: "#ef4444" }} /> Pola Keluar Berulang (Jam Sama)
+                    </span>
+                  }
+                  extra={<Tag color="red" style={{ fontSize: 10.5 }}>{analytics.patterns.length} pola</Tag>}
+                >
+                  {analytics.patterns.length === 0 ? (
+                    <div className="mik-pattern-empty">Belum ada pola keluar berulang yang mencurigakan. 🎉</div>
+                  ) : (
+                    <div className="mik-pattern-list">
+                      {analytics.patterns.map((p, i) => (
+                        <div className="mik-pattern-item" key={i}>
+                          <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#fef2f2", color: "#ef4444" }} size={34} />
+                          <div className="mik-pattern-info">
+                            <div className="mik-pattern-name">{p.employee_name}</div>
+                            <div className="mik-pattern-meta">
+                              {p.nip || "-"} · Keluar <strong>{p.count}x</strong> pada jam{" "}
+                              <Tag color="volcano" style={{ margin: 0, fontSize: 10 }}>{p.hour_label}</Tag>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </Col>
+
+              <Col xs={24} lg={12}>
+                <Card
+                  variant="borderless"
+                  className="mik-pattern-card"
+                  title={
+                    <span className="mik-chart-title">
+                      <UserOutlined style={{ color: "#2563eb" }} /> Pegawai Paling Sering Keluar Bulan Ini
+                    </span>
+                  }
+                  extra={<Tag color="blue" style={{ fontSize: 10.5 }}>Top {analytics.top_by_hour.length}</Tag>}
+                >
+                  {analytics.top_by_hour.length === 0 ? (
+                    <div className="mik-pattern-empty">Belum ada data izin keluar bulan ini.</div>
+                  ) : (
+                    <div className="mik-pattern-list">
+                      {analytics.top_by_hour.map((p, i) => (
+                        <div className="mik-pattern-item" key={i}>
+                          <div className="mik-rank-badge">{i + 1}</div>
+                          <div className="mik-pattern-info">
+                            <div className="mik-pattern-name">{p.employee_name}</div>
+                            <div className="mik-pattern-meta">
+                              {p.nip || "-"} · <strong>{p.count}x</strong> keluar · sering jam{" "}
+                              <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>{p.hour_label}</Tag>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
       </Spin>
 
       {/* Toolbar */}

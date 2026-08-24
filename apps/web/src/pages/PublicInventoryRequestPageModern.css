@@ -1,0 +1,783 @@
+/* ══════════════════════════════════════════════════════════════
+   Public Inventory Request — "Fluid Workspace"
+   Theme: Vibrant Modern Minimalist (White/Slate/Vivid Blue)
+   ══════════════════════════════════════════════════════════════ */
+
+
+:root {
+    --fluid-bg: var(--color-bg-subtle);
+    --fluid-surface: var(--color-bg);
+
+    --fluid-text-main: var(--color-text);
+    --fluid-text-sub: var(--color-text-secondary);
+
+    --fluid-accent: var(--color-primary);
+    --fluid-accent-hover: var(--color-primary-hover);
+    --fluid-accent-light: var(--color-primary-light);
+
+    --fluid-border: var(--color-border);
+
+    --fluid-radius-lg: var(--radius-xl);
+    --fluid-radius-md: var(--radius-md);
+    --fluid-radius-sm: var(--radius-sm);
+
+    --fluid-shadow-soft: var(--shadow-sm);
+    --fluid-shadow-popup: var(--shadow-lg);
+
+    --font-fluid: var(--ff-body);
+    --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Bouncy feel */
+    --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.fluid-ws {
+    min-height: 100vh;
+    background-color: var(--fluid-bg);
+    font-family: var(--ff-body);
+    color: var(--fluid-text-main);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Stop full page scroll, rely on inner scrolls */
+}
+
+/* ── Top Header Bar ── */
+.fluid-ws__header {
+    background: var(--fluid-surface);
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--fluid-border);
+    position: relative;
+    z-index: 20;
+}
+
+.fluid-ws__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--fluid-text-main);
+}
+
+.fluid-ws__brand-icon {
+    background: var(--fluid-accent-light);
+    color: var(--fluid-accent);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.fluid-ws__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Cart Trigger Button */
+.fluid-ws__cart-trigger {
+    background: var(--fluid-surface);
+    border: 1px solid var(--fluid-border);
+    height: 40px;
+    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--fluid-text-main);
+}
+
+.fluid-ws__cart-trigger:hover {
+    border-color: var(--fluid-accent);
+    color: var(--fluid-accent);
+}
+
+.fluid-ws__back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    margin-right: 16px;
+    transition: all 0.2s;
+}
+
+.fluid-ws__back-btn:hover {
+    color: var(--fluid-accent);
+}
+
+.fluid-ws__cart-badge {
+    background: var(--fluid-accent);
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 700;
+}
+
+/* ── Split Layout Container ── */
+.fluid-ws__layout {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 52px);
+    overflow: hidden;
+}
+
+/* Left Panel: Form / Requester Info */
+.fluid-ws__panel-left {
+    width: 360px;
+    background: var(--fluid-surface);
+    border-right: 1px solid var(--fluid-border);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    z-index: 10;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.02);
+}
+
+.fluid-ws__panel-left-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.fluid-ws__panel-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--color-text, #1a1f2e);
+}
+
+.fluid-ws__panel-desc {
+    color: var(--fluid-text-sub);
+    margin-bottom: 20px;
+    line-height: 1.45;
+    font-size: 0.825rem;
+}
+
+/* Form Styles Override */
+.fluid-ws .ant-form-item-label>label {
+    font-family: var(--ff-body);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--fluid-text-sub);
+}
+
+.fluid-ws .ant-input,
+.fluid-ws .ant-select-selector,
+.fluid-ws .ant-picker {
+    border-radius: var(--fluid-radius-sm) !important;
+    font-family: var(--ff-body);
+    font-size: 13px !important;
+    padding: 6px 11px !important;
+}
+
+.fluid-ws .ant-input:focus,
+.fluid-ws .ant-select-focused .ant-select-selector,
+.fluid-ws .ant-picker-focused {
+    border-color: var(--fluid-accent) !important;
+    box-shadow: 0 0 0 3px var(--fluid-accent-light) !important;
+}
+
+/* Active Requester Card */
+.fluid-ws__active-user {
+    background: var(--fluid-bg);
+    border: 1px solid var(--fluid-border);
+    border-radius: var(--fluid-radius-md);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    animation: slideDown 0.4s var(--ease-elastic);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fluid-ws__active-user-avatar {
+    width: 36px;
+    height: 36px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--fluid-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+.fluid-ws__active-user-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text, #1a1f2e);
+}
+
+.fluid-ws__active-user-pos {
+    color: var(--fluid-text-sub);
+    font-size: 0.775rem;
+}
+
+/* Right Panel: Catalog Matrix */
+.fluid-ws__panel-right {
+    flex: 1;
+    background: var(--fluid-bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.fluid-ws__catalog-header {
+    padding: 24px 32px;
+    background: rgba(248, 250, 252, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--fluid-border);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fluid-ws__search-wrapper {
+    max-width: 400px;
+    flex: 1;
+}
+
+.fluid-ws__search-wrapper .ant-input-affix-wrapper {
+    border-radius: 100px;
+    padding: 10px 20px;
+    border: 1px solid var(--fluid-border);
+    background: #fff;
+}
+
+.fluid-ws__search-wrapper .ant-input-affix-wrapper:focus-within {
+    border-color: var(--fluid-accent);
+    box-shadow: 0 4px 15px var(--fluid-accent-light);
+}
+
+.fluid-ws__search-wrapper .ant-input {
+    background: transparent !important;
+    font-family: var(--ff-body);
+    font-size: 1rem;
+}
+
+.fluid-ws__catalog-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+}
+
+.fluid-ws__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+/* Compact alternative for Asset Loans */
+.fluid-ws__grid--compact {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.fluid-ws__grid--compact .fluid-ws__card {
+    padding: 16px;
+    border-radius: var(--fluid-radius-md);
+}
+
+.fluid-ws__grid--compact .fluid-ws__card-title {
+    font-size: 1rem;
+}
+
+.fluid-ws__grid--compact .fluid-ws__card-actions {
+    margin-top: 12px;
+}
+
+/* ── Inventory Card (Squishy & Interactive) ── */
+.fluid-ws__card {
+    background: #fff;
+    border-radius: var(--fluid-radius-lg);
+    padding: 24px;
+    border: 1px solid var(--fluid-border);
+    transition: all 0.3s var(--ease-smooth);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: default;
+}
+
+.fluid-ws__card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--fluid-shadow-popup);
+    border-color: #cbd5e1;
+}
+
+/* Active state logic in React sets this class */
+.fluid-ws__card--active {
+    border-color: var(--fluid-accent);
+    box-shadow: 0 0 0 4px var(--fluid-accent-light);
+}
+
+.fluid-ws__card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.fluid-ws__card-icon {
+    width: 54px;
+    height: 54px;
+    background: var(--fluid-bg);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--fluid-text-sub);
+    transition: all 0.3s;
+}
+
+.fluid-ws__card:hover .fluid-ws__card-icon {
+    background: var(--fluid-accent-light);
+    color: var(--fluid-accent);
+    transform: scale(1.05) rotate(-5deg);
+}
+
+.fluid-ws__card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--fluid-text-main);
+    margin-bottom: 8px;
+}
+
+.fluid-ws__card-stock {
+    font-size: 0.9rem;
+    color: var(--fluid-text-sub);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fluid-ws__card-actions {
+    margin-top: auto;
+    padding-top: 20px;
+}
+
+/* Primary squish button */
+.fluid-ws__btn-add {
+    width: 100%;
+    border-radius: 12px;
+    height: 44px;
+    font-weight: 600;
+    font-family: var(--ff-body);
+    background: var(--fluid-surface);
+    color: var(--fluid-text-main);
+    border: 1px solid var(--fluid-border);
+    transition: all 0.2s var(--ease-elastic);
+    cursor: pointer;
+}
+
+.fluid-ws__btn-add:hover:not(:disabled) {
+    background: var(--fluid-text-main);
+    color: #fff;
+    border-color: var(--fluid-text-main);
+}
+
+.fluid-ws__btn-add:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+/* Qty Control */
+.fluid-ws__qty-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--fluid-bg);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid var(--fluid-border);
+}
+
+.fluid-ws__qty-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #fff;
+    color: var(--fluid-text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.fluid-ws__qty-btn:hover {
+    background: var(--fluid-bg);
+}
+
+.fluid-ws__qty-btn:active {
+    transform: scale(0.9);
+}
+
+.fluid-ws__qty-val {
+    font-weight: 700;
+    font-size: 1.1rem;
+    width: 40px;
+    text-align: center;
+}
+
+/* ── Custom Drawer Override (The Cart) ── */
+.fluid-ws__drawer .ant-drawer-content-wrapper {
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.08);
+}
+
+.fluid-ws__drawer .ant-drawer-header {
+    border-bottom: 1px solid var(--fluid-border);
+    padding: 24px 32px;
+}
+
+.fluid-ws__drawer .ant-drawer-title {
+    font-family: var(--ff-body);
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.fluid-ws__drawer .ant-drawer-body {
+    padding: 32px;
+    background: var(--fluid-bg);
+    display: flex;
+    flex-direction: column;
+}
+
+.fluid-ws__drawer .ant-drawer-footer {
+    padding: 24px 32px;
+    border-top: 1px solid var(--fluid-border);
+    background: #fff;
+}
+
+.fluid-cart__item {
+    background: #fff;
+    border: 1px solid var(--fluid-border);
+    border-radius: var(--fluid-radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fluid-cart__item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.fluid-cart__item-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.fluid-cart__item-qty {
+    background: var(--fluid-bg);
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--fluid-accent);
+}
+
+.fluid-cart__empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--fluid-text-sub);
+    text-align: center;
+}
+
+.fluid-cart__empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--fluid-border);
+}
+
+.fluid-ws__checkout-btn {
+    width: 100%;
+    height: 54px;
+    border-radius: 14px;
+    font-family: var(--ff-body);
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: var(--fluid-text-main);
+    color: #fff;
+    border: none;
+    transition: all 0.2s;
+}
+
+.fluid-ws__checkout-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    background: var(--fluid-accent);
+}
+
+/* ── Custom Scrollbars ── */
+.fluid-ws__panel-left-content::-webkit-scrollbar,
+.fluid-ws__catalog-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fluid-ws__panel-left-content::-webkit-scrollbar-track,
+.fluid-ws__catalog-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fluid-ws__panel-left-content::-webkit-scrollbar-thumb,
+.fluid-ws__catalog-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.fluid-ws__panel-left-content::-webkit-scrollbar-thumb:hover,
+.fluid-ws__catalog-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ── Modals Override ── */
+.fluid-ws .ant-modal-content {
+    border-radius: var(--fluid-radius-lg);
+    padding: 32px;
+    box-shadow: var(--fluid-shadow-popup);
+}
+
+.fluid-ws .ant-modal-title {
+    font-family: var(--ff-body);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+/* Ticket Styling */
+.fluid-ws__ticket {
+    text-align: center;
+}
+
+.fluid-ws__ticket-icon {
+    font-size: 64px;
+    color: var(--el-success);
+    margin-bottom: 24px;
+    animation: scaleBounce 0.6s var(--ease-elastic);
+}
+
+@keyframes scaleBounce {
+    0% {
+        transform: scale(0);
+    }
+
+    60% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.fluid-ws__ticket-box {
+    background: var(--fluid-bg);
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 24px;
+    margin: 24px 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .fluid-ws__layout {
+        flex-direction: column;
+        overflow: auto;
+    }
+
+    .fluid-ws__panel-left {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--fluid-border);
+        box-shadow: none;
+    }
+
+    .fluid-ws__panel-right {
+        overflow: visible;
+    }
+
+    .fluid-ws__catalog-scroll {
+        overflow: visible;
+    }
+}
+
+@media (max-width: 640px) {
+    .fluid-ws__header {
+        padding: 0 12px;
+        height: 60px;
+    }
+
+    .fluid-ws__brand-icon {
+        width: 30px;
+        height: 30px;
+        margin-right: 4px;
+    }
+
+    .fluid-ws__brand span {
+        display: inline-block;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fluid-ws__back-btn span {
+        display: inline-block;
+        font-size: 12px;
+    }
+
+    .fluid-ws__back-btn {
+        margin-right: 8px;
+    }
+
+    .fluid-ws__cart-text {
+        display: inline-block;
+        font-size: 13px;
+    }
+
+    .fluid-ws__cart-trigger {
+        padding: 0 10px;
+        height: 36px;
+    }
+
+    .fluid-ws__panel-left-content {
+        padding: 16px;
+    }
+
+    .fluid-ws__active-user {
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .fluid-ws__active-user-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .fluid-ws__active-user-name {
+        font-size: 0.95rem;
+    }
+
+    .fluid-ws__catalog-header {
+        padding: 12px;
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+        border-top: 1px solid var(--fluid-border);
+        border-bottom: none;
+    }
+
+    .fluid-ws__search-wrapper {
+        max-width: 100%;
+        gap: 8px !important;
+    }
+
+    .fluid-ws__search-wrapper .ant-input-affix-wrapper {
+        min-width: 0 !important;
+        flex: 1;
+        padding: 6px 12px;
+    }
+
+    .fluid-ws__search-wrapper .ant-select {
+        width: 100px !important;
+    }
+
+    .fluid-ws__grid--compact {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+    }
+
+    .fluid-ws .ant-picker-range {
+        padding: 6px !important;
+        gap: 0 !important;
+    }
+    
+    .fluid-ws .ant-picker-range .ant-picker-input > input {
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .fluid-ws .ant-picker-range-separator {
+        padding: 0 4px !important;
+        color: #cbd5e1;
+    }
+
+    /* Force DatePicker to show only 1 month on mobile BUT with all nav buttons */
+    .ant-picker-dropdown-range .ant-picker-panels { 
+        flex-direction: row !important; 
+    }
+    
+    .ant-picker-dropdown-range .ant-picker-panel-container { 
+        width: auto !important; 
+        max-width: 100vw;
+    }
+
+    .ant-picker-dropdown-range .ant-picker-panel:last-child {
+        display: none !important;
+    }
+
+    /* Show hidden Next/SuperNext buttons on the first panel */
+    .ant-picker-dropdown-range .ant-picker-panel:first-child .ant-picker-header-next-btn,
+    .ant-picker-dropdown-range .ant-picker-panel:first-child .ant-picker-header-super-next-btn {
+        visibility: visible !important;
+        display: block !important;
+    }
+}
+
+/* Shimmering Skeleton Loader */
+.fluid-ws__skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; width: 100%; }
+@media (max-width: 640px) { .fluid-ws__skeleton-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; } }
+.fluid-ws__skeleton-card { background: #fff; border-radius: var(--fluid-radius-md); padding: 16px; border: 1px solid var(--fluid-border); display: flex; flex-direction: column; gap: 12px; }
+.fluid-ws__shimmer { background: #f1f5f9; background-image: linear-gradient(to right, #f1f5f9 0%, #e2e8f0 20%, #f1f5f9 40%, #f1f5f9 100%); background-repeat: no-repeat; background-size: 800px 100%; display: inline-block; position: relative; animation: shimmer 1.5s linear infinite; }
+@keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+.fluid-ws__skeleton-icon { width: 48px; height: 48px; border-radius: 12px; }
+.fluid-ws__skeleton-title { width: 80%; height: 16px; border-radius: 4px; }
+.fluid-ws__skeleton-text { width: 50%; height: 12px; border-radius: 4px; }
+.fluid-ws__skeleton-btn { width: 100%; height: 36px; border-radius: 10px; margin-top: 8px; }

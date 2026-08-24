@@ -1,148 +1,318 @@
-.panjar-page {
-  animation: panjarFadeIn 0.28s ease;
+/* ═══════════════════════════════════════════════════════════════
+   PERMINTAAN PANJAR — MODERN MINIMALIST ENTERPRISE
+   ═══════════════════════════════════════════════════════════════ */
+
+.panjar-module-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
 }
 
-.panjar-metric-row {
-  margin-bottom: 14px;
+.panjar-main-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
-.panjar-metric-card {
-  border: 1px solid rgba(15, 91, 153, 0.1);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 91, 153, 0.07);
-}
-
-.panjar-metric-card .ant-card-body {
+.panjar-card-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.panjar-metric-card .anticon {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #0f766e 0%, #0f5b99 100%);
-  box-shadow: 0 8px 20px rgba(15, 91, 153, 0.25);
-}
-
-.panjar-metric-card strong {
-  display: block;
-  color: var(--color-text, #1a1f2e);
-  font-size: var(--fs-h3, 15px);
-  line-height: 1.25;
-}
-
-.panjar-table-card {
-  border-radius: 14px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
-}
-
-.panjar-filterbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+.panjar-toolbar-left {
+  display: flex;
+  align-items: baseline;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
-.panjar-ticket-cell,
+.panjar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.panjar-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.panjar-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panjar-search-input {
+  width: 220px;
+}
+
+.panjar-filter-select {
+  width: 130px;
+}
+
+/* Table */
+.panjar-table .ant-table {
+  background: transparent !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panjar-table .ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 12px 14px !important;
+  white-space: nowrap;
+}
+
+.panjar-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-size: 12.5px !important;
+  padding: 12px 14px !important;
+  color: #334155;
+  transition: background 0.15s ease;
+}
+
+.panjar-table .ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+.panjar-ticket-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panjar-main-no {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.1px;
+}
+
+.panjar-sub-no {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
 .panjar-activity-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.panjar-data-table .ant-table-tbody > tr > td {
-  font-size: var(--fs-sm, 12px);
+.panjar-kegiatan-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
 }
 
-.panjar-form .ant-form-item-label > label {
-  font-size: var(--fs-h5, 12px);
+.panjar-mak-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  color: #0F5B99;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 600;
+}
+
+.panjar-receiver-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panjar-receiver-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.panjar-ta-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  padding: 1px 4px;
+  width: fit-content;
+}
+
+.panjar-date-text {
+  font-size: 12px;
+  color: #475569;
+}
+
+.panjar-nominal-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Modals */
+.panjar-modal .ant-modal-content {
+  border-radius: 12px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15) !important;
+}
+
+.panjar-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.panjar-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.panjar-modal-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.panjar-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 50px;
+}
+
+.panjar-modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.panjar-modal-sub {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.panjar-modal-body {
+  padding: 16px 20px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panjar-section-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panjar-section-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F5B99;
+  margin-bottom: 4px;
 }
 
 .panjar-items-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .panjar-item-row {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) 150px 34px;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  align-items: flex-start;
-  padding: 10px;
-  border: 1px solid #e8eef5;
-  border-radius: 10px;
-  background: #fbfdff;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
-.panjar-item-row--simple {
-  grid-template-columns: 1fr 150px 34px;
-}
-
-.panjar-summary-row {
-  margin-top: 12px;
-}
-
-.panjar-calc-box {
+.panjar-sum-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(16, 185, 129, 0.24);
-  background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%);
-  color: #0f766e;
-  font-size: var(--fs-sm, 12px);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 6px;
 }
 
-.panjar-detail-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px;
-  margin-bottom: 14px;
-  border-radius: 14px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #0f766e 0%, #0f5b99 100%);
+.panjar-sum-lbl {
+  font-size: 11.5px;
+  color: #475569;
+  margin-right: 6px;
 }
 
-.panjar-detail-hero .ant-typography,
-.panjar-detail-hero h3 {
-  color: #ffffff;
-  margin: 0;
-}
-
-.panjar-detail p {
-  margin: 3px 0 0;
-  font-size: var(--fs-body, 13px);
-}
-
-.panjar-detail-money {
-  color: #0f5b99;
+.panjar-sum-val {
+  font-size: 14px;
   font-weight: 700;
+  color: #0F5B99;
 }
 
-@keyframes panjarFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.panjar-sum-due {
+  font-size: 11.5px;
+  color: #64748b;
 }
 
-@media (max-width: 900px) {
-  .panjar-filterbar,
-  .panjar-item-row,
-  .panjar-item-row--simple {
-    grid-template-columns: 1fr;
-  }
+.panjar-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
 }
+
+.panjar-meta-k {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.panjar-meta-v {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 1px 0 0 0;
+}
+
+.panjar-meta-v.text-green { color: #059669; }
+.panjar-meta-v.font-bold { font-weight: 700; font-size: 14px; }

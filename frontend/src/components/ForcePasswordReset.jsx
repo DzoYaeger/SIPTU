@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, Form, Input, Button, Typography, App as AntdApp } from "antd";
+import { Card, Form, Input, Button, Typography, App as AntdApp, Alert } from "antd";
 import { KeyOutlined, LogoutOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
@@ -16,10 +16,13 @@ const ForcePasswordReset = ({ returnUrl = "/" }) => {
   const { changePassword, refreshProfile, logout } = useAuth();
   const { message } = AntdApp.useApp();
   const navigate = useNavigate();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const handleSubmit = async (values) => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       await changePassword({
         current_password: values.current_password,
@@ -31,7 +34,9 @@ const ForcePasswordReset = ({ returnUrl = "/" }) => {
       // Redirect back to the page user originally intended to visit
       navigate(returnUrl, { replace: true });
     } catch (err) {
-      message.error(err.message || "Gagal memperbarui kata sandi.");
+      const msg = err.message || "Gagal memperbarui kata sandi.";
+      setErrorMsg(msg);
+      message.error(msg);
     } finally {
       setLoading(false);
     }
@@ -58,7 +63,19 @@ const ForcePasswordReset = ({ returnUrl = "/" }) => {
           </Paragraph>
         </div>
 
-        <Form layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+        {errorMsg && (
+          <Alert
+            type="error"
+            showIcon
+            message="Gagal Memperbarui Kata Sandi"
+            description={errorMsg}
+            closable
+            onClose={() => setErrorMsg(null)}
+            style={{ marginBottom: 16, borderRadius: 8 }}
+          />
+        )}
+
+        <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
           <Form.Item
             label="Kata Sandi Saat Ini"
             name="current_password"

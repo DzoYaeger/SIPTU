@@ -37,6 +37,72 @@ class SuratTugasController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+            $query->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('tanggal_mulai', [$startDate, $endDate])
+                  ->orWhereBetween('tanggal_selesai', [$startDate, $endDate])
+                  ->orWhere(function ($sub) use ($startDate, $endDate) {
+                      $sub->where('tanggal_mulai', '<=', $startDate)
+                          ->where('tanggal_selesai', '>=', $endDate);
+                  });
+            });
+        }
+
+        if ($request->filled('kota')) {
+            $kotaParam = $request->kota;
+            $cities = is_array($kotaParam) ? $kotaParam : explode(',', $kotaParam);
+            $cities = array_filter(array_map('trim', $cities));
+
+            if (!empty($cities)) {
+                $query->where(function ($q) use ($cities) {
+                    foreach ($cities as $city) {
+                        switch ($city) {
+                            case 'Palopo':
+                                $q->orWhere('lokasi_tugas', 'like', '%Palopo%');
+                                break;
+                            case 'Kab. Luwu':
+                                $q->orWhere(function ($sub) {
+                                    $sub->where('lokasi_tugas', 'like', '%Luwu%')
+                                        ->where('lokasi_tugas', 'not like', '%Luwu Utara%')
+                                        ->where('lokasi_tugas', 'not like', '%Luwu Timur%');
+                                });
+                                break;
+                            case 'Kab. Luwu Utara':
+                                $q->orWhere('lokasi_tugas', 'like', '%Luwu Utara%');
+                                break;
+                            case 'Kab. Luwu Timur':
+                                $q->orWhere('lokasi_tugas', 'like', '%Luwu Timur%');
+                                break;
+                            case 'Kab. Toraja Utara':
+                                $q->orWhere('lokasi_tugas', 'like', '%Toraja Utara%');
+                                break;
+                            case 'Kab. Tana Toraja':
+                                $q->orWhere('lokasi_tugas', 'like', '%Tana Toraja%');
+                                break;
+                            case 'Kab. Enrekang':
+                                $q->orWhere('lokasi_tugas', 'like', '%Enrekang%');
+                                break;
+                            case 'Kota Lain':
+                                $q->orWhere(function ($sub) {
+                                    $sub->whereNotNull('lokasi_tugas')
+                                        ->where('lokasi_tugas', '!=', '')
+                                        ->where('lokasi_tugas', 'not like', '%Palopo%')
+                                        ->where('lokasi_tugas', 'not like', '%Luwu%')
+                                        ->where('lokasi_tugas', 'not like', '%Toraja%')
+                                        ->where('lokasi_tugas', 'not like', '%Enrekang%');
+                                });
+                                break;
+                            default:
+                                $q->orWhere('lokasi_tugas', 'like', "%{$city}%");
+                                break;
+                        }
+                    }
+                });
+            }
+        }
+
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
@@ -1214,7 +1280,7 @@ class SuratTugasController extends Controller
 
         $request->validate([
             'password' => 'required|string',
-            'totp_code' => $user->has_mfa ? 'required|string' : 'nullable|string',
+            'totp_code' => 'nullable|string',
         ]);
 
         if (!Hash::check($request->password, $user->password)) {

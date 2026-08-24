@@ -1,0 +1,265 @@
+/* ══════════════════════════════════════════════════════════════
+   SimkeuUnifiedModule.css — "SIMKEU" Corporate Light Theme
+   Clean, minimal sidebar + workspace layout
+   Uses design-system tokens from index.css
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Module Container ── */
+.simkeu-module {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: var(--color-bg-subtle, #f8fafc);
+}
+
+/* ══════════════════════════════════════
+   Sidebar
+   ══════════════════════════════════════ */
+.simkeu-sidebar {
+  background: var(--color-bg, #ffffff);
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.simkeu-sidebar--expanded {
+  width: 210px;
+}
+
+.simkeu-sidebar--collapsed {
+  width: 48px;
+}
+
+/* ── Sidebar Header ── */
+.simkeu-sidebar-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg, #ffffff);
+}
+
+.simkeu-sidebar-header--collapsed {
+  padding: 10px 6px;
+}
+
+.simkeu-sidebar-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simkeu-sidebar-header__top--collapsed {
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sidebar Footer & Back Button */
+.simkeu-sidebar-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg, #ffffff);
+  display: flex;
+  align-items: center;
+}
+
+.simkeu-sidebar-footer--collapsed {
+  padding: 10px 6px;
+  justify-content: center;
+}
+
+.simkeu-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  color: var(--color-primary, #0F5B99);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--color-bg-subtle, #f8fafc);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  transition: all 0.18s ease;
+}
+
+.simkeu-back-btn:hover {
+  background: var(--color-primary-light, #E6F2FC);
+  color: var(--color-primary-hover, #0B4A7D);
+  border-color: var(--color-primary, #0F5B99);
+}
+
+.simkeu-back-btn--collapsed {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+/* Toggle sidebar button */
+.simkeu-toggle-btn {
+  background: var(--color-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text-secondary, #64748b);
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11.5px;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.simkeu-toggle-btn:hover {
+  background: var(--color-bg-muted, #f1f5f9);
+  color: var(--color-text, #1a1f2e);
+  border-color: var(--color-text-muted, #94a3b8);
+}
+
+/* Brand / Title section */
+.simkeu-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.simkeu-sidebar-brand__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.simkeu-sidebar-brand__title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text, #1a1f2e);
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.simkeu-sidebar-brand__subtitle {
+  font-size: 9.5px;
+  color: var(--color-text-muted, #94a3b8);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+/* ══════════════════════════════════════
+   Sidebar Menu
+   ══════════════════════════════════════ */
+.simkeu-sidebar-menu {
+  flex: 1;
+  padding: 10px 8px;
+  overflow-y: auto;
+}
+
+.simkeu-sidebar-menu--collapsed {
+  padding: 10px 4px;
+}
+
+/* Menu Group */
+.simkeu-menu-group {
+  margin-bottom: 12px;
+}
+
+.simkeu-menu-group--collapsed {
+  margin-bottom: 10px;
+}
+
+.simkeu-menu-group__label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted, #94a3b8);
+  letter-spacing: 0.7px;
+  padding: 0 6px 4px 6px;
+  text-transform: uppercase;
+}
+
+/* Menu Item Button */
+.simkeu-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--ff-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  margin-bottom: 2px;
+}
+
+.simkeu-menu-item:hover {
+  background: var(--color-bg-subtle, #f8fafc);
+  color: var(--color-text, #1a1f2e);
+}
+
+.simkeu-menu-item--active {
+  background: var(--color-primary-light, #E6F2FC);
+  color: var(--color-primary, #0F5B99);
+  font-weight: 600;
+}
+
+.simkeu-menu-item--collapsed {
+  justify-content: center;
+  padding: 7px 0;
+}
+
+.simkeu-menu-item__icon {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.simkeu-menu-item__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══════════════════════════════════════
+   Main Content Area
+   ══════════════════════════════════════ */
+.simkeu-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--color-bg-subtle, #f8fafc);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .simkeu-sidebar--expanded {
+    width: 170px;
+  }
+  .simkeu-main {
+    padding: 14px;
+  }
+}

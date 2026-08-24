@@ -97,7 +97,7 @@ const LAYANAN_MANDIRI_SERVICES = [
   { id: "it-helpdesk", title: "IT Helpdesk", defaultIcon: itHelpdeskIcon, category: "IT" },
   { id: "surat-tugas", title: "Pengajuan Surat Tugas", defaultIcon: suratTugasIcon, category: "Kepegawaian" },
   { id: "zoom-generator", title: "Pengajuan Zoom", defaultIcon: zoomIcon, category: "Kepegawaian" },
-  { id: "rhpk", title: "Pengelolaan RHPK", defaultIcon: buildingIcon, category: "Kepegawaian" },
+  { id: "rhpk", title: "Layanan RHPK", defaultIcon: buildingIcon, category: "Kepegawaian" },
   { id: "sakip-2026", title: "DATA SAKIP 2026", defaultIcon: sakipIcon, category: "Akuntabilitas" },
   { id: "pengusulan-pengadaan", title: "Pengusulan PBJ", defaultIcon: cartIcon, category: "Logistik" },
   { id: "pengajuan-pdtt", title: "Pengadaan PDTT", defaultIcon: pdttIcon, category: "Logistik" },

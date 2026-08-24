@@ -1,0 +1,70 @@
+/* ==========================================================================
+   SIPTU BMN Maintenance & Complaint Form Styles
+   Clean Teal Corporate Design System
+   ========================================================================== */
+
+.bmn-type-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.bmn-type-group .ant-radio-button-wrapper {
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  height: 50px;
+  line-height: 48px;
+  text-align: center;
+  font-weight: 700;
+  color: #475569;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.bmn-type-group .ant-radio-button-wrapper:hover {
+  border-color: #0d9488 !important;
+  color: #0d9488;
+}
+
+.bmn-type-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  color: #0f766e;
+  border-color: #0d9488 !important;
+  background: #f0fdfa;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* Radio button icons spacing */
+.bmn-type-group .ant-radio-button-wrapper span.anticon {
+  font-size: 16px;
+}
+
+.bmn-asset-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fluid-ws__layout {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+  .fluid-ws__panel-left {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+    height: auto !important;
+  }
+  .fluid-ws__panel-right {
+    height: auto !important;
+    padding: 24px 16px !important;
+  }
+}

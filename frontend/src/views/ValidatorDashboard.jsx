@@ -455,8 +455,8 @@ export default function ValidatorDashboard() {
         ) : (
           <div>
             {/* Bar chart: pending per modul */}
-            <div style={{ width: "100%", height: 260 }}>
-              <ResponsiveContainer>
+            <div style={{ width: "100%", height: 260, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart
                   data={dashboardData.map(m => ({
                     name: m.title?.replace("Peminjaman ", "").replace("Permintaan ", ""),

@@ -126,6 +126,9 @@ class MfaController extends Controller
         // Clear the pending MFA cache
         Cache::forget($cacheKey);
 
+        // Start 20-minute active MFA session for this user
+        $totpService->startSession($user, 20);
+
         // Generate Sanctum token (completing login)
         $token = $user->createToken('auth-token')->plainTextToken;
 
@@ -135,6 +138,18 @@ class MfaController extends Controller
             'user' => $user->load('employee'),
             'token' => $token,
             'token_type' => 'bearer',
+        ]);
+    }
+
+    /**
+     * Check status of current user's MFA session.
+     */
+    public function sessionStatus(Request $request, TotpService $totpService)
+    {
+        $user = $request->user();
+        return response()->json([
+            'mfa_session_active' => $totpService->isSessionActive($user),
+            'expires_in_seconds' => $totpService->getSessionTtl($user),
         ]);
     }
 

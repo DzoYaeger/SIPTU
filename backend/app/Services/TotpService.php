@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -116,19 +117,67 @@ class TotpService
     }
 
     /**
-     * Helper to verify either a 6-digit TOTP code or an 8-character recovery code.
+     * Start/refresh active MFA session for user (default 20 minutes).
      */
-    public function verifyCodeOrRecovery(User $user, string $code): bool
+    public function startSession(User $user, int $minutes = 20): void
     {
-        $code = trim($code);
-        $numericCode = preg_replace('/\D/', '', $code);
+        if (!$user || !$user->id) return;
+        $cacheKey = "mfa_session_{$user->id}";
+        Cache::put($cacheKey, now()->addMinutes($minutes)->timestamp, now()->addMinutes($minutes));
+    }
 
-        if (strlen($numericCode) === 6) {
-            return $this->verifyCode($user, $numericCode);
+    /**
+     * Check if user currently has an active MFA session within 20 minutes.
+     */
+    public function isSessionActive(User $user): bool
+    {
+        if (!$user || !$user->id) return false;
+        $cacheKey = "mfa_session_{$user->id}";
+        return Cache::has($cacheKey);
+    }
+
+    /**
+     * Get remaining TTL seconds for active MFA session (0 if expired/none).
+     */
+    public function getSessionTtl(User $user): int
+    {
+        if (!$user || !$user->id) return 0;
+        $cacheKey = "mfa_session_{$user->id}";
+        $timestamp = Cache::get($cacheKey);
+        if (!$timestamp) return 0;
+        $remaining = (int)$timestamp - now()->timestamp;
+        return max(0, $remaining);
+    }
+
+    /**
+     * Helper to verify either a 6-digit TOTP code, an 8-character recovery code,
+     * or fallback to an active 20-minute MFA session if code is blank.
+     */
+    public function verifyCodeOrRecovery(User $user, ?string $code = null): bool
+    {
+        $code = trim((string)$code);
+
+        if ($code !== '') {
+            $isValid = false;
+            $numericCode = preg_replace('/\D/', '', $code);
+
+            if (strlen($numericCode) === 6) {
+                $isValid = $this->verifyCode($user, $numericCode);
+            } elseif (preg_match('/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/', $code) || strlen($code) === 8) {
+                $isValid = $this->verifyRecoveryCode($user, $code);
+            }
+
+            if ($isValid) {
+                $this->startSession($user, 20);
+                return true;
+            }
+
+            return false;
         }
 
-        if (preg_match('/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/', $code) || strlen($code) === 8) {
-            return $this->verifyRecoveryCode($user, $code);
+        // If code is empty/blank, check if user has an active 20-minute MFA session
+        if ($this->isSessionActive($user)) {
+            return true;
         }
 
         return false;

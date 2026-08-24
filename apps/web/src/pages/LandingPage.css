@@ -1,0 +1,209 @@
+﻿.landing {
+  min-height: 100vh;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(82, 196, 26, 0.12) 0%, rgba(24, 144, 255, 0.08) 35%, #ffffff 70%);
+  padding: 72px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+}
+
+.landing__hero {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  padding: 48px;
+  border-radius: 28px;
+  border: 1px solid rgba(79, 84, 116, 0.1);
+  box-shadow: 0 40px 80px -60px rgba(15, 23, 42, 0.4);
+  overflow: hidden;
+}
+
+.landing__hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% -10%, rgba(24, 144, 255, 0.25), transparent 55%),
+    radial-gradient(circle at 90% 20%, rgba(82, 196, 26, 0.18), transparent 50%);
+  pointer-events: none;
+}
+
+.landing__hero-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.landing__hero-text {
+  max-width: 680px;
+}
+
+.landing__badge .ant-badge-status-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.landing__title {
+  font-size: clamp(34px, 5vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #1f2445;
+  margin-bottom: 0;
+}
+
+.landing__subtitle {
+  font-size: 18px;
+  color: #54607a;
+  margin: 0;
+}
+
+.landing__hero-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.landing__highlight {
+  display: flex;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(193, 200, 220, 0.45);
+}
+
+.landing__highlight svg {
+  font-size: 30px;
+  color: #1890ff;
+}
+
+.landing__services {
+  max-width: 1080px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing__services-subtitle {
+  max-width: 640px;
+  margin: 16px auto 36px;
+}
+
+.landing-card {
+  text-align: left;
+  padding: 36px 28px;
+  border: none;
+  border-radius: 24px;
+  min-height: 280px;
+  box-shadow: 0 24px 40px -30px rgba(15, 23, 42, 0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 32px 60px -32px rgba(15, 23, 42, 0.45);
+}
+
+.landing-card__icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.landing-card--asset .landing-card__icon {
+  background: linear-gradient(135deg, #3f87ff 0%, #1d5eff 100%);
+}
+
+.landing-card--inventory .landing-card__icon {
+  background: linear-gradient(135deg, #14c38e 0%, #0f9d58 100%);
+}
+
+.landing-card--helpdesk .landing-card__icon {
+  background: linear-gradient(135deg, #f97316 0%, #f43f5e 100%);
+}
+
+.landing-card h4 {
+  margin-bottom: 12px;
+  color: #1f2445;
+}
+
+.landing-card p {
+  color: #4c5876;
+  min-height: 70px;
+}
+
+.landing__workflow {
+  max-width: 960px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing__workflow .ant-steps {
+  margin-top: 32px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  border: 1px solid rgba(193, 200, 220, 0.3);
+}
+
+.landing__cta {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.landing__cta-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #2d6dfa 0%, #1849ab 100%);
+  color: #fff;
+  padding: 32px 36px;
+}
+
+.landing__cta-card h3,
+.landing__cta-card p {
+  color: #fff;
+}
+
+.landing__cta-card .ant-btn-primary {
+  background: #fff;
+  color: #1d46a0;
+  border: none;
+}
+
+@media (max-width: 992px) {
+  .landing {
+    padding: 64px 18px 56px;
+    gap: 56px;
+  }
+
+  .landing__hero {
+    padding: 36px;
+  }
+
+  .landing__cta-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing {
+    padding: 48px 16px 48px;
+    gap: 40px;
+  }
+
+  .landing__hero {
+    padding: 28px;
+  }
+
+  .landing-card {
+    min-height: auto;
+  }
+}

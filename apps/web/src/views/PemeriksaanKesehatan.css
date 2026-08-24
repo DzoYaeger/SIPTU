@@ -1,0 +1,440 @@
+/* ==========================================================================
+   Pemeriksaan Kesehatan (Medical Check-up / MCU) — UI/UX Stylesheet
+   Design Benchmark: SIPTU ULTRA Modern Minimalist Enterprise
+   ========================================================================== */
+
+.mcu-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ── Top Horizontal Navigation Bar ── */
+.mcu-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 10px;
+  overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.mcu-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mcu-nav-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.mcu-nav-btn.active {
+  color: #0284c7;
+  background: #f0f9ff;
+  font-weight: 600;
+}
+
+/* ── Balance Hero Card ── */
+.mcu-balance-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.mcu-balance-grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.mcu-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mcu-user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.mcu-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.mcu-user-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.mcu-metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mcu-metric-label {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.mcu-metric-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mcu-metric-val.available {
+  color: #059669;
+}
+
+.mcu-metric-val.used {
+  color: #d97706;
+}
+
+/* ── Live Simulation Sticky Banner ── */
+.mcu-simulator-banner {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.mcu-simulator-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.mcu-sim-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mcu-sim-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mcu-sim-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mcu-sim-value.highlight {
+  color: #0284c7;
+}
+
+.mcu-sim-value.safe {
+  color: #059669;
+}
+
+.mcu-sim-value.danger {
+  color: #dc2626;
+}
+
+/* ── Package Selection Grid & Cards ── */
+.mcu-package-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.mcu-package-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  user-select: none;
+  position: relative;
+}
+
+.mcu-package-card:hover {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.mcu-package-card.selected {
+  border-color: #0284c7;
+  background: #f8fafc;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.mcu-pkg-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mcu-pkg-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.mcu-pkg-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0284c7;
+  white-space: nowrap;
+}
+
+.mcu-pkg-cat {
+  display: inline-block;
+  font-size: 10.5px;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-bottom: 6px;
+  width: fit-content;
+}
+
+.mcu-pkg-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+/* ── Section & Card Surface ── */
+.mcu-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.mcu-section-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Status Dot & Indicator Standards ── */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.status-dot.pending {
+  background-color: #f59e0b;
+}
+
+.status-dot.approved {
+  background-color: #0284c7;
+}
+
+.status-dot.completed {
+  background-color: #10b981;
+}
+
+.status-dot.rejected {
+  background-color: #ef4444;
+}
+
+.status-dot.cancelled {
+  background-color: #94a3b8;
+}
+
+/* ── Action Buttons ── */
+.mcu-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mcu-action-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.mcu-action-btn.danger:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+/* ── Detail Drawer ── */
+.mcu-drawer .ant-drawer-header {
+  padding: 14px 20px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.mcu-drawer .ant-drawer-body {
+  padding: 20px !important;
+  background: #f8fafc;
+}
+
+.mcu-drawer .ant-drawer-footer {
+  padding: 12px 20px !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background: #ffffff;
+}
+
+.mcu-detail-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.mcu-detail-box-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mcu-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.mcu-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mcu-detail-field-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.mcu-detail-field-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.mcu-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+}
+
+/* ── Modal Standard ── */
+.mcu-modal .ant-modal-content {
+  border-radius: 14px !important;
+  padding: 24px !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15) !important;
+}
+
+.mcu-modal .ant-modal-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .mcu-balance-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .mcu-balance-grid {
+    grid-template-columns: 1fr;
+  }
+  .mcu-simulator-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

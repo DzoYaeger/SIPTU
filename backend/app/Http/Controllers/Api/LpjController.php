@@ -22,30 +22,42 @@ class LpjController extends Controller
         $query = SuratTugas::with(['employees', 'penandatangan', 'ketuaTim'])
             ->where('status', 'lengkap');
 
-        // Filter for non-admin users: only show Surat Tugas where user/employee is tagged
+        // Filter for non-admin/non-validator users (operators): only show Surat Tugas where user/employee is tagged
         $user = $request->user();
-        if ($user && ($user->base_role ?? 'operator') !== 'admin') {
-            $employeeId = $user->employee?->id ?? DB::table('employees')->where('nip', $user->nip)->value('id');
-            $userNip = $user->nip;
-            $userId = $user->id;
+        if ($user) {
+            $headerRole = strtolower($request->header('X-Current-Role') ?? '');
+            $inputRole = strtolower($request->input('current_role') ?? '');
+            $baseRole = strtolower($user->base_role ?? 'operator');
+            $currentRole = strtolower($user->current_role ?? $baseRole);
 
-            $query->where(function ($q) use ($employeeId, $userNip, $userId) {
-                $q->where('created_by', $userId);
-                if ($employeeId) {
-                    $q->orWhere('ketua_tim_id', $employeeId)
-                      ->orWhere('penandatangan_id', $employeeId)
-                      ->orWhereHas('employees', function ($eq) use ($employeeId, $userNip) {
-                          $eq->where('employees.id', $employeeId);
-                          if ($userNip) {
-                              $eq->orWhere('employees.nip', $userNip);
-                          }
-                      });
-                } elseif ($userNip) {
-                    $q->orWhereHas('employees', function ($eq) use ($userNip) {
-                        $eq->where('employees.nip', $userNip);
-                    });
-                }
-            });
+            $isPowerUser = in_array($baseRole, ['admin', 'validator']) ||
+                           in_array($currentRole, ['admin', 'validator']) ||
+                           in_array($headerRole, ['admin', 'validator']) ||
+                           in_array($inputRole, ['admin', 'validator']);
+
+            if (!$isPowerUser) {
+                $employeeId = $user->employee?->id ?? DB::table('employees')->where('nip', $user->nip)->value('id');
+                $userNip = $user->nip;
+                $userId = $user->id;
+
+                $query->where(function ($q) use ($employeeId, $userNip, $userId) {
+                    $q->where('created_by', $userId);
+                    if ($employeeId) {
+                        $q->orWhere('ketua_tim_id', $employeeId)
+                          ->orWhere('penandatangan_id', $employeeId)
+                          ->orWhereHas('employees', function ($eq) use ($employeeId, $userNip) {
+                              $eq->where('employees.id', $employeeId);
+                              if ($userNip) {
+                                  $eq->orWhere('employees.nip', $userNip);
+                              }
+                          });
+                    } elseif ($userNip) {
+                        $q->orWhereHas('employees', function ($eq) use ($userNip) {
+                            $eq->where('employees.nip', $userNip);
+                        });
+                    }
+                });
+            }
         }
 
         // Exclude STs that have been marked as 'excluded'
@@ -65,7 +77,28 @@ class LpjController extends Controller
             });
         }
 
-        $data = $query->orderBy('tanggal_mulai', 'desc')->paginate(20);
+        if ($request->filled('status') && $request->status !== 'ALL') {
+            $status = strtolower($request->status);
+            if ($status === 'sudan' || $status === 'sudah') {
+                $query->whereHas('lpjHeader', fn($l) => $l->whereIn('status', ['draft', 'final', 'manual']));
+            } elseif ($status === 'belum') {
+                $query->whereDoesntHave('lpjHeader', fn($l) => $l->whereIn('status', ['draft', 'final', 'manual']));
+            } elseif ($status === 'draft') {
+                $query->whereHas('lpjHeader', fn($l) => $l->where('status', 'draft'));
+            } elseif ($status === 'final') {
+                $query->whereHas('lpjHeader', fn($l) => $l->where('status', 'final'));
+            } elseif ($status === 'manual') {
+                $query->whereHas('lpjHeader', fn($l) => $l->where('status', 'manual'));
+            }
+        }
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereDate('tanggal_mulai', '>=', $request->start_date)
+                  ->whereDate('tanggal_mulai', '<=', $request->end_date);
+        }
+
+        $perPage = min((int)$request->input('per_page', 1000), 2000);
+        $data = $query->orderBy('tanggal_mulai', 'desc')->paginate($perPage);
 
         // Inject status LPJ ke setiap record
         $suratTugasIds = collect($data->items())->pluck('id')->toArray();
@@ -143,12 +176,18 @@ class LpjController extends Controller
      */
     public function updateItems(Request $request, $suratTugasId)
     {
-        $st = SuratTugas::where('status', 'lengkap')->findOrFail($suratTugasId);
+        $st = SuratTugas::findOrFail($suratTugasId);
 
         $validator = Validator::make($request->all(), [
             'status'                          => 'nullable|in:draft,final',
             'keterangan'                      => 'nullable|string|max:1000',
             'bendahara_id'                    => 'nullable|integer|exists:employees,id',
+            'tanggal_mulai'                   => 'nullable|date',
+            'tanggal_selesai'                 => 'nullable|date',
+            'lokasi_tugas'                    => 'nullable|string|max:500',
+            'mak'                             => 'nullable|string|max:255',
+            'employee_ids'                    => 'nullable|array',
+            'employee_ids.*'                  => 'integer|exists:employees,id',
             'items'                           => 'required|array',
             'items.*.employee_name'           => 'required|string|max:255',
             'items.*.employee_nip'            => 'nullable|string|max:50',
@@ -193,9 +232,29 @@ class LpjController extends Controller
                     'bendahara_id' => $request->bendahara_id,
                     'created_by' => $request->user()?->id,
                 ]
-            );            // Update mak pada SuratTugas jika dikirimkan
+            );
+
+            // Update Surat Tugas utama jika dikirimkan dari modul LPJ SIMKEU
+            $stUpdates = [];
+            if ($request->filled('tanggal_mulai')) {
+                $stUpdates['tanggal_mulai'] = $request->tanggal_mulai;
+            }
+            if ($request->filled('tanggal_selesai')) {
+                $stUpdates['tanggal_selesai'] = $request->tanggal_selesai;
+            }
             if ($request->has('mak')) {
-                $st->update(['mak' => $request->mak]);
+                $stUpdates['mak'] = $request->mak;
+            }
+            if ($request->has('lokasi_tugas')) {
+                $stUpdates['lokasi_tugas'] = $request->lokasi_tugas;
+            }
+            if (!empty($stUpdates)) {
+                $st->update($stUpdates);
+            }
+
+            // Sync data pegawai bertugas di Surat Tugas jika dikirimkan
+            if ($request->has('employee_ids') && is_array($request->employee_ids)) {
+                $st->employees()->sync($request->employee_ids);
             }
 
             // Update header jika sudah ada
@@ -214,17 +273,53 @@ class LpjController extends Controller
                 $num = fn($k) => isset($item[$k]) && $item[$k] !== '' ? (float) $item[$k] : 0;
                 $int = fn($k) => isset($item[$k]) && $item[$k] !== '' ? (int) $item[$k] : 0;
 
-                // Calculate totals from breakdowns
-                $busTotal   = $num('uang_transport_bus_berangkat') + $num('uang_transport_bus_pulang');
-                $taxiTotal  = $num('uang_transport_taxi_berangkat') + $num('uang_transport_taxi_pulang');
-                $pesawatTotal = $num('uang_transport_pesawat_berangkat') + $num('uang_transport_pesawat_pulang');
-                $umumTotal   = $num('uang_transport_umum_berangkat') + $num('uang_transport_umum_pulang');
+                // Helper for multi-item transport
+                $resolveTransport = function ($key) use ($item, $val, $num) {
+                    $itemsKey = $key . '_items';
+                    $entries = $item[$itemsKey] ?? null;
+
+                    if (is_array($entries) && !empty($entries)) {
+                        $valid = array_values(array_filter($entries, fn($x) => (isset($x['nominal']) && (float)$x['nominal'] > 0) || !empty($x['keterangan']) || !empty($x['rincian'])));
+                        if (!empty($valid)) {
+                            $total = array_sum(array_map(fn($x) => (float)($x['nominal'] ?? 0), $valid));
+                            return [
+                                'total' => $total,
+                                'berangkat' => (float)($valid[0]['nominal'] ?? 0),
+                                'pulang' => (float)($valid[1]['nominal'] ?? 0),
+                                'keterangan' => json_encode($valid),
+                            ];
+                        }
+                    }
+
+                    // Fallback to legacy single / departure-return fields
+                    $berangkat = $num($key . '_berangkat');
+                    $pulang = $num($key . '_pulang');
+                    $direct = $num($key);
+                    $total = $direct ?: ($berangkat + $pulang);
+
+                    return [
+                        'total' => $total ?: $val($key),
+                        'berangkat' => $val($key . '_berangkat'),
+                        'pulang' => $val($key . '_pulang'),
+                        'keterangan' => $val($key . '_keterangan'),
+                    ];
+                };
+
+                $busData = $resolveTransport('uang_transport_bus');
+                $taxiData = $resolveTransport('uang_transport_taxi');
+                $pesawatData = $resolveTransport('uang_transport_pesawat');
+                $umumData = $resolveTransport('uang_transport_umum');
+                $bbmData = $resolveTransport('uang_transport_bbm');
+                $lokalData = $resolveTransport('uang_transport_lokal');
+
+                // Sewa Mobil
                 $sewaMobilTotal = $num('uang_transport_sewa_mobil_harian') * $int('uang_transport_sewa_mobil_hari');
+
+                // Harian, Penginapan, Fullboard
                 $harianTotal = $num('uang_harian_per_hari') * $int('uang_harian_hari');
                 $penginapanTotal = $num('uang_penginapan_harian') * $int('uang_penginapan_hari');
                 $fullboardTotal = $num('uang_fullboard_harian') * $int('uang_fullboard_hari');
                 $harianFullboardTotal = $num('uang_harian_fullboard_per_hari') * $int('uang_harian_fullboard_hari');
-                $lokalTotal = $num('uang_transport_lokal_harian') * $int('uang_transport_lokal_hari');
 
                 return [
                     'lpj_header_id'       => $lpj->id,
@@ -237,26 +332,26 @@ class LpjController extends Controller
                     'nomor_kamar'         => $val('nomor_kamar'),
 
                     // Transport Bus
-                    'uang_transport_bus'            => $busTotal ?: $val('uang_transport_bus'),
-                    'uang_transport_bus_berangkat'  => $val('uang_transport_bus_berangkat'),
-                    'uang_transport_bus_pulang'     => $val('uang_transport_bus_pulang'),
-                    'uang_transport_bus_keterangan' => $val('uang_transport_bus_keterangan'),
+                    'uang_transport_bus'            => $busData['total'],
+                    'uang_transport_bus_berangkat'  => $busData['berangkat'],
+                    'uang_transport_bus_pulang'     => $busData['pulang'],
+                    'uang_transport_bus_keterangan' => $busData['keterangan'],
 
                     // Transport Taxi
-                    'uang_transport_taxi'           => $taxiTotal ?: $val('uang_transport_taxi'),
-                    'uang_transport_taxi_berangkat' => $val('uang_transport_taxi_berangkat'),
-                    'uang_transport_taxi_pulang'    => $val('uang_transport_taxi_pulang'),
-                    'uang_transport_taxi_keterangan' => $val('uang_transport_taxi_keterangan'),
+                    'uang_transport_taxi'           => $taxiData['total'],
+                    'uang_transport_taxi_berangkat' => $taxiData['berangkat'],
+                    'uang_transport_taxi_pulang'    => $taxiData['pulang'],
+                    'uang_transport_taxi_keterangan' => $taxiData['keterangan'],
 
                     // Transport Pesawat
-                    'uang_transport_pesawat'           => $pesawatTotal ?: $val('uang_transport_pesawat'),
-                    'uang_transport_pesawat_berangkat' => $val('uang_transport_pesawat_berangkat'),
-                    'uang_transport_pesawat_pulang'    => $val('uang_transport_pesawat_pulang'),
-                    'uang_transport_pesawat_keterangan' => $val('uang_transport_pesawat_keterangan'),
+                    'uang_transport_pesawat'           => $pesawatData['total'],
+                    'uang_transport_pesawat_berangkat' => $pesawatData['berangkat'],
+                    'uang_transport_pesawat_pulang'    => $pesawatData['pulang'],
+                    'uang_transport_pesawat_keterangan' => $pesawatData['keterangan'],
 
                     // Transport BBM
-                    'uang_transport_bbm'            => $val('uang_transport_bbm'),
-                    'uang_transport_bbm_keterangan' => $val('uang_transport_bbm_keterangan'),
+                    'uang_transport_bbm'            => $bbmData['total'],
+                    'uang_transport_bbm_keterangan' => $bbmData['keterangan'],
 
                     // Transport Sewa Mobil
                     'uang_transport_sewa_mobil'            => $sewaMobilTotal ?: $val('uang_transport_sewa_mobil'),
@@ -265,16 +360,16 @@ class LpjController extends Controller
                     'uang_transport_sewa_mobil_keterangan'  => $val('uang_transport_sewa_mobil_keterangan'),
 
                     // Transport Lokal
-                    'uang_transport_lokal'           => $lokalTotal ?: $val('uang_transport_lokal'),
+                    'uang_transport_lokal'           => $lokalData['total'] ?: ($num('uang_transport_lokal_harian') * $int('uang_transport_lokal_hari')),
                     'uang_transport_lokal_harian'    => $val('uang_transport_lokal_harian'),
                     'uang_transport_lokal_hari'      => $val('uang_transport_lokal_hari'),
-                    'uang_transport_lokal_keterangan' => $val('uang_transport_lokal_keterangan'),
+                    'uang_transport_lokal_keterangan' => $lokalData['keterangan'],
 
                     // Transport Umum
-                    'uang_transport_umum'           => $umumTotal ?: $val('uang_transport_umum'),
-                    'uang_transport_umum_berangkat'  => $val('uang_transport_umum_berangkat'),
-                    'uang_transport_umum_pulang'     => $val('uang_transport_umum_pulang'),
-                    'uang_transport_umum_keterangan' => $val('uang_transport_umum_keterangan'),
+                    'uang_transport_umum'           => $umumData['total'],
+                    'uang_transport_umum_berangkat'  => $umumData['berangkat'],
+                    'uang_transport_umum_pulang'     => $umumData['pulang'],
+                    'uang_transport_umum_keterangan' => $umumData['keterangan'],
 
                     // Uang Harian
                     'uang_harian'            => $harianTotal ?: $val('uang_harian'),
@@ -308,8 +403,6 @@ class LpjController extends Controller
             if (!empty($toInsert)) {
                 LpjItem::insert($toInsert);
             }
-
-            $this->_lpj = $lpj;
         });
 
         $lpjResult = LpjHeader::with(['items', 'bendahara'])
@@ -420,74 +513,80 @@ class LpjController extends Controller
             $no = 1;
             $totalAmount = 0;
 
-            // Transport Bus
-            if ($item->uang_transport_bus !== null && $item->uang_transport_bus > 0) {
+            // Helper function to build transport rows supporting multi-item breakdowns
+            $formatTransportRow = function ($type, $title) use ($item, &$no, &$totalAmount) {
+                $field = 'uang_transport_' . $type;
+                $val = $item->$field;
+                if ($val === null || (float)$val <= 0) {
+                    return null;
+                }
+
+                $ketField = $field . '_keterangan';
+                $rawKet = $item->$ketField;
                 $breakdown = [];
-                if ($item->uang_transport_bus_berangkat > 0) {
-                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_bus_berangkat, 'total' => $item->uang_transport_bus_berangkat];
+                $rowKeterangan = '';
+
+                if (!empty($rawKet) && str_starts_with(trim($rawKet), '[')) {
+                    $parsed = json_decode($rawKet, true);
+                    if (is_array($parsed) && !empty($parsed)) {
+                        foreach ($parsed as $idx => $entry) {
+                            $nom = (float)($entry['nominal'] ?? 0);
+                            $rincian = !empty($entry['rincian']) ? trim($entry['rincian']) : (!empty($entry['label']) ? trim($entry['label']) : '');
+                            $ket = !empty($entry['keterangan']) ? trim($entry['keterangan']) : '';
+                            if (empty($rincian) && !empty($ket)) {
+                                $rincian = $ket;
+                                $ket = '';
+                            }
+                            if ($nom > 0 || !empty($rincian) || !empty($ket)) {
+                                $breakdown[] = [
+                                    'label' => !empty($rincian) ? $rincian : ($title . ' #' . ($idx + 1)),
+                                    'qty' => 1,
+                                    'rate' => $nom,
+                                    'total' => $nom,
+                                    'keterangan' => $ket,
+                                ];
+                            }
+                        }
+                    }
                 }
-                if ($item->uang_transport_bus_pulang > 0) {
-                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_bus_pulang, 'total' => $item->uang_transport_bus_pulang];
+
+                if (empty($breakdown)) {
+                    $berangkatField = $field . '_berangkat';
+                    $pulangField = $field . '_pulang';
+                    $berangkat = (float)($item->$berangkatField ?? 0);
+                    $pulang = (float)($item->$pulangField ?? 0);
+
+                    if ($berangkat > 0) {
+                        $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $berangkat, 'total' => $berangkat];
+                    }
+                    if ($pulang > 0) {
+                        $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $pulang, 'total' => $pulang];
+                    }
+                    $rowKeterangan = $rawKet ?? '';
                 }
-                $rows[] = [
+
+                $totalAmount += (float)$val;
+
+                return [
                     'no' => $no++,
-                    'title' => 'Transport (Bus)',
+                    'title' => $title,
                     'breakdown' => $breakdown,
-                    'total' => $item->uang_transport_bus,
-                    'keterangan' => $item->uang_transport_bus_keterangan ?? ''
+                    'total' => (float)$val,
+                    'keterangan' => $rowKeterangan,
                 ];
-                $totalAmount += $item->uang_transport_bus;
-            }
+            };
+
+            // Transport Bus
+            if ($r = $formatTransportRow('bus', 'Transport (Bus)')) $rows[] = $r;
 
             // Transport Taxi
-            if ($item->uang_transport_taxi !== null && $item->uang_transport_taxi > 0) {
-                $breakdown = [];
-                if ($item->uang_transport_taxi_berangkat > 0) {
-                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_taxi_berangkat, 'total' => $item->uang_transport_taxi_berangkat];
-                }
-                if ($item->uang_transport_taxi_pulang > 0) {
-                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_taxi_pulang, 'total' => $item->uang_transport_taxi_pulang];
-                }
-                $rows[] = [
-                    'no' => $no++,
-                    'title' => 'Transport (Taksi)',
-                    'breakdown' => $breakdown,
-                    'total' => $item->uang_transport_taxi,
-                    'keterangan' => $item->uang_transport_taxi_keterangan ?? ''
-                ];
-                $totalAmount += $item->uang_transport_taxi;
-            }
+            if ($r = $formatTransportRow('taxi', 'Transport (Taksi)')) $rows[] = $r;
 
             // Transport Pesawat
-            if ($item->uang_transport_pesawat !== null && $item->uang_transport_pesawat > 0) {
-                $breakdown = [];
-                if ($item->uang_transport_pesawat_berangkat > 0) {
-                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_pesawat_berangkat, 'total' => $item->uang_transport_pesawat_berangkat];
-                }
-                if ($item->uang_transport_pesawat_pulang > 0) {
-                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_pesawat_pulang, 'total' => $item->uang_transport_pesawat_pulang];
-                }
-                $rows[] = [
-                    'no' => $no++,
-                    'title' => 'Transport (Pesawat)',
-                    'breakdown' => $breakdown,
-                    'total' => $item->uang_transport_pesawat,
-                    'keterangan' => $item->uang_transport_pesawat_keterangan ?? ''
-                ];
-                $totalAmount += $item->uang_transport_pesawat;
-            }
+            if ($r = $formatTransportRow('pesawat', 'Transport (Pesawat)')) $rows[] = $r;
 
             // Transport BBM
-            if ($item->uang_transport_bbm !== null && $item->uang_transport_bbm > 0) {
-                $rows[] = [
-                    'no' => $no++,
-                    'title' => 'Transport (BBM)',
-                    'breakdown' => [],
-                    'total' => $item->uang_transport_bbm,
-                    'keterangan' => $item->uang_transport_bbm_keterangan ?? ''
-                ];
-                $totalAmount += $item->uang_transport_bbm;
-            }
+            if ($r = $formatTransportRow('bbm', 'Transport (BBM)')) $rows[] = $r;
 
             // Transport Sewa Mobil
             if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
@@ -495,7 +594,7 @@ class LpjController extends Controller
                     'no' => $no++,
                     'title' => 'Transport Sewa Mobil',
                     'breakdown' => [
-                        ['label' => '', 'qty' => $item->uang_transport_sewa_mobil_hari, 'rate' => $item->uang_transport_sewa_mobil_harian, 'total' => $item->uang_transport_sewa_mobil]
+                        ['label' => '', 'qty' => $item->uang_transport_sewa_mobil_hari, 'rate' => $item->uang_transport_sewa_mobil_harian, 'total' => $item->uang_transport_sewa_mobil, 'keterangan' => $item->uang_transport_sewa_mobil_keterangan ?? '']
                     ],
                     'total' => $item->uang_transport_sewa_mobil,
                     'keterangan' => $item->uang_transport_sewa_mobil_keterangan ?? ''
@@ -504,37 +603,10 @@ class LpjController extends Controller
             }
 
             // Transport Lokal
-            if ($item->uang_transport_lokal !== null && $item->uang_transport_lokal > 0) {
-                $rows[] = [
-                    'no' => $no++,
-                    'title' => 'Transport Lokal',
-                    'breakdown' => [
-                        ['label' => '', 'qty' => $item->uang_transport_lokal_hari, 'rate' => $item->uang_transport_lokal_harian, 'total' => $item->uang_transport_lokal]
-                    ],
-                    'total' => $item->uang_transport_lokal,
-                    'keterangan' => $item->uang_transport_lokal_keterangan ?? ''
-                ];
-                $totalAmount += $item->uang_transport_lokal;
-            }
+            if ($r = $formatTransportRow('lokal', 'Transport Lokal')) $rows[] = $r;
 
             // Transport Umum
-            if ($item->uang_transport_umum !== null && $item->uang_transport_umum > 0) {
-                $breakdown = [];
-                if ($item->uang_transport_umum_berangkat > 0) {
-                    $breakdown[] = ['label' => 'Berangkat', 'qty' => 1, 'rate' => $item->uang_transport_umum_berangkat, 'total' => $item->uang_transport_umum_berangkat];
-                }
-                if ($item->uang_transport_umum_pulang > 0) {
-                    $breakdown[] = ['label' => 'Kembali', 'qty' => 1, 'rate' => $item->uang_transport_umum_pulang, 'total' => $item->uang_transport_umum_pulang];
-                }
-                $rows[] = [
-                    'no' => $no++,
-                    'title' => 'Transport (Umum)',
-                    'breakdown' => $breakdown,
-                    'total' => $item->uang_transport_umum,
-                    'keterangan' => $item->uang_transport_umum_keterangan ?? ''
-                ];
-                $totalAmount += $item->uang_transport_umum;
-            }
+            if ($r = $formatTransportRow('umum', 'Transport (Umum)')) $rows[] = $r;
 
             // Uang Harian
             if ($item->uang_harian !== null && $item->uang_harian > 0) {
@@ -542,7 +614,7 @@ class LpjController extends Controller
                     'no' => $no++,
                     'title' => 'Uang Harian',
                     'breakdown' => [
-                        ['label' => '', 'qty' => $item->uang_harian_hari, 'rate' => $item->uang_harian_per_hari, 'total' => $item->uang_harian]
+                        ['label' => '', 'qty' => $item->uang_harian_hari, 'rate' => $item->uang_harian_per_hari, 'total' => $item->uang_harian, 'keterangan' => $item->uang_harian_keterangan ?? '']
                     ],
                     'total' => $item->uang_harian,
                     'keterangan' => $item->uang_harian_keterangan ?? ''
@@ -562,7 +634,7 @@ class LpjController extends Controller
                     'no' => $no++,
                     'title' => 'Penginapan',
                     'breakdown' => [
-                        ['label' => '', 'qty' => $item->uang_penginapan_hari, 'rate' => $item->uang_penginapan_harian, 'total' => $item->uang_penginapan]
+                        ['label' => '', 'qty' => $item->uang_penginapan_hari, 'rate' => $item->uang_penginapan_harian, 'total' => $item->uang_penginapan, 'keterangan' => $penginapanKet]
                     ],
                     'total' => $item->uang_penginapan,
                     'keterangan' => $penginapanKet
@@ -588,7 +660,7 @@ class LpjController extends Controller
                     'no' => $no++,
                     'title' => 'Uang Harian Fullboard',
                     'breakdown' => [
-                        ['label' => '', 'qty' => $item->uang_harian_fullboard_hari, 'rate' => $item->uang_harian_fullboard_per_hari, 'total' => $item->uang_harian_fullboard]
+                        ['label' => '', 'qty' => $item->uang_harian_fullboard_hari, 'rate' => $item->uang_harian_fullboard_per_hari, 'total' => $item->uang_harian_fullboard, 'keterangan' => $item->uang_harian_fullboard_keterangan ?? '']
                     ],
                     'total' => $item->uang_harian_fullboard,
                     'keterangan' => $item->uang_harian_fullboard_keterangan ?? ''

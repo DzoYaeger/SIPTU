@@ -1,0 +1,684 @@
+/* ══════════════════════════════════════════════════════════════
+   BmnUnifiedModule — "SIMBA" Corporate Light Theme
+   Clean, minimal, easy-to-use sidebar + workspace layout
+   Uses design-system tokens from index.css
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Module Container ── */
+.simba-module {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: var(--color-bg-subtle, #f8fafc);
+}
+
+/* ══════════════════════════════════════
+   Sidebar
+   ══════════════════════════════════════ */
+.simba-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  transition: width 0.22s ease, box-shadow 0.22s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.simba-sidebar--expanded { width: 224px; box-shadow: 4px 0 18px rgba(15, 23, 42, 0.04); }
+.simba-sidebar--collapsed { width: 56px; }
+
+.simba-sidebar-header {
+  padding: 16px 14px 14px;
+  border-bottom: 1px solid #edf1f5;
+  background: #ffffff;
+}
+
+.simba-sidebar-header--collapsed { padding: 12px 8px; }
+
+.simba-sidebar-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.simba-sidebar-header__top--collapsed { flex-direction: column; gap: 10px; }
+
+.simba-sidebar-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.simba-sidebar-brand__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #eaf3fb;
+  color: #0f5b99;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.simba-sidebar-brand__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #172033;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+}
+
+.simba-sidebar-brand__subtitle {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.simba-sidebar-intro {
+  margin: 14px 2px 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.simba-toggle-btn {
+  background: #f8fafc;
+  border: 1px solid #dbe3ec;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.simba-toggle-btn:hover,
+.simba-toggle-btn:focus-visible {
+  background: #eaf3fb;
+  color: #0f5b99;
+  border-color: #a9c9e3;
+  outline: none;
+}
+
+.simba-sidebar-menu {
+  flex: 1;
+  padding: 16px 10px;
+  overflow-y: auto;
+}
+
+.simba-sidebar-menu--collapsed { padding: 14px 7px; }
+
+.simba-sidebar-section-label {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 8px 9px;
+}
+
+.simba-menu-group { margin-bottom: 18px; }
+.simba-menu-group--collapsed { margin-bottom: 12px; }
+
+.simba-menu-group__heading { padding: 0 8px 7px; }
+
+.simba-menu-group__label {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.simba-menu-group__description {
+  display: block;
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.simba-menu-item {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+  margin-bottom: 3px;
+  position: relative;
+}
+
+.simba-menu-item:hover,
+.simba-menu-item:focus-visible {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #172033;
+  outline: none;
+}
+
+.simba-menu-item--active {
+  background: #eaf3fb;
+  border-color: #cfe2f1;
+  color: #0f5b99;
+  box-shadow: inset 3px 0 0 #0f5b99;
+}
+
+.simba-menu-item--active:hover { background: #eaf3fb; }
+.simba-menu-item--collapsed { justify-content: center; padding: 10px 0; }
+
+.simba-menu-item__icon {
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.simba-menu-item--active .simba-menu-item__icon { color: #0f5b99; }
+
+.simba-menu-item__copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.simba-menu-item__label {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.simba-menu-item__hint {
+  display: block;
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.simba-menu-item--active .simba-menu-item__hint { color: #5d86a7; }
+
+.simba-current-area {
+  margin: 0 12px 12px;
+  padding: 10px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.simba-current-area__label {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+
+.simba-current-area strong { color: #334155; font-size: 11.5px; font-weight: 600; }
+
+.simba-sidebar-footer {
+  padding: 12px 14px;
+  border-top: 1px solid #edf1f5;
+  background: #ffffff;
+}
+
+.simba-sidebar-footer--collapsed { padding: 12px 8px; }
+
+.simba-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 36px;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  background: #f8fafc;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.18s ease;
+}
+
+.simba-back-btn:hover,
+.simba-back-btn:focus-visible {
+  background: #eaf3fb;
+  color: #0f5b99;
+  border-color: #b8d3e8;
+  outline: none;
+}
+
+.simba-back-btn--collapsed { width: 36px; padding: 0; }
+/* ══════════════════════════════════════
+   Main Workspace
+   ══════════════════════════════════════ */
+.simba-main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--color-bg-subtle, #f8fafc);
+  padding: 0;
+}
+
+/* ── History Section Panels ── */
+.simba-history-wrapper {
+  padding: 24px;
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
+.simba-history-card {
+  background: var(--color-bg, #ffffff);
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,0.04));
+}
+
+.simba-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-light, #f1f5f9);
+}
+
+.simba-history-header__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text, #1a1f2e);
+}
+
+.simba-history-header__desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* Keluhan section wrapper */
+.simba-keluhan-wrapper {
+  padding: 20px;
+}
+
+.simba-keluhan-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* ══════════════════════════════════════
+   Responsive — Mobile considerations
+   ══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .simba-module {
+    position: relative;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .simba-sidebar--expanded { width: 208px; }
+
+  .simba-history-wrapper { padding: 16px; }
+
+  .simba-history-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .simba-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .simba-module { display: block; }
+
+  .simba-sidebar,
+  .simba-sidebar--expanded,
+  .simba-sidebar--collapsed {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: none;
+  }
+
+  .simba-sidebar--collapsed .simba-sidebar-menu,
+  .simba-sidebar--collapsed .simba-sidebar-footer {
+    display: none;
+  }
+
+  .simba-sidebar-header__top--collapsed { flex-direction: row; justify-content: space-between; }
+  .simba-sidebar-menu { max-height: 390px; }
+  .simba-main { min-height: calc(100vh - 72px); }
+
+  .simba-keluhan-wrapper { padding: 12px; }
+}
+
+
+/* ══════════════════════════════════════
+   Simple & Clean User-Friendly Detail Modal
+   ══════════════════════════════════════ */
+.simba-detail-modal .ant-modal-content {
+  border-radius: 12px;
+  padding: 22px 24px;
+}
+
+.simba-detail-header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.simba-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text, #1a1f2e);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.simba-detail-subtitle {
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  margin-top: 4px;
+}
+
+.simba-detail-section {
+  margin-bottom: 20px;
+}
+
+.simba-detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary, #64748b);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.simba-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 20px;
+  background: var(--color-bg-subtle, #f8fafc);
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.simba-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.simba-detail-label {
+  font-size: 10.5px;
+  color: var(--color-text-muted, #94a3b8);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.simba-detail-value {
+  font-size: 13px;
+  color: var(--color-text, #1a1f2e);
+  font-weight: 500;
+}
+
+@media (max-width: 576px) {
+  .simba-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* ══════════════════════════════════════
+   Redesigned Peminjaman BMN Streamlined Layout
+   ══════════════════════════════════════ */
+.simba-loan-container {
+  padding: 20px 24px 80px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Toolbar Header */
+.simba-loan-toolbar {
+  background: var(--color-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+.simba-loan-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.simba-loan-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Category Tabs Bar */
+.simba-category-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.simba-cat-btn {
+  background: var(--color-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.simba-cat-btn:hover {
+  border-color: var(--color-primary, #0F5B99);
+  color: var(--color-primary, #0F5B99);
+}
+
+.simba-cat-btn--active {
+  background: var(--color-primary-light, #E6F2FC);
+  border-color: var(--color-primary, #0F5B99);
+  color: var(--color-primary, #0F5B99);
+  font-weight: 600;
+}
+
+/* Minimalist Asset Grid */
+.simba-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.simba-asset-card {
+  background: var(--color-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.simba-asset-card:hover {
+  border-color: var(--color-primary, #0F5B99);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
+}
+
+.simba-asset-card--selected {
+  border-color: var(--color-primary, #0F5B99);
+  background: var(--color-primary-light, #E6F2FC);
+}
+
+.simba-asset-card__top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.simba-asset-card__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--color-bg-subtle, #f8fafc);
+  color: var(--color-primary, #0F5B99);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.simba-asset-card__info {
+  flex: 1;
+}
+
+.simba-asset-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1a1f2e);
+  margin: 0 0 2px 0;
+  line-height: 1.35;
+}
+
+.simba-asset-card__sub {
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.simba-asset-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light, #f1f5f9);
+}
+
+/* Sticky Bottom Summary Bar */
+.simba-sticky-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  width: calc(100% - 48px);
+  max-width: 860px;
+  background: var(--color-text, #1a1f2e);
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  animation: slideUpBar 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpBar {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.simba-sticky-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.simba-sticky-bar__count {
+  background: var(--color-primary, #0F5B99);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.simba-sticky-bar__info {
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+  .simba-loan-container {
+    padding: 14px 14px 90px 14px;
+  }
+  .simba-loan-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .simba-sticky-bar {
+    width: calc(100% - 24px);
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    text-align: center;
+  }
+}
+

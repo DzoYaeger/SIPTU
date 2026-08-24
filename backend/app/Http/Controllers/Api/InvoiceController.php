@@ -96,10 +96,22 @@ class InvoiceController extends Controller
     {
         $query = Invoice::with(['taxes', 'creator', 'approver']);
 
-        // Filter for non-admin users: only show invoices created by the logged-in user
+        // Filter for non-admin/non-validator users: only show invoices created by the logged-in user
         $user = $request->user();
-        if ($user && ($user->base_role ?? 'operator') !== 'admin') {
-            $query->where('created_by', $user->id);
+        if ($user) {
+            $headerRole = strtolower($request->header('X-Current-Role') ?? '');
+            $inputRole = strtolower($request->input('current_role') ?? '');
+            $baseRole = strtolower($user->base_role ?? 'operator');
+            $currentRole = strtolower($user->current_role ?? $baseRole);
+
+            $isPowerUser = in_array($baseRole, ['admin', 'validator']) ||
+                           in_array($currentRole, ['admin', 'validator']) ||
+                           in_array($headerRole, ['admin', 'validator']) ||
+                           in_array($inputRole, ['admin', 'validator']);
+
+            if (!$isPowerUser) {
+                $query->where('created_by', $user->id);
+            }
         }
 
         if ($request->filled('search')) {

@@ -1,0 +1,89 @@
+/* MfaSetupPage.css - Premium Styling for MFA Setup Onboarding */
+
+.mfa-setup-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-family: 'Inter', sans-serif;
+}
+
+.mfa-setup-card-wrapper {
+  width: 100%;
+  max-width: 520px;
+}
+
+.mfa-setup-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  padding: 12px;
+}
+
+.mfa-setup-header {
+  text-align: center;
+}
+
+.mfa-icon-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #0b56a4;
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: 0 4px 14px rgba(11, 86, 164, 0.15);
+}
+
+.qr-code-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.secret-key-display {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.totp-code-input {
+  text-align: center;
+  letter-spacing: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 10px;
+}
+
+.btn-confirm-mfa {
+  background: #0b56a4 !important;
+  height: 46px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+}
+
+.recovery-codes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.recovery-code-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+}

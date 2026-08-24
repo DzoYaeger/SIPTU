@@ -566,4 +566,94 @@ class AdminNotificationSettingsController extends Controller
         }
         return array_values(array_unique($result));
     }
+
+    /**
+     * Get Layanan Mandiri categories and service filter mappings.
+     */
+    public function getLayananFilterConfig()
+    {
+        $setting = NotificationSetting::first();
+        $config = $setting?->layanan_filter_config;
+
+        $defaultCategories = [
+            ['key' => 'all', 'label' => 'Semua Layanan', 'icon' => 'AppstoreOutlined', 'color' => '#0F5B99'],
+            ['key' => 'kepegawaian', 'label' => 'Kepegawaian & Izin', 'icon' => 'UserOutlined', 'color' => '#0F5B99'],
+            ['key' => 'logistik', 'label' => 'BMN & Sarpras', 'icon' => 'BankOutlined', 'color' => '#2563eb'],
+            ['key' => 'it', 'label' => 'IT & Digital', 'icon' => 'DesktopOutlined', 'color' => '#ef4444'],
+            ['key' => 'keuangan', 'label' => 'Keuangan & LPJ', 'icon' => 'FundOutlined', 'color' => '#10b981'],
+        ];
+
+        $defaultMapping = [
+            'simkeu' => 'keuangan',
+            'siptu-drive' => 'kepegawaian',
+            'pelatihan-pegawai' => 'kepegawaian',
+            'kearsipan' => 'kepegawaian',
+            'simba' => 'logistik',
+            'ruangan' => 'logistik',
+            'rispeg' => 'kepegawaian',
+            'pengumuman-rispeg' => 'kepegawaian',
+            'it-helpdesk' => 'it',
+            'surat-tugas' => 'kepegawaian',
+            'zoom-generator' => 'kepegawaian',
+            'pengadaan-pbj' => 'logistik',
+            'rhpk' => 'kepegawaian',
+            'pemeriksaan-kesehatan' => 'kepegawaian',
+            'kanban-work' => 'kepegawaian',
+            'sakip-2026' => 'kepegawaian',
+            'pengusulan-pengadaan' => 'logistik',
+            'pengajuan-pdtt' => 'logistik',
+        ];
+
+        $categories = (is_array($config) && !empty($config['categories'])) ? $config['categories'] : $defaultCategories;
+        $mapping = (is_array($config) && isset($config['mapping']) && is_array($config['mapping'])) ? $config['mapping'] : $defaultMapping;
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'categories' => $categories,
+                'mapping' => $mapping,
+            ],
+        ]);
+    }
+
+    /**
+     * Update Layanan Mandiri categories and service filter mappings.
+     */
+    public function updateLayananFilterConfig(Request $request)
+    {
+        $validated = $request->validate([
+            'categories' => 'required|array|min:1',
+            'categories.*.key' => 'required|string|max:50',
+            'categories.*.label' => 'required|string|max:100',
+            'categories.*.icon' => 'nullable|string|max:50',
+            'categories.*.color' => 'nullable|string|max:30',
+            'mapping' => 'required|array',
+        ]);
+
+        $setting = NotificationSetting::first();
+        if (!$setting) {
+            $setting = NotificationSetting::create([
+                'fonnte_token' => null,
+                'fonnte_endpoint' => 'https://api.fonnte.com/send',
+                'default_admin_numbers' => [],
+                'recipients' => [],
+                'kgb_window' => [],
+                'surat_tugas_templates' => [],
+                'hero_slider' => [],
+                'popup_config' => [],
+                'slider_duration' => 6,
+                'layanan_filter_config' => $validated,
+            ]);
+        } else {
+            $setting->update([
+                'layanan_filter_config' => $validated,
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Pengaturan pengelompokan & filter layanan berhasil disimpan.',
+            'data' => $setting->layanan_filter_config,
+        ]);
+    }
 }

@@ -63,6 +63,10 @@ import {
   EyeOutlined,
   PictureOutlined,
   BellOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  FilterOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import DocViewerModal from "../components/DocViewerModal.jsx";
@@ -161,6 +165,9 @@ export default function PenyimpananCloud() {
   const [viewMode, setViewMode] = useState("list"); // grid or list
   const [currentPath, setCurrentPath] = useState(""); // relative to NIP root
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sortField, setSortField] = useState("name"); // "name" | "size" | "last_modified"
+  const [sortOrder, setSortOrder] = useState("asc"); // "asc" (A-Z) | "desc" (Z-A)
+  const [filterType, setFilterType] = useState("all"); // "all" | "folder" | "document" | "pdf" | "image" | "archive"
 
   // Modals state
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -1007,6 +1014,68 @@ export default function PenyimpananCloud() {
     }
   };
 
+  // Direct same-directory copy handler with automatic " Copy" suffix
+  const handleDirectCopy = async (file) => {
+    if (!file) return;
+    const nip = user?.nip;
+    if (!nip) return;
+
+    const key = `copy-${file.name}`;
+    try {
+      andMessage.loading({ content: `Menyalin "${file.name}"...`, key });
+
+      const sourcePath = file.path;
+      const pathParts = sourcePath.split("/");
+      const oldName = pathParts.pop();
+      const parentPath = pathParts.join("/");
+
+      // Generate base copy name
+      let baseName = oldName;
+      let extension = "";
+      if (!file.is_dir) {
+        const lastDotIndex = oldName.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+          baseName = oldName.substring(0, lastDotIndex);
+          extension = oldName.substring(lastDotIndex);
+        }
+      }
+
+      // Check current files in directory to avoid collisions
+      const existingNames = new Set(files.map((f) => f.name.toLowerCase()));
+      let finalName = `${baseName} Copy${extension}`;
+      let counter = 2;
+      while (existingNames.has(finalName.toLowerCase())) {
+        finalName = `${baseName} Copy ${counter}${extension}`;
+        counter++;
+      }
+
+      const destPath = `${parentPath}/${finalName}`;
+
+      const response = await apiFetch("/nextcloud/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_path: sourcePath,
+          dest_path: destPath,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Gagal menyalin berkas.");
+      }
+
+      andMessage.success({
+        content: `"${file.name}" berhasil disalin menjadi "${finalName}".`,
+        key,
+        duration: 3,
+      });
+      fetchFiles();
+    } catch (err) {
+      andMessage.error({ content: err.message, key });
+    }
+  };
+
   // Selector modal triggers (Move/Copy)
   const openSelectorModal = useCallback((file, action) => {
     setSelectorSourceFile(file);
@@ -1283,13 +1352,45 @@ export default function PenyimpananCloud() {
     e.target.value = "";
   };
 
-  // Filter files
+  // Filter & Sort files
   const filteredFiles = useMemo(() => {
-    if (searchQuery.trim()) {
-      return searchResults;
+    let list = searchQuery.trim() ? searchResults : files;
+
+    // Filter by type
+    if (filterType !== "all") {
+      list = list.filter((f) => {
+        if (filterType === "folder") return f.is_dir;
+        if (f.is_dir) return false;
+        const ext = f.name ? f.name.split(".").pop().toLowerCase() : "";
+        if (filterType === "pdf") return ext === "pdf";
+        if (filterType === "document") return ["docx", "doc", "xlsx", "xls", "pptx", "ppt", "csv", "txt"].includes(ext);
+        if (filterType === "image") return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext);
+        if (filterType === "archive") return ["zip", "rar", "7z", "tar", "gz"].includes(ext);
+        return true;
+      });
     }
-    return files;
-  }, [files, searchQuery, searchResults]);
+
+    // Sort: Folders grouped first, then items sorted by sortField and sortOrder
+    return [...list].sort((a, b) => {
+      if (a.is_dir && !b.is_dir) return -1;
+      if (!a.is_dir && b.is_dir) return 1;
+
+      let comparison = 0;
+      if (sortField === "name") {
+        comparison = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+      } else if (sortField === "size") {
+        const sizeA = a.size || 0;
+        const sizeB = b.size || 0;
+        comparison = sizeA - sizeB;
+      } else if (sortField === "last_modified") {
+        const dateA = a.last_modified ? new Date(a.last_modified).getTime() : 0;
+        const dateB = b.last_modified ? new Date(b.last_modified).getTime() : 0;
+        comparison = dateA - dateB;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [files, searchQuery, searchResults, filterType, sortField, sortOrder]);
 
   // Separate Folders and Files
   const folderItems = useMemo(() => filteredFiles.filter((f) => f.is_dir), [filteredFiles]);
@@ -1359,16 +1460,16 @@ export default function PenyimpananCloud() {
           onClick: () => openRenameModal(file),
         },
         {
+          key: "copy",
+          label: file.is_dir ? "Salin Folder" : "Salin Berkas",
+          icon: <CopyOutlined style={{ color: "#0F5B99" }} />,
+          onClick: () => handleDirectCopy(file),
+        },
+        {
           key: "move",
           label: "Pindahkan",
           icon: <FolderOpenOutlined style={{ color: "#722ed1" }} />,
           onClick: () => openSelectorModal(file, "move"),
-        },
-        {
-          key: "copy",
-          label: file.is_dir ? "Salin Folder" : "Salin Berkas",
-          icon: <PlusOutlined style={{ color: "#13c2c2" }} />,
-          onClick: () => openSelectorModal(file, "copy"),
         },
         ...(!file.is_dir && isImage
           ? [
@@ -1427,13 +1528,50 @@ export default function PenyimpananCloud() {
         },
       ];
     },
-    [handleDelete, handleDownload, handlePreviewImage, handlePreviewPdf, openRenameModal, openSelectorModal, openShareModal]
+    [handleDelete, handleDownload, handlePreviewImage, handlePreviewPdf, openRenameModal, openSelectorModal, openShareModal, handleDirectCopy]
   );
 
+  // Handle Table Column Sort Click
+  const handleSortClick = (field) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const renderSortableTitle = (label, field) => {
+    const isActive = sortField === field;
+    return (
+      <div
+        className={`drive-table-sort-col ${isActive ? "drive-table-sort-col--active" : ""}`}
+        onClick={() => handleSortClick(field)}
+        title={`Klik untuk mengurutkan berdasarkan ${label} (${isActive && sortOrder === "asc" ? "Z ke A / Terbesar ke Terkecil" : "A ke Z / Terkecil ke Terbesar"})`}
+      >
+        <span className="drive-table-sort-col__text">{label}</span>
+        <span className="drive-table-sort-col__icons">
+          {isActive ? (
+            sortOrder === "asc" ? (
+              <ArrowUpOutlined className="drive-table-sort-icon is-active" />
+            ) : (
+              <ArrowDownOutlined className="drive-table-sort-icon is-active" />
+            )
+          ) : (
+            <span className="drive-table-sort-duo">
+              <ArrowUpOutlined className="drive-table-sort-icon is-dimmed" />
+              <ArrowDownOutlined className="drive-table-sort-icon is-dimmed" />
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
   // List View columns
-  const columns = [
+  const columns = useMemo(() => [
     {
-      title: "Nama",
+      title: renderSortableTitle("Nama", "name"),
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
@@ -1491,7 +1629,7 @@ export default function PenyimpananCloud() {
       ),
     },
     {
-      title: "Ukuran",
+      title: renderSortableTitle("Ukuran", "size"),
       dataIndex: "size",
       key: "size",
       width: 140,
@@ -1502,7 +1640,7 @@ export default function PenyimpananCloud() {
       ),
     },
     {
-      title: "Terakhir Diubah",
+      title: renderSortableTitle("Terakhir Diubah", "last_modified"),
       dataIndex: "last_modified",
       key: "last_modified",
       width: 220,
@@ -1575,7 +1713,7 @@ export default function PenyimpananCloud() {
         </Space>
       ),
     },
-  ];
+  ], [sortField, sortOrder, getFileMenuItems, searchQuery]);
 
   return (
     <div
@@ -1799,7 +1937,7 @@ export default function PenyimpananCloud() {
             </div>
           )}
           
-          {/* Breadcrumbs & Layout Switcher toolbar */}
+          {/* Breadcrumbs, Filter, Sorting & Layout Switcher toolbar */}
           <div className="drive-toolbar-wrap">
             <div className="drive-navigation">
               <Breadcrumb separator=">">
@@ -1818,31 +1956,60 @@ export default function PenyimpananCloud() {
               </Breadcrumb>
             </div>
 
-            <div className="drive-actions">
+            <div className="drive-toolbar-controls">
+              {/* Filter Tipe Berkas */}
+              <Select
+                value={filterType}
+                onChange={setFilterType}
+                className="drive-filter-select"
+                size="middle"
+                style={{ width: 160 }}
+                options={[
+                  { value: "all", label: "Semua Tipe" },
+                  { value: "folder", label: "Hanya Folder" },
+                  { value: "document", label: "Dokumen Office" },
+                  { value: "pdf", label: "Dokumen PDF" },
+                  { value: "image", label: "Gambar / Foto" },
+                  { value: "archive", label: "Arsip (ZIP/RAR)" },
+                ]}
+              />
+
+              {/* Toggle Sort Panah Atas (A-Z) / Panah Bawah (Z-A) */}
+              <Tooltip title={sortOrder === "asc" ? "Urutan: A ke Z (Klik untuk ubah Z ke A)" : "Urutan: Z ke A (Klik untuk ubah A ke Z)"}>
+                <Button
+                  className={`drive-sort-toggle-btn ${sortOrder === "desc" ? "is-desc" : ""}`}
+                  icon={sortOrder === "asc" ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                  onClick={() => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))}
+                >
+                  {sortOrder === "asc" ? "A - Z" : "Z - A"}
+                </Button>
+              </Tooltip>
+
+              {/* View Mode Switcher */}
               <Radio.Group
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value)}
                 className="view-toggle"
               >
-                <Radio.Button value="grid"><AppstoreOutlined /></Radio.Button>
-                <Radio.Button value="list"><UnorderedListOutlined /></Radio.Button>
+                <Radio.Button value="grid" title="Tampilan Kisi (Grid)"><AppstoreOutlined /></Radio.Button>
+                <Radio.Button value="list" title="Tampilan Daftar (List)"><UnorderedListOutlined /></Radio.Button>
               </Radio.Group>
             </div>
           </div>
 
-          {/* Quick status display with Total Folder Size summary */}
-          <div className="drive-path-status-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", margin: "12px 0 16px 0" }}>
-            <Tag color="processing" className="status-tag" style={{ borderRadius: 6, padding: "4px 10px", fontSize: 12 }}>
-              Path: SIPTU Drive/{user?.nip}{currentPath || "/"}
-            </Tag>
+          {/* Clean Status & Path Bar without heavy background fills or icons */}
+          <div className="drive-clean-status-bar">
+            <div className="drive-status-path">
+              <span className="drive-status-path__label">Path:</span>
+              <span className="drive-status-path__value">SIPTU Drive/{user?.nip}{currentPath || "/"}</span>
+            </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Tag color="geekblue" style={{ borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
-                📁 {folderCount} Folder &nbsp;|&nbsp; 📄 {fileCount} Berkas
-              </Tag>
-              <Tag color="green" style={{ borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: "#059669", background: "#ecfdf5", borderColor: "#a7f3d0" }}>
-                💾 Total Ukuran Folder Ini: {formatBytes(totalSize)}
-              </Tag>
+            <div className="drive-status-metrics">
+              <span className="drive-metric-item">{folderCount} folder</span>
+              <span className="drive-metric-separator">•</span>
+              <span className="drive-metric-item">{fileCount} berkas</span>
+              <span className="drive-metric-separator">•</span>
+              <span className="drive-metric-item drive-metric-item--size">Total Ukuran: {formatBytes(totalSize)}</span>
             </div>
           </div>
 

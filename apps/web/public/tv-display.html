@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antrian Layanan - BBPOM Palopo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','Outfit',sans-serif;background:#f8fafc;color:#1e293b;overflow:hidden;width:100vw;height:100vh;display:flex;flex-direction:column}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0.8vh 2.5vw;background:#fff;border-bottom:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04);flex-shrink:0}
+.hdr-brand{display:flex;align-items:center;gap:0.8vw}
+.hdr-logo{width:3.5vh;height:3.5vh;border-radius:0.5vw;object-fit:contain}
+.hdr-title{font-family:'Outfit',sans-serif;font-size:1.6vh;font-weight:700;color:#1e293b}
+.hdr-sub{font-size:1.1vh;color:#94a3b8;letter-spacing:1px;text-transform:uppercase}
+.hdr-badges{display:flex;gap:0.6vw}
+.badge{display:flex;align-items:center;gap:0.4vw;padding:0.5vh 1vw;border-radius:100px;font-size:1.1vh;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge.open{background:#ecfdf5;border:1px solid rgba(5,150,105,.2);color:#059669}
+.badge.shut{background:#fef2f2;border:1px solid rgba(220,38,38,.2);color:#dc2626}
+.badge-dot{width:0.8vh;height:0.8vh;border-radius:50%;animation:pulse 2s ease-in-out infinite}
+.badge.open .badge-dot{background:#059669;box-shadow:0 0 6px rgba(5,150,105,.5)}
+.badge.shut .badge-dot{background:#dc2626;box-shadow:0 0 6px rgba(220,38,38,.5)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.hdr-clock{text-align:right}
+.clock-time{font-family:'Outfit',monospace;font-size:2.8vh;font-weight:800;color:#1e293b}
+.clock-date{font-size:1.1vh;color:#94a3b8;text-transform:capitalize}
+
+/* Main */
+.main{flex:1;display:flex;min-height:0}
+
+/* Left */
+.left{flex:0 0 50%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5vh 2vw}
+.cards{display:flex;flex-direction:column;gap:1.5vh;width:100%;height:100%;justify-content:center}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:2vh;padding:2vh 2vw;box-shadow:0 2px 10px rgba(0,0,0,.04);flex:1;display:flex;flex-direction:column;justify-content:center}
+.card-a{border-left:0.4vw solid #2563eb}
+.card-b{border-left:0.4vw solid #059669}
+.card.off{opacity:.45}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1vh}
+.card-code{display:inline-flex;align-items:center;justify-content:center;width:4.5vh;height:4.5vh;border-radius:1vh;font-family:'Outfit',sans-serif;font-size:2.2vh;font-weight:800;color:#fff}
+.card-a .card-code{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+.card-b .card-code{background:linear-gradient(135deg,#059669,#10b981)}
+.card-status{font-size:1.2vh;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:0.4vh 1vw;border-radius:100px}
+.card-status.open{color:#059669;background:#ecfdf5;border:1px solid rgba(5,150,105,.15)}
+.card-status.shut{color:#dc2626;background:#fef2f2;border:1px solid rgba(220,38,38,.15)}
+.card-num-wrap{text-align:center;margin:1vh 0}
+.card-num{font-family:'Outfit',sans-serif;font-size:10vh;font-weight:900;line-height:1;letter-spacing:0.3vw;transition:all .3s}
+.card-a .card-num{color:#2563eb}
+.card-b .card-num{color:#059669}
+.card-num.pop{animation:numpop .8s cubic-bezier(.34,1.56,.64,1)}
+@keyframes numpop{0%{transform:scale(.6);opacity:0}50%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.card-num-sub{font-size:1.3vh;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#94a3b8;margin-top:0.5vh}
+.card-officer{display:flex;align-items:center;gap:1vw;padding:1vh 1vw;background:#f8fafc;border-radius:1.2vh;border:1px solid #e2e8f0;margin-top:1vh}
+.officer-photo{width:5.5vh;height:5.5vh;border-radius:50%;object-fit:cover;flex-shrink:0}
+.card-a .officer-photo{border:2px solid #dbeafe}
+.card-b .officer-photo{border:2px solid #d1fae5}
+.officer-ph{width:5.5vh;height:5.5vh;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2vh;font-weight:800;flex-shrink:0}
+.card-a .officer-ph{background:linear-gradient(135deg,#dbeafe,#e0e7ff);color:#2563eb;border:2px solid rgba(37,99,235,.15)}
+.card-b .officer-ph{background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#059669;border:2px solid rgba(5,150,105,.15)}
+.officer-lbl{font-size:1.1vh;font-weight:600;color:#94a3b8;letter-spacing:1px;text-transform:uppercase}
+.officer-name{font-family:'Outfit',sans-serif;font-size:1.8vh;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-closed{text-align:center;padding:2vh;color:#94a3b8;font-size:1.6vh}
+
+/* Right - Slideshow */
+.right{flex:0 0 50%;position:relative;padding:1.5vh 1.5vw 1.5vh 0;display:flex;align-items:center;justify-content:center}
+.slide-box{position:relative;width:100%;height:100%;border-radius:2vh;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 1s ease-in-out;display:flex;align-items:center;justify-content:center}
+.slide.on{opacity:1;z-index:2}
+.slide img,.slide video{width:100%;height:100%;object-fit:cover}
+.slide-title{position:absolute;bottom:0;left:0;right:0;padding:1.5vh 1.5vw;background:linear-gradient(transparent,rgba(0,0,0,.5));font-family:'Outfit',sans-serif;font-size:1.8vh;font-weight:600;color:#fff;z-index:3}
+.slide-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5vh;color:#94a3b8;font-size:1.8vh;height:100%}
+.slide-empty-icon{font-size:5vh;opacity:.4}
+.dots{position:absolute;bottom:1vh;left:50%;transform:translateX(-50%);display:flex;gap:0.5vw;z-index:10}
+.dot{width:0.8vh;height:0.8vh;border-radius:50%;background:rgba(255,255,255,.4);transition:all .3s;border:1px solid rgba(0,0,0,.1)}
+.dot.on{background:#fff;box-shadow:0 0 8px rgba(0,0,0,.15);width:2vw;border-radius:4px}
+
+/* Ticker */
+.ticker{flex-shrink:0;height:4.5vh;background:#fff;border-top:1px solid #e2e8f0;display:flex;align-items:center;overflow:hidden}
+.ticker-label{flex-shrink:0;padding:0 1.2vw;font-size:1.2vh;font-weight:700;color:#2563eb;letter-spacing:2px;text-transform:uppercase;border-right:1px solid #e2e8f0;height:100%;display:flex;align-items:center;gap:0.4vw;background:#dbeafe}
+.ticker-content{flex:1;overflow:hidden;white-space:nowrap;position:relative}
+.ticker-scroll{display:inline-block;animation:tickmove 30s linear infinite;padding-left:100%;font-size:1.6vh;font-weight:500;color:#64748b}
+@keyframes tickmove{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
+
+/* Flash */
+.flash{position:fixed;inset:0;background:radial-gradient(circle at center,rgba(37,99,235,.08),transparent 70%);pointer-events:none;z-index:50;animation:flashpulse 1s ease-out forwards}
+@keyframes flashpulse{0%{opacity:1}100%{opacity:0}}
+.flash.hide{display:none}
+
+/* Fullscreen btn */
+.fs-btn{position:fixed;bottom:5vh;right:1vw;width:3.5vh;height:3.5vh;border-radius:0.8vh;background:#fff;border:1px solid #e2e8f0;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.8vh;z-index:100;opacity:0;transition:opacity .3s}
+body:hover .fs-btn{opacity:1}
+.fs-btn:hover{background:#f1f5f9;color:#1e293b}
+</style>
+</head>
+<body ondblclick="toggleFS()">
+
+<div id="flash" class="flash hide"></div>
+
+<!-- Header -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <img src="/logo/logo.png" alt="BPOM" class="hdr-logo">
+    <div>
+      <div class="hdr-title">Layanan Unit Pelayanan Publik</div>
+      <div class="hdr-sub">Balai POM di Palopo</div>
+    </div>
+  </div>
+  <div class="hdr-badges">
+    <div class="badge" style="background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-size:1.3vh;padding:0.6vh 1.2vw;text-transform:none;letter-spacing:0.5px;">
+      <span style="font-size:1.6vh">🌤️</span> <span id="weatherText">Memuat cuaca...</span>
+    </div>
+  </div>
+  <div class="hdr-clock">
+    <div id="clockTime" class="clock-time">--:--:--</div>
+    <div id="clockDate" class="clock-date">-</div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="main">
+  <div class="left"><div id="countersArea" class="cards"></div></div>
+  <div class="right">
+    <div class="slide-box">
+      <div id="slidesArea"></div>
+      <div id="dotsArea" class="dots"></div>
+      <div id="slideEmpty" class="slide-empty">
+        <div class="slide-empty-icon">&#128250;</div>
+        <span>Slideshow Informasi</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Ticker -->
+<div id="tickerBar" class="ticker" style="display:none">
+  <div class="ticker-label">&#128227; INFO</div>
+  <div class="ticker-content"><span id="tickerText" class="ticker-scroll"></span></div>
+</div>
+
+<button class="fs-btn" onclick="toggleFS()" title="Fullscreen">&#9974;</button>
+
+<script>
+var API_URL = "https://siptu.bpompalopo.com/core_api/api";
+var POLL_MS = 2000;
+var prevNums = {};
+var prevCalls = {};
+var slideIdx = 0;
+var slideTimer = null;
+var ttsQueue = [];
+var isSpeaking = false;
+
+// Number to Indonesian words
+var SATUAN = ["","satu","dua","tiga","empat","lima","enam","tujuh","delapan","sembilan"];
+var BELASAN = ["sepuluh","sebelas","dua belas","tiga belas","empat belas","lima belas","enam belas","tujuh belas","delapan belas","sembilan belas"];
+function numWords(n) {
+  if (n === 0) return "nol";
+  if (n < 10) return SATUAN[n];
+  if (n < 20) return BELASAN[n - 10];
+  if (n < 100) { var t = Math.floor(n/10), o = n%10; return SATUAN[t] + " puluh" + (o ? " " + SATUAN[o] : ""); }
+  if (n < 200) return "seratus" + (n%100 ? " " + numWords(n%100) : "");
+  if (n < 1000) { var h = Math.floor(n/100); return SATUAN[h] + " ratus" + (n%100 ? " " + numWords(n%100) : ""); }
+  return String(n);
+}
+
+// Clock
+function updateClock() {
+  var d = new Date();
+  var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  document.getElementById("clockTime").textContent = pad(h) + "." + pad(m) + "." + pad(s);
+  var days = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  var months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  document.getElementById("clockDate").textContent = days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+}
+function pad(n) { return n < 10 ? "0" + n : String(n); }
+setInterval(updateClock, 1000);
+updateClock();
+
+// Bell sound
+function playBell() {
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    var ctx = new AC();
+    var o1 = ctx.createOscillator(), g1 = ctx.createGain();
+    o1.type = "sine"; o1.frequency.value = 830;
+    g1.gain.setValueAtTime(0.25, ctx.currentTime);
+    g1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+    o1.connect(g1); g1.connect(ctx.destination);
+    o1.start(ctx.currentTime); o1.stop(ctx.currentTime + 0.6);
+    var o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = "sine"; o2.frequency.value = 1046;
+    g2.gain.setValueAtTime(0, ctx.currentTime);
+    g2.gain.setValueAtTime(0.25, ctx.currentTime + 0.2);
+    g2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.9);
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.start(ctx.currentTime + 0.2); o2.stop(ctx.currentTime + 0.9);
+    setTimeout(function() { ctx.close(); }, 1500);
+  } catch(e) {}
+}
+
+// TTS
+function speakNum(code, num) {
+  var w = numWords(num);
+  var txt = "Nomor antrian " + code + ", " + w + ", silahkan menuju loket yang telah ditentukan";
+  ttsQueue.push(txt);
+  processNextTTS();
+}
+function processNextTTS() {
+  if (isSpeaking || ttsQueue.length === 0) return;
+  if (!window.speechSynthesis) { ttsQueue = []; return; }
+  isSpeaking = true;
+  var txt = ttsQueue.shift();
+  try {
+    var synth = window.speechSynthesis;
+    synth.cancel();
+    var utt = new SpeechSynthesisUtterance(txt);
+    utt.lang = "id-ID";
+    utt.rate = 0.85;
+    utt.pitch = 1.0;
+    utt.volume = 1.0;
+    var voices = synth.getVoices();
+    for (var i = 0; i < voices.length; i++) {
+      if (voices[i].lang.indexOf("id") === 0 || voices[i].lang.indexOf("ms") === 0) {
+        utt.voice = voices[i]; break;
+      }
+    }
+    utt.onend = function() { isSpeaking = false; setTimeout(processNextTTS, 500); };
+    utt.onerror = function() { isSpeaking = false; setTimeout(processNextTTS, 300); };
+    synth.speak(utt);
+  } catch(e) { isSpeaking = false; }
+}
+if (window.speechSynthesis) { window.speechSynthesis.getVoices(); }
+
+// Render counter card
+function renderCounter(c) {
+  var code = c.counter_code || "A";
+  var cls = code === "A" ? "card-a" : "card-b";
+  var isOpen = c.status === "active";
+  var numStr = code + "-" + pad3(c.current_number || 0);
+  var animClass = c._anim ? " pop" : "";
+
+  if (!isOpen) {
+    return '<div class="card ' + cls + ' off">' +
+      '<div class="card-head"><span class="card-code">' + code + '</span><span class="card-status shut">Tutup</span></div>' +
+      '<div class="card-closed">Loket ' + code + ' tutup</div></div>';
+  }
+
+  var officerHtml = "";
+  if (c.employee_name) {
+    var photoHtml = c.employee_photo
+      ? '<img src="' + c.employee_photo + '" class="officer-photo" onerror="this.style.display=\'none\'">'
+      : '<div class="officer-ph">' + (c.employee_name.charAt(0) || "?").toUpperCase() + '</div>';
+    officerHtml = '<div class="card-officer">' + photoHtml +
+      '<div style="flex:1;min-width:0"><div class="officer-lbl">Petugas</div><div class="officer-name">' + esc(c.employee_name) + '</div></div></div>';
+  }
+
+  return '<div class="card ' + cls + '">' +
+    '<div class="card-head"><span class="card-code">' + code + '</span><span class="card-status open">Buka</span></div>' +
+    '<div class="card-num-wrap"><div class="card-num' + animClass + '">' + numStr + '</div><div class="card-num-sub">Sedang Dilayani</div></div>' +
+    officerHtml + '</div>';
+}
+
+function pad3(n) { var s = String(n); while (s.length < 3) s = "0" + s; return s; }
+function esc(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+// Render badges (removed, using weather instead)
+function renderBadges(counters) {
+  // We no longer render counter badges in the navbar
+}
+
+// Weather fetch
+function fetchWeather() {
+  var wxhr = new XMLHttpRequest();
+  wxhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=-2.9961&longitude=120.1983&current_weather=true", true);
+  wxhr.onreadystatechange = function() {
+    if (wxhr.readyState === 4 && wxhr.status === 200) {
+      try {
+        var res = JSON.parse(wxhr.responseText);
+        var temp = res.current_weather.temperature;
+        document.getElementById("weatherText").textContent = "Kota Palopo: " + temp + "°C";
+      } catch(e) {}
+    }
+  };
+  wxhr.send();
+}
+
+// Render slideshow
+var slidesData = [];
+function renderSlides(slides) {
+  slidesData = slides || [];
+  var area = document.getElementById("slidesArea");
+  var dots = document.getElementById("dotsArea");
+  var empty = document.getElementById("slideEmpty");
+
+  if (slidesData.length === 0) {
+    area.innerHTML = "";
+    dots.innerHTML = "";
+    empty.style.display = "flex";
+    return;
+  }
+  empty.style.display = "none";
+
+  var html = "";
+  var dhtml = "";
+  for (var i = 0; i < slidesData.length; i++) {
+    var s = slidesData[i];
+    var onClass = i === slideIdx ? " on" : "";
+    var isVideo = s.image && s.image.indexOf(".mp4") > -1;
+    var media = isVideo
+      ? '<video src="' + s.image + '" autoplay muted loop playsinline></video>'
+      : '<img src="' + s.image + '" alt="">';
+    var title = s.title ? '<div class="slide-title">' + esc(s.title) + '</div>' : "";
+    html += '<div class="slide' + onClass + '">' + media + title + '</div>';
+    dhtml += '<div class="dot' + (i === slideIdx ? " on" : "") + '"></div>';
+  }
+  area.innerHTML = html;
+  if (slidesData.length > 1) { dots.innerHTML = dhtml; } else { dots.innerHTML = ""; }
+}
+
+function advanceSlide() {
+  if (slidesData.length <= 1) return;
+  slideIdx = (slideIdx + 1) % slidesData.length;
+  var slides = document.querySelectorAll("#slidesArea .slide");
+  var dots = document.querySelectorAll("#dotsArea .dot");
+  for (var i = 0; i < slides.length; i++) {
+    slides[i].className = i === slideIdx ? "slide on" : "slide";
+  }
+  for (var j = 0; j < dots.length; j++) {
+    dots[j].className = j === slideIdx ? "dot on" : "dot";
+  }
+  scheduleSlide();
+}
+
+function scheduleSlide() {
+  if (slideTimer) clearTimeout(slideTimer);
+  if (slidesData.length <= 1) return;
+  var dur = (slidesData[slideIdx] && slidesData[slideIdx].duration) || 8;
+  slideTimer = setTimeout(advanceSlide, dur * 1000);
+}
+
+// Poll API
+function fetchQueue() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", API_URL + "/public/queue-display?t=" + new Date().getTime(), true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status !== 200) return;
+    try {
+      var data = JSON.parse(xhr.responseText);
+      var counters = data.counters || [];
+
+      // Check for number changes or recalls
+      for (var i = 0; i < counters.length; i++) {
+        var c = counters[i];
+        var prevNum = prevNums[c.counter_code];
+        var prevCall = prevCalls[c.counter_code];
+        c._anim = false;
+        
+        var numChanged = prevNum !== undefined && c.current_number !== prevNum && c.current_number > 0;
+        var recalled = prevCall !== undefined && c.last_called_at !== prevCall && c.current_number > 0;
+
+        if (numChanged || recalled) {
+          c._anim = true;
+          playBell();
+          setTimeout((function(code, num) { return function() { speakNum(code, num); }; })(c.counter_code, c.current_number), 800);
+          showFlash();
+        }
+        prevNums[c.counter_code] = c.current_number;
+        prevCalls[c.counter_code] = c.last_called_at;
+      }
+
+      // Render
+      var html = "";
+      for (var j = 0; j < counters.length; j++) {
+        html += renderCounter(counters[j]);
+      }
+      document.getElementById("countersArea").innerHTML = html;
+      renderBadges(counters);
+
+      // Ticker
+      var tickerRaw = data.ticker_text;
+      var ticker = "";
+      if (Array.isArray(tickerRaw)) {
+        ticker = tickerRaw.filter(function(t) { return t.trim() !== ""; }).join("   \u2022   ");
+      } else if (typeof tickerRaw === "string") {
+        ticker = tickerRaw;
+      }
+
+      if (ticker) {
+        document.getElementById("tickerBar").style.display = "flex";
+        document.getElementById("tickerText").textContent = ticker;
+      } else {
+        document.getElementById("tickerBar").style.display = "none";
+      }
+
+      // Slideshow
+      renderSlides(data.slideshow || []);
+      if (slidesData.length > 1 && !slideTimer) scheduleSlide();
+    } catch(e) {}
+  };
+  xhr.send();
+}
+
+function showFlash() {
+  var el = document.getElementById("flash");
+  el.className = "flash";
+  setTimeout(function() { el.className = "flash hide"; }, 1000);
+}
+
+// Fullscreen
+function toggleFS() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  }
+}
+
+// Start
+fetchWeather();
+setInterval(fetchWeather, 30 * 60 * 1000); // 30 minutes
+fetchQueue();
+setInterval(fetchQueue, POLL_MS);
+</script>
+</body>
+</html>

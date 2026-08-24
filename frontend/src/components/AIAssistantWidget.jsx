@@ -12,14 +12,14 @@ import { useAuth } from "../hooks/useAuth";
 import "./AIAssistantWidget.css";
 
 const AIAssistantWidget = () => {
-  const { apiFetch, user, token } = useAuth();
+  const { apiFetch, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([
     { 
       role: "assistant", 
-      content: `Selamat datang, Bapak/Ibu ${user?.name?.split(' ')[0] || 'Rekan'}. Saya adalah SIPTU Concierge, asisten digital resmi Anda. Ada informasi atau bantuan operasional yang dapat kami berikan untuk Anda hari ini?` 
+      content: `Selamat datang, ${user?.name?.split(' ')[0] || 'Bapak/Ibu'}. Saya adalah SIPTU Concierge, asisten digital resmi Anda. Ada informasi atau bantuan operasional yang dapat kami berikan untuk Anda hari ini?` 
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,52 +72,15 @@ const AIAssistantWidget = () => {
 
   return (
     <div className={`ai-widget-container ${isOpen ? "is-open" : ""} ${isMinimized ? "is-minimized" : ""}`}>
-      {/* SiamparanV2 Bubble */}
-      {!isOpen && user && (
-        <button 
-          className="siamparan-floating-btn" 
-          onClick={() => {
-            const ssoUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-              ? `http://localhost:8000/auth/sso?token=${token}&user=${user.nip}`
-              : `https://siamparan.bpompalopo.com/auth/sso?token=${token}&user=${user.nip}`;
-            window.open(ssoUrl, '_blank');
-          }}
-        >
-          <div className="siamparan-stars">
-            <div className="siamparan-star s1">★</div>
-            <div className="siamparan-star s2">✦</div>
-            <div className="siamparan-star s3">✨</div>
-          </div>
-          <img src="/logo/siamparan.png" alt="SiamparanV2" className="siamparan-icon-img" />
-          <span className="siamparan-btn-label">SIAMPARAN V2</span>
-        </button>
-      )}
-
-      {/* Selaras Bubble */}
-      {!isOpen && user && (
-        <button 
-          className="selaras-floating-btn" 
-          onClick={() => {
-            const ssoUrl = `https://selaras.bpompalopo.com/auth/sso?token=${token}&user=${user.nip}`;
-            window.open(ssoUrl, '_blank');
-          }}
-        >
-          <div className="selaras-stars">
-            <div className="star s1">★</div>
-            <div className="star s2">✦</div>
-            <div className="star s3">✨</div>
-          </div>
-          <img src="/logo/selaras.png" alt="Selaras" className="selaras-icon-img" />
-          <span className="selaras-btn-label">SELARAS</span>
-        </button>
-      )}
-
-      {/* Floating Button (AI Concierge) */}
+      {/* Single Minimalist Floating AI Concierge Button */}
       {!isOpen && (
-        <button className="ai-floating-btn" onClick={() => setIsOpen(true)}>
-          <div className="ai-btn-glow" />
-          <MessageOutlined />
-          <span className="ai-btn-label">SIPTU Concierge</span>
+        <button
+          className="ai-floating-btn"
+          onClick={() => setIsOpen(true)}
+          title="Tanya SIPTU AI Concierge"
+        >
+          <MessageOutlined className="ai-btn-icon" />
+          <span className="ai-btn-label">Tanya AI Concierge</span>
         </button>
       )}
 
@@ -131,14 +94,22 @@ const AIAssistantWidget = () => {
               </div>
               <div>
                 <h4>SIPTU Concierge</h4>
-                <span className="ai-status-online">● Online</span>
+                <span className="ai-status-online">● Siap Membantu</span>
               </div>
             </div>
             <div className="ai-header-actions">
-              <button onClick={() => setIsMinimized(!isMinimized)} className="ai-action-btn">
+              <button
+                onClick={() => setIsMinimized(!isMinimized)}
+                className="ai-action-btn"
+                title={isMinimized ? "Perbesar" : "Kecilkan"}
+              >
                 <MinusOutlined />
               </button>
-              <button onClick={() => setIsOpen(false)} className="ai-action-btn ai-close-btn">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="ai-action-btn ai-close-btn"
+                title="Tutup Chat"
+              >
                 <CloseOutlined />
               </button>
             </div>
@@ -159,7 +130,7 @@ const AIAssistantWidget = () => {
                 {isLoading && (
                   <div className="ai-message-row assistant">
                     <div className="ai-message-bubble loading">
-                      <LoadingOutlined /> <span>SIPTU sedang berpikir...</span>
+                      <LoadingOutlined /> <span>SIPTU Concierge sedang mengetik...</span>
                     </div>
                   </div>
                 )}
@@ -169,7 +140,7 @@ const AIAssistantWidget = () => {
               <form className="ai-chat-input-area" onSubmit={handleSendMessage}>
                 <textarea
                   className="ai-chat-textarea"
-                  placeholder="Tanya sesuatu... (Shift+Enter untuk baris baru)"
+                  placeholder="Tanya info layanan / SOP / regulasi..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -181,7 +152,7 @@ const AIAssistantWidget = () => {
                   rows={1}
                   disabled={isLoading}
                 />
-                <button type="submit" disabled={!message.trim() || isLoading}>
+                <button type="submit" disabled={!message.trim() || isLoading} title="Kirim Pesan">
                   <SendOutlined />
                 </button>
               </form>

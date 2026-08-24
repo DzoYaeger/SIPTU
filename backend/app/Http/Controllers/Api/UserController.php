@@ -186,6 +186,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Kata sandi berhasil diperbarui.',
+            'user' => $user->load('employee'),
         ]);
     }
 

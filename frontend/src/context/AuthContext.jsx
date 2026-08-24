@@ -377,7 +377,12 @@ export function AuthProvider({ children }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Gagal membuat token reset.");
+        let errMsg = errorData.message || "Gagal membuat token reset.";
+        if (errorData.errors) {
+          const detailed = Object.values(errorData.errors).flat().join(" ");
+          if (detailed) errMsg = detailed;
+        }
+        throw new Error(errMsg);
       }
 
       return response.json();
@@ -394,7 +399,12 @@ export function AuthProvider({ children }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Gagal memperbarui kata sandi.");
+        let errMsg = errorData.message || "Gagal memperbarui kata sandi.";
+        if (errorData.errors) {
+          const detailed = Object.values(errorData.errors).flat().join(" ");
+          if (detailed) errMsg = detailed;
+        }
+        throw new Error(errMsg);
       }
 
       return response.json();
@@ -411,7 +421,12 @@ export function AuthProvider({ children }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Gagal memperbarui profil.");
+        let errMsg = errorData.message || "Gagal memperbarui profil.";
+        if (errorData.errors) {
+          const detailed = Object.values(errorData.errors).flat().join(" ");
+          if (detailed) errMsg = detailed;
+        }
+        throw new Error(errMsg);
       }
 
       const result = await response.json();
@@ -431,10 +446,20 @@ export function AuthProvider({ children }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Gagal memperbarui kata sandi.");
+        let errMsg = errorData.message || "Gagal memperbarui kata sandi.";
+        if (errorData.errors) {
+          const detailed = Object.values(errorData.errors).flat().join(" ");
+          if (detailed) errMsg = detailed;
+        }
+        throw new Error(errMsg);
       }
 
-      return response.json();
+      const result = await response.json();
+      if (result?.user) {
+        setUser(result.user);
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+      }
+      return result;
     },
     [apiFetch],
   );
@@ -605,6 +630,15 @@ export function AuthProvider({ children }) {
     [user, currentRole],
   );
 
+  const markMfaSessionActive = useCallback(() => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, mfa_session_active: true };
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       token,
@@ -627,6 +661,7 @@ export function AuthProvider({ children }) {
       updateProfile,
       changePassword,
       verifyMfa,
+      markMfaSessionActive,
     }),
     [
       token,
@@ -646,6 +681,7 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       resetPassword,
       verifyMfa,
+      markMfaSessionActive,
     ],
   );
 

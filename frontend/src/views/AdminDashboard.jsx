@@ -110,12 +110,12 @@ const MODULE_META = {
 
 // ── KPI Config ───────────────────────────────────────────────────
 const KPI_CONFIG = [
-  { key: "services_total", label: "Total Layanan", suffix: "tiket", icon: <FolderOutlined style={{ fontSize: 20, color: "#6366f1" }} />, color: "#6366f1" },
-  { key: "services_today", label: "Layanan Hari Ini", suffix: "aktivitas", icon: <FolderOutlined style={{ fontSize: 20, color: "#0ea5e9" }} />, color: "#0ea5e9" },
-  { key: "users_total", label: "Pengguna", suffix: "akun", icon: <FolderOutlined style={{ fontSize: 20, color: "#8b5cf6" }} />, color: "#8b5cf6" },
-  { key: "employees_total", label: "Pegawai", suffix: "orang", icon: <FolderOutlined style={{ fontSize: 20, color: "#ec4899" }} />, color: "#ec4899" },
-  { key: "assets_total", label: "Aset BMN", suffix: "item", icon: <FolderOutlined style={{ fontSize: 20, color: "#f59e0b" }} />, color: "#f59e0b" },
-  { key: "inventories_total", label: "Persediaan", suffix: "item", icon: <FolderOutlined style={{ fontSize: 20, color: "#10b981" }} />, color: "#10b981" },
+  { key: "services_total", label: "Total Layanan", suffix: "tiket", icon: <FolderOutlined style={{ fontSize: 18, color: "#4f46e5" }} />, color: "#4f46e5" },
+  { key: "services_today", label: "Layanan Hari Ini", suffix: "aktivitas", icon: <ThunderboltOutlined style={{ fontSize: 18, color: "#06b6d4" }} />, color: "#06b6d4" },
+  { key: "users_total", label: "Pengguna", suffix: "akun", icon: <UserOutlined style={{ fontSize: 18, color: "#8b5cf6" }} />, color: "#8b5cf6" },
+  { key: "employees_total", label: "Pegawai", suffix: "orang", icon: <TeamOutlined style={{ fontSize: 18, color: "#f97316" }} />, color: "#f97316" },
+  { key: "assets_total", label: "Aset BMN", suffix: "item", icon: <SafetyOutlined style={{ fontSize: 18, color: "#10b981" }} />, color: "#10b981" },
+  { key: "inventories_total", label: "Persediaan", suffix: "item", icon: <RocketOutlined style={{ fontSize: 18, color: "#ec4899" }} />, color: "#ec4899" },
 ];
 
 function AdminDashboard() {
@@ -593,7 +593,7 @@ function AdminDashboard() {
                 <Text type="secondary">Distribusi seluruh aktivitas layanan SIPTU.</Text>
               </div>
               <div className="dashboard-donut-wrap">
-                <ResponsiveContainer width="58%" height={220}>
+                <ResponsiveContainer width="58%" height={220} minWidth={0}>
                   <PieChart>
                     <Pie data={globalStatusData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} stroke="none">
                       {globalStatusData.map((item) => <Cell key={item.name} fill={item.color} />)}
@@ -618,7 +618,7 @@ function AdminDashboard() {
                 <Text type="secondary">Komposisi akun pengguna.</Text>
               </div>
               <div className="dashboard-role-chart">
-                <ResponsiveContainer width="100%" height={190}>
+                <ResponsiveContainer width="100%" height={190} minWidth={0}>
                   <PieChart>
                     <Pie data={roleChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={76} paddingAngle={3} stroke="none">
                       {roleChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
@@ -752,8 +752,8 @@ function AdminDashboard() {
               <Text type="secondary">Status pending, aktif, dan selesai untuk tiap layanan inti.</Text>
             </div>
             {data && (
-              <div style={{ width: "100%", height: 350, marginTop: 16 }}>
-                <ResponsiveContainer>
+              <div style={{ width: "100%", height: 350, marginTop: 16, minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart 
                     data={Object.entries(MODULE_META).map(([key, meta]) => {
                       const item = data?.services?.[key] ?? { total: 0, pending: 0, active: 0, completed: 0 };
@@ -836,8 +836,8 @@ function AdminDashboard() {
               <Text type="secondary">Volume aktivitas harian per modul layanan.</Text>
             </div>
             {data?.trends?.labels?.length ? (
-              <div style={{ width: "100%", height: 350, marginTop: 16 }}>
-                <ResponsiveContainer>
+              <div style={{ width: "100%", height: 350, marginTop: 16, minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorArchive" x1="0" y1="0" x2="0" y2="1">

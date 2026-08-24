@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { Spin } from "antd";
 import { useAuth } from "./hooks/useAuth.js";
-import ForcePasswordReset from "./components/ForcePasswordReset.jsx";
 import Login from "./pages/Login.jsx";
 import AppLayout from "./layouts/AppLayout.jsx";
 import PublicLoanPage from "./pages/PublicLoanPage.jsx";
@@ -47,6 +46,8 @@ import ZoomGenerator from "./views/ZoomGenerator.jsx";
 import MfaSetupPage from "./pages/MfaSetupPage.jsx";
 import EInvitationModule from "./views/EInvitationModule.jsx";
 import PublicEInvitationPage from "./pages/PublicEInvitationPage.jsx";
+import PemeriksaanKesehatan from "./views/PemeriksaanKesehatan.jsx";
+import KanbanWork from "./views/KanbanWork.jsx";
 import "./App.css";
 import "./MobileNativeForms.css";
 
@@ -111,32 +112,6 @@ function App() {
   const location = useLocation();
   const [hasSyncedProfile, setHasSyncedProfile] = useState(false);
   const redirectParam = new URLSearchParams(location.search).get("redirect");
-
-  // Global password reset enforcement — applies to every authenticated page
-  const mustResetPassword = useMemo(() => {
-    if (!token || !user) return false;
-    // Skip on public / unauthenticated routes
-    const path = location.pathname;
-    const isPublic =
-      PUBLIC_PATHS.some((p) => path === p) ||
-      path.startsWith("/loan/") ||
-      path.startsWith("/peminjaman-aset/track/") ||
-      path.startsWith("/permintaan-persediaan/approve/") ||
-      path.startsWith("/public/exit-permit/resolve-unfinished") ||
-      path.startsWith("/sign-protokol") ||
-      path.startsWith("/verifikasi/") ||
-      path.startsWith("/it-helpdesk/") ||
-      path.startsWith("/kearsipan-peminjaman/") ||
-      path.endsWith("/new");
-    if (isPublic) return false;
-    if (user.must_reset_password) return true;
-    if (!user.password_changed_at) return true;
-    const changedDate = new Date(user.password_changed_at);
-    const diffDays = Math.ceil(
-      Math.abs(new Date() - changedDate) / (1000 * 60 * 60 * 24)
-    );
-    return diffDays >= 90;
-  }, [token, user, location.pathname]);
 
   // Global dynamic browser tab titles
   useEffect(() => {
@@ -207,6 +182,7 @@ function App() {
       "/app/account-settings": "SIPTU | Pengaturan Akun",
       "/app/pengumuman-rispeg": "SIPTU | Pengumuman RISPEG",
       "/app/e-invitation": "SIPTU | E-Invitation Undangan Digital",
+      "/app/pemeriksaan-kesehatan": "SIPTU | Pemeriksaan Kesehatan",
     };
 
     // Exact match
@@ -326,11 +302,6 @@ function App() {
 
   return (
     <>
-      {mustResetPassword && (
-        <ForcePasswordReset
-          returnUrl={location.pathname + location.search}
-        />
-      )}
       {mustSetupMfa && (
         <Navigate to="/app/mfa-setup" replace />
       )}
@@ -461,6 +432,18 @@ function App() {
         element={<PengadaanPbj />}
       />
       <Route
+        path="/app/pengadaan-pbj"
+        element={token ? <PengadaanPbj /> : <Navigate to="/login?redirect=/app/pengadaan-pbj" replace />}
+      />
+      <Route
+        path="/kanban-work"
+        element={<KanbanWork />}
+      />
+      <Route
+        path="/app/kanban-work"
+        element={token ? <KanbanWork /> : <Navigate to="/login?redirect=/app/kanban-work" replace />}
+      />
+      <Route
         path="/app/layanan-mandiri"
         element={token ? <LayananMandiri /> : <Navigate to="/login" replace />}
       />
@@ -471,6 +454,10 @@ function App() {
       <Route
         path="/app/pengumuman-rispeg"
         element={token ? <PengumumanRispeg /> : <Navigate to="/login?redirect=/app/pengumuman-rispeg" replace />}
+      />
+      <Route
+        path="/app/pemeriksaan-kesehatan"
+        element={token ? <PemeriksaanKesehatan /> : <Navigate to="/login?redirect=/app/pemeriksaan-kesehatan" replace />}
       />
       <Route path="/sso/selaras" element={<SSOSelarasRedirect />} />
       <Route path="/sso/siamparan" element={<SSOSiamparanRedirect />} />

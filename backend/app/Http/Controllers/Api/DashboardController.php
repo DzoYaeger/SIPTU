@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Models\SuratTugas;
 use App\Models\ExitPermit;
 use App\Models\Asset;
@@ -197,5 +198,136 @@ class DashboardController extends Controller
             ->take($totalLimit);
 
         return response()->json($allActivities);
+    }
+
+    /**
+     * Get active requests submitted by the logged in user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function myActiveRequests(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return response()->json([]);
+            }
+
+            $nip = $user->nip ?? ($user->employee->nip ?? null);
+            $name = $user->name ?? null;
+
+            $activeBmn = collect([]);
+            try {
+                $activeBmn = \App\Models\BmnLoan::where('loan_type', '!=', 'ruangan')
+                    ->where(function($q) use ($nip, $name) {
+                        if ($nip) $q->where('borrower_nip', $nip);
+                        if ($name) $q->orWhere('borrower_name', 'like', "%{$name}%");
+                    })
+                    ->whereIn('status', ['pengajuan', 'disetujui', 'dipinjam', 'proses', 'pending'])
+                    ->orderBy('created_at', 'desc')->take(5)->get()
+                    ->map(function($loan) {
+                        return [
+                            'id' => 'bmn_' . $loan->id,
+                            'type' => 'bmn',
+                            'title' => 'Peminjaman BMN',
+                            'item_name' => $loan->spa_number ? "Aset BMN (#{$loan->spa_number})" : "Peminjaman Aset",
+                            'status' => $loan->status,
+                            'status_label' => ucfirst($loan->status),
+                            'step' => $loan->status === 'pengajuan' ? 2 : ($loan->status === 'disetujui' ? 3 : 3),
+                            'date' => $loan->created_at,
+                            'url' => $loan->token ? "/peminjaman-aset/track/{$loan->token}" : "/app/simba",
+                        ];
+                    });
+            } catch (\Throwable $e) {}
+
+            $activeRooms = collect([]);
+            try {
+                $activeRooms = \App\Models\BmnLoan::where('loan_type', 'ruangan')
+                    ->where(function($q) use ($nip, $name) {
+                        if ($nip) $q->where('borrower_nip', $nip);
+                        if ($name) $q->orWhere('borrower_name', 'like', "%{$name}%");
+                    })
+                    ->whereIn('status', ['pengajuan', 'disetujui', 'dipinjam', 'proses', 'pending'])
+                    ->orderBy('created_at', 'desc')->take(5)->get()
+                    ->map(function($loan) {
+                        return [
+                            'id' => 'room_' . $loan->id,
+                            'type' => 'ruangan',
+                            'title' => 'Peminjaman Ruangan',
+                            'item_name' => $loan->activity_name ? "Ruang Rapat: " . \Illuminate\Support\Str::limit($loan->activity_name, 35) : "Peminjaman Ruangan",
+                            'status' => $loan->status,
+                            'status_label' => ucfirst($loan->status),
+                            'step' => $loan->status === 'pengajuan' ? 2 : 3,
+                            'date' => $loan->created_at,
+                            'url' => "/peminjaman-ruangan",
+                        ];
+                    });
+            } catch (\Throwable $e) {}
+
+            $activeExits = collect([]);
+            try {
+                $activeExits = \App\Models\ExitPermit::where(function($q) use ($nip, $name) {
+                        if ($nip) $q->where('nip', $nip);
+                        if ($name) $q->orWhere('employee_name', 'like', "%{$name}%");
+                    })
+                    ->whereIn('status', ['pending', 'approved', 'out', 'diajukan', 'proses'])
+                    ->orderBy('created_at', 'desc')->take(5)->get()
+                    ->map(function($permit) {
+                        return [
+                            'id' => 'exit_' . $permit->id,
+                            'type' => 'izin_keluar',
+                            'title' => 'Izin Keluar Kantor',
+                            'item_name' => $permit->reason ? "Alasan: " . \Illuminate\Support\Str::limit($permit->reason, 35) : "Izin Keluar Kantor",
+                            'status' => $permit->status,
+                            'status_label' => $permit->status === 'approved' ? 'Disetujui' : ($permit->status === 'out' ? 'Di Luar' : 'Diajukan'),
+                            'step' => $permit->status === 'approved' ? 3 : ($permit->status === 'out' ? 3 : 2),
+                            'date' => $permit->created_at,
+                            'url' => "/izin-keluar",
+                        ];
+                    });
+            } catch (\Throwable $e) {}
+
+            $activeIt = collect([]);
+            try {
+                $itQuery = \App\Models\ItHelpdeskTicket::where(function($q) use ($nip, $name) {
+                        if ($nip) $q->where('nip', $nip);
+                        if ($name) $q->orWhere('employee_name', 'like', "%{$name}%");
+                    })
+                    ->whereIn('status', ['open', 'in_progress', 'pending', 'proses']);
+                
+                // Safe check if column exists
+                if (\Illuminate\Support\Facades\Schema::hasColumn('it_helpdesk_tickets', 'is_auto_resolved')) {
+                    $itQuery->where('is_auto_resolved', false);
+                }
+
+                $activeIt = $itQuery->orderBy('created_at', 'desc')->take(5)->get()
+                    ->map(function($ticket) {
+                        return [
+                            'id' => 'it_' . $ticket->id,
+                            'type' => 'it_helpdesk',
+                            'title' => 'Laporan IT Helpdesk',
+                            'item_name' => $ticket->problem_details ? "Kendala: " . \Illuminate\Support\Str::limit($ticket->problem_details, 35) : "Laporan IT",
+                            'status' => $ticket->status,
+                            'status_label' => $ticket->status === 'in_progress' ? 'Dalam Proses' : 'Diajukan',
+                            'step' => $ticket->status === 'in_progress' ? 3 : 2,
+                            'date' => $ticket->created_at,
+                            'url' => "/it-helpdesk/new",
+                        ];
+                    });
+            } catch (\Throwable $e) {}
+
+            $allActive = collect(array_merge(
+                $activeBmn->toArray(),
+                $activeRooms->toArray(),
+                $activeExits->toArray(),
+                $activeIt->toArray()
+            ))->sortByDesc('date')->values();
+
+            return response()->json($allActive);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('myActiveRequests error: ' . $e->getMessage());
+            return response()->json([]);
+        }
     }
 }

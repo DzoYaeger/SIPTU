@@ -41,6 +41,7 @@ import {
   KeyOutlined,
   AlertOutlined,
   LeftOutlined,
+  ProjectOutlined,
 } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import kepegawaianIcon from '../assets/icons/kepegawaian-icon.png';
@@ -108,6 +109,7 @@ const iconMap = {
   'pengadaan-pdtt-katalog': <AppstoreOutlined style={{ color: '#2563eb' }} />,
   'pengadaan-pdtt-rekapan': <FileTextOutlined style={{ color: '#2563eb' }} />,
   'pengelola-pegawai-pdtt': <TeamOutlined style={{ color: '#2563eb' }} />,
+  'kanban-work': <ProjectOutlined style={{ color: '#2563eb' }} />,
 
   keuangan: <DollarCircleOutlined style={{ color: '#2563eb' }} />,
   'keuangan-invoice': <FileTextOutlined style={{ color: '#2563eb' }} />,

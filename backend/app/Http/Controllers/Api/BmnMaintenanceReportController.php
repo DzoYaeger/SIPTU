@@ -49,6 +49,13 @@ class BmnMaintenanceReportController extends Controller
             });
         }
 
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->string('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->string('end_date'));
+        }
+
         if ($request->boolean('all')) {
             return response()->json(['data' => $query->get()]);
         }
@@ -74,6 +81,12 @@ class BmnMaintenanceReportController extends Controller
         }
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
+        }
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->string('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->string('end_date'));
         }
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
@@ -345,6 +358,36 @@ class BmnMaintenanceReportController extends Controller
         }
 
         return response()->json(['message' => 'Laporan berhasil diselesaikan.', 'report' => $report->load(['asset:id,name,asset_code', 'handler:id,name'])]);
+    }
+
+    /**
+     * Remove the specified maintenance report from storage.
+     */
+    public function destroy(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $report = BmnMaintenanceReport::findOrFail($id);
+
+        $isAdmin = $this->isAdminOrValidator($user);
+        $isOwner = ($report->created_by === $user->id) || (!empty($user->nip) && $report->reporter_nip === $user->nip);
+
+        // Allow admin/validator to delete any report, or reporter to delete if still 'new'
+        if (!$isAdmin && (!$isOwner || $report->status !== 'new')) {
+            return response()->json(['message' => 'Anda tidak memiliki hak akses untuk menghapus laporan ini.'], 403);
+        }
+
+        $reportNumber = $report->report_number;
+        $report->delete();
+
+        if (class_exists(\App\Services\ActivityLogger::class)) {
+            \App\Services\ActivityLogger::log('delete', 'bmn_maintenance', "Menghapus laporan pemeliharaan/keluhan BMN ({$reportNumber})", $reportNumber);
+        }
+
+        return response()->json(['message' => 'Laporan pemeliharaan/keluhan BMN berhasil dihapus.']);
     }
 
     private function generateReportNumber(): string

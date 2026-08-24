@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\OpenCodeService;
 use App\Services\GeminiService;
 use App\Models\BmnLoan;
 use App\Models\ItHelpdeskTicket;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AIAssistantController extends Controller
 {
+    protected $openCodeService;
     protected $geminiService;
 
-    public function __construct(GeminiService $geminiService)
+    public function __construct(OpenCodeService $openCodeService, GeminiService $geminiService)
     {
+        $this->openCodeService = $openCodeService;
         $this->geminiService = $geminiService;
     }
 
@@ -52,7 +55,20 @@ class AIAssistantController extends Controller
 
         $history = $request->input('history', []);
 
-        $response = $this->geminiService->chatAssistant($request->message, $context, $history);
+        // Use OpenCode (DeepSeek) as primary if configured, otherwise fallback to Gemini
+        $opencodeKey = config('services.opencode.api_key', env('OPENCODE_API_KEY', ''));
+        $response = null;
+
+        if (!empty($opencodeKey)) {
+            $response = $this->openCodeService->chatAssistant($request->message, $context, $history);
+            // If OpenCode encountered a provider error, fallback to Gemini
+            if (empty($response) || str_starts_with($response, 'Maaf, terjadi kendala') || str_starts_with($response, 'Maaf, tidak ada respon')) {
+                \Illuminate\Support\Facades\Log::warning('OpenCode failed, falling back to Gemini', ['opencode_response' => $response]);
+                $response = $this->geminiService->chatAssistant($request->message, $context, $history);
+            }
+        } else {
+            $response = $this->geminiService->chatAssistant($request->message, $context, $history);
+        }
 
         return response()->json([
             'status' => 'success',

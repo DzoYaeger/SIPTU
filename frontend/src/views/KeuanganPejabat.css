@@ -1,76 +1,96 @@
-.kp-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 24px 0;
-}
+/* ═══════════════════════════════════════════════════════════════
+   PENGATURAN PEJABAT PERBENDAHARAAN — MODERN MINIMALIST ENTERPRISE
+   ═══════════════════════════════════════════════════════════════ */
 
-.kp-card {
-  border-radius: var(--radius-xl) !important;
-  box-shadow: var(--shadow-md) !important;
-  background: var(--color-bg) !important;
-  border: 1px solid var(--color-border) !important;
-}
-
-.kp-header {
+.kp-module-container {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 16px;
-  margin-bottom: 24px;
-}
-
-.kp-header-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.kp-title {
-  margin: 0 0 6px 0 !important;
-  font-weight: 700 !important;
-  color: var(--color-text) !important;
-}
-
-.kp-subtitle {
-  margin: 0 !important;
-  color: var(--color-text-secondary);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-.kp-alert {
-  margin-bottom: 28px !important;
-  border-radius: var(--radius-md) !important;
-  border: 1px solid var(--color-primary-ring) !important;
-  background: var(--color-primary-light) !important;
-}
-
-.kp-form-label {
-  font-weight: 600;
-  color: var(--color-text);
-  font-size: 13.5px;
-}
-
-.kp-select {
   width: 100%;
 }
 
-.kp-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-border);
+.kp-main-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
-.kp-save-btn {
-  border-radius: var(--radius-md) !important;
-  font-weight: 600 !important;
-  min-width: 180px;
+.kp-card-header {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kp-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.kp-card-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.kp-field-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kp-field-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kp-field-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0F5B99;
+  letter-spacing: 0.4px;
+}
+
+.kp-field-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.kp-selected-preview {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.kp-selected-preview strong {
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.kp-selected-preview span {
+  font-size: 10.5px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.kp-footer-actions {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

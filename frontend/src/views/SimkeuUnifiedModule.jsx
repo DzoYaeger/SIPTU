@@ -1,145 +1,159 @@
-import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth.js';
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeftOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  BankOutlined,
   FileProtectOutlined,
+  DollarOutlined,
   CalculatorOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
-import { Tooltip } from 'antd';
-import KeuanganLpj from './KeuanganLpj.jsx';
-import InvoiceBelanja from './InvoiceBelanja.jsx';
-import PermintaanPanjar from './PermintaanPanjar.jsx';
-import simkeuIcon from '../assets/icons/simkeu-icon.png';
+  TeamOutlined,
+  ArrowLeftOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+import { useAuth } from "../hooks/useAuth.js";
+import dayjs from "dayjs";
+import "dayjs/locale/id";
 
-import './SimkeuUnifiedModule.css';
+// Sub-modules
+import KeuanganLpj from "./KeuanganLpj.jsx";
+import PermintaanPanjar from "./PermintaanPanjar.jsx";
+import InvoiceBelanja from "./InvoiceBelanja.jsx";
+import KeuanganPejabat from "./KeuanganPejabat.jsx";
 
-const SimkeuUnifiedModule = () => {
+import "./SimkeuUnifiedModule.css";
+
+dayjs.locale("id");
+
+const TABS = [
+  {
+    key: "lpj",
+    label: "Pertanggungjawaban (LPJ)",
+    icon: <FileProtectOutlined />,
+    desc: "Rincian biaya riil tiket, transport, harian & penginapan",
+  },
+  {
+    key: "panjar",
+    label: "Permintaan Panjar",
+    icon: <DollarOutlined />,
+    desc: "Uang muka kegiatan operasional & form persetujuan",
+  },
+  {
+    key: "invoice",
+    label: "Invoice & Bukti Belanja",
+    icon: <CalculatorOutlined />,
+    desc: "Perekaman bukti nota pembelian & pemotongan pajak",
+  },
+  {
+    key: "pejabat",
+    label: "Pejabat Perbendaharaan",
+    icon: <TeamOutlined />,
+    desc: "Pengaturan PPK & Bendahara Pengeluaran",
+  },
+];
+
+export default function SimkeuUnifiedModule() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('lpj');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const menuItems = [
-    {
-      group: 'KEUANGAN',
-      items: [
-        {
-          key: 'lpj',
-          label: 'Pembuatan / Kelola LPJ',
-          icon: <FileProtectOutlined />,
-        },
-        {
-          key: 'panjar',
-          label: 'Permintaan Panjar',
-          icon: <WalletOutlined />,
-        },
-        {
-          key: 'invoice',
-          label: 'Pembuatan / Kelola Invoice Belanja',
-          icon: <CalculatorOutlined />,
-        },
-      ],
-    },
-  ];
+  const currentTab = searchParams.get("tab") || "lpj";
+  const [activeTab, setActiveTab] = useState(currentTab);
+  const [currentTime, setCurrentTime] = useState(dayjs().format("HH:mm:ss"));
+
+  useEffect(() => {
+    setActiveTab(currentTab);
+  }, [currentTab]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(dayjs().format("HH:mm:ss"));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    setSearchParams({ tab: key });
+  };
+
+  const renderModuleView = () => {
+    switch (activeTab) {
+      case "lpj":
+        return <KeuanganLpj />;
+      case "panjar":
+        return <PermintaanPanjar />;
+      case "invoice":
+        return <InvoiceBelanja />;
+      case "pejabat":
+        return <KeuanganPejabat />;
+      default:
+        return <KeuanganLpj />;
+    }
+  };
+
+  const activeTabMeta = TABS.find((t) => t.key === activeTab) || TABS[0];
 
   return (
-    <div className="simkeu-module">
-      {/* ── Sub-Sidebar Navigation SIMKEU ── */}
-      <aside className={`simkeu-sidebar ${sidebarCollapsed ? 'simkeu-sidebar--collapsed' : 'simkeu-sidebar--expanded'}`}>
-        {/* Module Title Header */}
-        <div className={`simkeu-sidebar-header ${sidebarCollapsed ? 'simkeu-sidebar-header--collapsed' : ''}`}>
-          <div className={`simkeu-sidebar-header__top ${sidebarCollapsed ? 'simkeu-sidebar-header__top--collapsed' : ''}`}>
-            <div className="simkeu-sidebar-brand">
-              <div className="simkeu-sidebar-brand__icon">
-                <img src={simkeuIcon} alt="SIMKEU" style={{ width: 34, height: 34, objectFit: "contain" }} />
+    <div className="simkeu-unified-root">
+      {/* ── Top Frosted Navigation Bar with Embedded Horizontal Tabs ── */}
+      <header className="simkeu-top-navbar">
+        <div className="simkeu-navbar-container">
+          {/* Left: Quick Back + Brand Header */}
+          <div className="simkeu-brand-block">
+            <button
+              className="simkeu-back-btn"
+              onClick={() => navigate("/app/layanan-mandiri")}
+              title="Kembali ke Layanan Mandiri"
+            >
+              <ArrowLeftOutlined />
+            </button>
+            <div className="simkeu-brand-titles">
+              <div className="simkeu-brand-row">
+                <span className="simkeu-brand-name">SIMKEU</span>
+                <span className="simkeu-badge-pill">ULTRA</span>
               </div>
-              {!sidebarCollapsed && (
-                <div>
-                  <h2 className="simkeu-sidebar-brand__title">SIMKEU</h2>
-                  <span className="simkeu-sidebar-brand__subtitle">
-                    Sistem Informasi Keuangan
-                  </span>
-                </div>
-              )}
+              <span className="simkeu-brand-sub">Sistem Informasi Keuangan</span>
+            </div>
+          </div>
+
+          {/* Center: Horizontal Navigation Tabs (Azure & Facebook Style) */}
+          <nav className="simkeu-nav-tabs">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTabChange(tab.key)}
+                  className={`simkeu-tab-pill ${isActive ? "active" : ""}`}
+                >
+                  <span className="tab-icon">{tab.icon}</span>
+                  <span className="tab-label">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right: Live Clock & Profile */}
+          <div className="simkeu-navbar-right">
+            <div className="simkeu-clock-badge">
+              <ClockCircleOutlined style={{ color: "#64748b" }} />
+              <span>{currentTime} WITA</span>
             </div>
 
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
-              className="simkeu-toggle-btn"
-            >
-              {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </button>
+            <div className="simkeu-user-chip">
+              <div className="user-avatar-circle">
+                {(user?.name?.[0] || "U").toUpperCase()}
+              </div>
+              <span className="user-display-name">{user?.name || "Pegawai"}</span>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Sidebar Menu Items */}
-        <div className={`simkeu-sidebar-menu ${sidebarCollapsed ? 'simkeu-sidebar-menu--collapsed' : ''}`}>
-          {menuItems.map((group, idx) => (
-            <div key={idx} className={`simkeu-menu-group ${sidebarCollapsed ? 'simkeu-menu-group--collapsed' : ''}`}>
-              {!sidebarCollapsed && (
-                <div className="simkeu-menu-group__label">
-                  {group.group}
-                </div>
-              )}
-              {group.items.map((item) => {
-                const isActive = activeTab === item.key;
-                const buttonContent = (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveTab(item.key)}
-                    className={`simkeu-menu-item ${isActive ? 'simkeu-menu-item--active' : ''} ${sidebarCollapsed ? 'simkeu-menu-item--collapsed' : ''}`}
-                  >
-                    <span className="simkeu-menu-item__icon">
-                      {item.icon}
-                    </span>
-                    {!sidebarCollapsed && (
-                      <span className="simkeu-menu-item__label">
-                        {item.label}
-                      </span>
-                    )}
-                  </button>
-                );
-
-                return sidebarCollapsed ? (
-                  <Tooltip key={item.key} title={item.label} placement="right">
-                    {buttonContent}
-                  </Tooltip>
-                ) : (
-                  buttonContent
-                );
-              })}
-            </div>
-          ))}
+      {/* ── Main 100% Full-Width Content Canvas ── */}
+      <main className="simkeu-full-canvas">
+        <div className="simkeu-canvas-container">
+          {renderModuleView()}
         </div>
-
-        {/* Sidebar Footer — Back Button */}
-        <div className={`simkeu-sidebar-footer ${sidebarCollapsed ? 'simkeu-sidebar-footer--collapsed' : ''}`}>
-          {sidebarCollapsed ? (
-            <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
-              <a href="/app/layanan-mandiri" className="simkeu-back-btn simkeu-back-btn--collapsed">
-                <ArrowLeftOutlined style={{ fontSize: 13 }} />
-              </a>
-            </Tooltip>
-          ) : (
-            <a href="/app/layanan-mandiri" className="simkeu-back-btn">
-              <ArrowLeftOutlined style={{ fontSize: 11 }} /> Kembali ke Layanan Mandiri
-            </a>
-          )}
-        </div>
-      </aside>
-
-      {/* ── Main Dynamic Workspace ── */}
-      <main className="simkeu-main">
-        {activeTab === 'lpj' && <KeuanganLpj />}
-        {activeTab === 'panjar' && <PermintaanPanjar />}
-        {activeTab === 'invoice' && <InvoiceBelanja />}
       </main>
     </div>
   );
-};
-
-export default SimkeuUnifiedModule;
+}

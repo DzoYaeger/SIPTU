@@ -1,0 +1,599 @@
+/* ═══════════════════════════════════════════════════════════
+   Queue TV Display — Solid Corporate BPOM Theme (16:9 Lobby)
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --qtv-bg: #f1f5f9;
+  --qtv-surface: #ffffff;
+  --qtv-accent: #1e3a8a;       /* BPOM Corporate Blue */
+  --qtv-accent-light: #eff6ff;
+  --qtv-text: #0f172a;         /* Slate 900 */
+  --qtv-text-secondary: #334155; /* Slate 700 */
+  --qtv-text-dim: #64748b;       /* Slate 500 */
+  --qtv-border: #cbd5e1;       /* Slate 300 */
+  --qtv-green: #0d9488;        /* Teal 600 */
+  --qtv-green-bg: #f0fdfa;
+  --qtv-red: #e11d48;          /* Rose 600 */
+  --qtv-red-bg: #fff1f2;
+  --qtv-orange: #ea580c;
+  --qtv-orange-bg: #fff7ed;
+}
+
+/* ── Full Page ── */
+.qtv-page {
+  width: 100vw;
+  height: 100vh;
+  background: var(--qtv-bg);
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  color: var(--qtv-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.qtv-ambient {
+  display: none; /* No ambient blobs for clean solid corporate style */
+}
+
+.qtv-grid-overlay {
+  display: none;
+}
+
+/* ── Header Bar ── */
+.qtv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 32px;
+  background: #0f172a; /* Deep solid obsidian/navy background */
+  border-bottom: 3px solid var(--qtv-accent);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.qtv-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qtv-header-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.qtv-header-text h1 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin: 0;
+  color: #ffffff;
+}
+
+.qtv-header-text span {
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+}
+
+.qtv-header-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qtv-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.qtv-status-badge.active {
+  background: var(--qtv-green);
+  color: #ffffff;
+  border: none;
+}
+
+.qtv-status-badge.closed {
+  background: var(--qtv-red);
+  color: #ffffff;
+  border: none;
+}
+
+.qtv-header-clock {
+  text-align: right;
+}
+
+.qtv-clock-time {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.qtv-clock-date {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-top: 4px;
+}
+
+/* ── Main Content ── */
+.qtv-main {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  z-index: 5;
+  min-height: 0;
+  padding: 24px;
+}
+
+/* ── Left Panel — Queue Info ── */
+.qtv-left {
+  flex: 0 0 52%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid var(--qtv-border);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Dual Counters Grid ── */
+.qtv-counters-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+.qtv-counter-card {
+  background: #ffffff;
+  border: 2px solid var(--qtv-border);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qtv-counter-card.counter-a {
+  border-left: 6px solid var(--qtv-accent);
+}
+
+.qtv-counter-card.counter-b {
+  border-left: 6px solid var(--qtv-green);
+}
+
+.qtv-counter-card.closed {
+  background: #f8fafc;
+  border: 2px dashed var(--qtv-border);
+  border-left: 6px solid var(--qtv-text-dim);
+  opacity: 0.7;
+}
+
+.qtv-counter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.qtv-counter-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.counter-a .qtv-counter-code {
+  background: linear-gradient(135deg, var(--qtv-accent), #3b82f6);
+}
+
+.counter-b .qtv-counter-code {
+  background: linear-gradient(135deg, var(--qtv-green), #10b981);
+}
+
+.qtv-counter-status-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 6px;
+  color: var(--qtv-red);
+  background: var(--qtv-red-bg);
+  border: 1px solid rgba(225, 29, 72, 0.2);
+}
+
+.qtv-counter-status-label.active {
+  color: var(--qtv-green);
+  background: var(--qtv-green-bg);
+  border: 1px solid rgba(13, 148, 136, 0.2);
+}
+
+/* ── Counter Number ── */
+.qtv-counter-number-wrap {
+  text-align: center;
+  margin: 12px 0 16px;
+}
+
+.qtv-counter-number {
+  font-size: 76px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+
+.counter-a .qtv-counter-number {
+  color: var(--qtv-accent);
+}
+
+.counter-b .qtv-counter-number {
+  color: var(--qtv-green);
+}
+
+.qtv-counter-number.animate-change {
+  animation: qtv-number-pop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes qtv-number-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.12); filter: brightness(1.2); }
+  100% { transform: scale(1); }
+}
+
+.qtv-counter-number-sub {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--qtv-text-dim);
+  margin-top: 6px;
+}
+
+/* ── Counter Officer ── */
+.qtv-counter-officer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.qtv-counter-officer-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.counter-a .qtv-counter-officer-photo {
+  border: 2px solid #93c5fd;
+}
+
+.counter-b .qtv-counter-officer-photo {
+  border: 2px solid #86efac;
+}
+
+.qtv-counter-officer-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.counter-a .qtv-counter-officer-placeholder {
+  background: #dbeafe;
+  color: var(--qtv-accent);
+  border: 2px solid #93c5fd;
+}
+
+.counter-b .qtv-counter-officer-placeholder {
+  background: #ccfbf1;
+  color: var(--qtv-green);
+  border: 2px solid #86efac;
+}
+
+.qtv-counter-officer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.qtv-counter-officer-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--qtv-text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.qtv-counter-officer-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--qtv-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.qtv-counter-closed-msg {
+  text-align: center;
+  padding: 24px;
+  color: var(--qtv-text-dim);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ── Closed State ── */
+.qtv-closed-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+  text-align: center;
+}
+
+.qtv-closed-icon {
+  font-size: 72px;
+  filter: grayscale(1);
+}
+
+.qtv-closed-text {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--qtv-text-dim);
+}
+
+.qtv-closed-sub {
+  font-size: 15px;
+  color: var(--qtv-text-dim);
+}
+
+/* ── Right Panel — Slideshow ── */
+.qtv-right {
+  flex: 0 0 48%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qtv-slide-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 3px solid var(--qtv-border);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.qtv-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  z-index: 1;
+}
+
+.qtv-slide.active {
+  opacity: 1;
+  z-index: 2;
+}
+
+.qtv-slide img,
+.qtv-slide video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qtv-slide-title {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 24px;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0) 100%);
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  z-index: 3;
+}
+
+.qtv-slide-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.qtv-slide-empty-icon {
+  font-size: 54px;
+  opacity: 0.3;
+}
+
+.qtv-slide-dots {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.qtv-slide-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.qtv-slide-dot.active {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  width: 28px;
+  border-radius: 5px;
+}
+
+/* ── Ticker Bar ── */
+.qtv-ticker {
+  flex-shrink: 0;
+  height: 48px;
+  background: #ffffff;
+  border-top: 2px solid var(--qtv-border);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.qtv-ticker-label {
+  flex-shrink: 0;
+  padding: 0 24px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--qtv-accent);
+}
+
+.qtv-ticker-content {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.qtv-ticker-scroll {
+  display: inline-block;
+  animation: qtv-ticker-move 32s linear infinite;
+  padding-left: 100%;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--qtv-text-secondary);
+}
+
+@keyframes qtv-ticker-move {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ── Fullscreen Button ── */
+.qtv-fullscreen-btn {
+  position: fixed;
+  bottom: 64px;
+  right: 24px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--qtv-border);
+  color: var(--qtv-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.qtv-page:hover .qtv-fullscreen-btn {
+  opacity: 1;
+}
+
+.qtv-fullscreen-btn:hover {
+  background: #f1f5f9;
+  color: var(--qtv-text);
+}
+
+/* ── Bell Sound Flash ── */
+.qtv-bell-flash {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(30, 58, 138, 0.08), transparent 75%);
+  pointer-events: none;
+  z-index: 50;
+  animation: qtv-bell-pulse 0.9s ease-out forwards;
+}
+
+@keyframes qtv-bell-pulse {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Responsive scaling ── */
+@media (max-width: 1280px) {
+  .qtv-counter-number { font-size: 64px; }
+  .qtv-header { padding: 12px 24px; }
+  .qtv-left { padding: 24px; }
+}
+
+@media (max-width: 960px) {
+  .qtv-main { flex-direction: column; gap: 16px; padding: 16px; }
+  .qtv-left { flex: 1; padding: 20px; }
+  .qtv-right { flex: 1; }
+  .qtv-counter-number { font-size: 56px; }
+  .qtv-counter-officer { padding: 8px 12px; }
+  .qtv-counter-officer-photo, .qtv-counter-officer-placeholder { width: 40px; height: 40px; }
+  .qtv-counter-officer-name { font-size: 14px; }
+}

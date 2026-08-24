@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, Select, Button, Typography, Space, Spin, Alert, Form } from "antd";
-import { SaveOutlined, TeamOutlined, UserOutlined } from "@ant-design/icons";
+import { Select, Button, Spin, Form, Row, Col } from "antd";
+import { SaveOutlined } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuth.js";
 import { App as AntdApp } from "antd";
 import "./KeuanganPejabat.css";
-
-const { Title, Paragraph } = Typography;
 
 export default function KeuanganPejabat() {
     const { apiFetch } = useAuth();
@@ -21,12 +19,10 @@ export default function KeuanganPejabat() {
         const loadData = async () => {
             setLoading(true);
             try {
-                // Fetch employees
                 const resEmp = await apiFetch("/employees?pageSize=1000");
                 const jsonEmp = await resEmp.json();
                 setEmployees(jsonEmp.data ?? []);
 
-                // Fetch active settings
                 const resSet = await apiFetch("/pejabat-perbendaharaan");
                 const jsonSet = await resSet.json();
                 if (jsonSet.setting) {
@@ -68,86 +64,107 @@ export default function KeuanganPejabat() {
         }
     };
 
+    const selectedPPK = employees.find(e => e.id === ppkId);
+    const selectedBendahara = employees.find(e => e.id === bendaharaId);
+
     return (
-        <div className="kp-container">
-            <Card className="kp-card" bordered={false}>
-                <div className="kp-header">
-                    <div className="kp-header-icon">
-                        <TeamOutlined />
-                    </div>
-                    <div>
-                        <Title level={3} className="kp-title">Pengaturan Pejabat Perbendaharaan</Title>
-                        <Paragraph className="kp-subtitle">
-                            Atur pejabat bendahara dan PPK secara global. Nama dan NIP pejabat yang dipilih akan muncul secara otomatis di lembar tanda tangan seluruh laporan rincian biaya LPJ.
-                        </Paragraph>
-                    </div>
+        <div className="kp-module-container">
+            <div className="kp-main-card">
+                <div className="kp-card-header">
+                    <h2 className="kp-card-title">Penetapan Pejabat Perbendaharaan Global</h2>
+                    <span className="kp-card-subtitle">
+                        Nama dan NIP pejabat PPK & Bendahara aktif yang tercetak otomatis di seluruh dokumen cetak LPJ & Invoice
+                    </span>
                 </div>
 
-                <Alert 
-                    message="Penting"
-                    description="Perubahan pengaturan di sini akan langsung berlaku untuk semua berkas LPJ yang dicetak dari sistem."
-                    type="info"
-                    showIcon
-                    className="kp-alert"
-                />
-
                 <Spin spinning={loading}>
-                    <Form layout="vertical" onFinish={handleSave} className="kp-form">
-                        <Form.Item 
-                            label={<span className="kp-form-label"><UserOutlined style={{ marginRight: 6 }} />Bendahara Pengeluaran</span>}
-                            tooltip="Pejabat yang bertindak sebagai Bendahara Pengeluaran pada dokumen rincian biaya."
-                        >
-                            <Select
-                                showSearch
-                                placeholder="Pilih Bendahara Pengeluaran..."
-                                optionFilterProp="label"
-                                value={bendaharaId}
-                                onChange={(val) => setBendaharaId(val)}
-                                options={employees.map(emp => ({
-                                    value: emp.id,
-                                    label: `${emp.name} (NIP. ${emp.nip ?? '-'})`
-                                }))}
-                                allowClear
-                                className="kp-select"
-                                size="large"
-                            />
-                        </Form.Item>
+                    <Form layout="vertical" onFinish={handleSave}>
+                        <Row gutter={[16, 16]}>
+                            {/* PPK Selector */}
+                            <Col xs={24} md={12}>
+                                <div className="kp-field-box">
+                                    <div className="kp-field-header">
+                                        <span className="kp-field-tag">PEJABAT STRUKTURAL</span>
+                                        <h3 className="kp-field-name">Pejabat Pembuat Komitmen (PPK)</h3>
+                                    </div>
 
-                        <Form.Item 
-                            label={<span className="kp-form-label"><UserOutlined style={{ marginRight: 6 }} />Pejabat Pembuat Komitmen (PPK)</span>}
-                            tooltip="Pejabat yang menyetujui pembayaran perjalanan dinas."
-                        >
-                            <Select
-                                showSearch
-                                placeholder="Pilih Pejabat Pembuat Komitmen (PPK)..."
-                                optionFilterProp="label"
-                                value={ppkId}
-                                onChange={(val) => setPpkId(val)}
-                                options={employees.map(emp => ({
-                                    value: emp.id,
-                                    label: `${emp.name} (NIP. ${emp.nip ?? '-'})`
-                                }))}
-                                allowClear
-                                className="kp-select"
-                                size="large"
-                            />
-                        </Form.Item>
+                                    <Form.Item 
+                                        label="Pilih Pegawai PPK"
+                                        style={{ marginBottom: 8 }}
+                                    >
+                                        <Select
+                                            showSearch
+                                            placeholder="Cari nama / NIP PPK..."
+                                            optionFilterProp="label"
+                                            value={ppkId}
+                                            onChange={(val) => setPpkId(val)}
+                                            options={employees.map(emp => ({
+                                                value: emp.id,
+                                                label: `${emp.name} (NIP. ${emp.nip ?? '-'})`
+                                            }))}
+                                            allowClear
+                                        />
+                                    </Form.Item>
 
-                        <div className="kp-form-actions">
+                                    {selectedPPK && (
+                                        <div className="kp-selected-preview">
+                                            <strong>{selectedPPK.name}</strong>
+                                            <span>NIP. {selectedPPK.nip || '-'}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </Col>
+
+                            {/* Bendahara Selector */}
+                            <Col xs={24} md={12}>
+                                <div className="kp-field-box">
+                                    <div className="kp-field-header">
+                                        <span className="kp-field-tag">PENGELOLA KEUANGAN</span>
+                                        <h3 className="kp-field-name">Bendahara Pengeluaran</h3>
+                                    </div>
+
+                                    <Form.Item 
+                                        label="Pilih Pegawai Bendahara"
+                                        style={{ marginBottom: 8 }}
+                                    >
+                                        <Select
+                                            showSearch
+                                            placeholder="Cari nama / NIP Bendahara..."
+                                            optionFilterProp="label"
+                                            value={bendaharaId}
+                                            onChange={(val) => setBendaharaId(val)}
+                                            options={employees.map(emp => ({
+                                                value: emp.id,
+                                                label: `${emp.name} (NIP. ${emp.nip ?? '-'})`
+                                            }))}
+                                            allowClear
+                                        />
+                                    </Form.Item>
+
+                                    {selectedBendahara && (
+                                        <div className="kp-selected-preview">
+                                            <strong>{selectedBendahara.name}</strong>
+                                            <span>NIP. {selectedBendahara.nip || '-'}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </Col>
+                        </Row>
+
+                        <div className="kp-footer-actions">
+                            <div></div>
                             <Button 
                                 type="primary" 
                                 icon={<SaveOutlined />} 
                                 loading={saving} 
                                 htmlType="submit"
-                                size="large"
-                                className="kp-save-btn"
                             >
-                                Simpan Pengaturan
+                                Simpan Pengaturan Pejabat
                             </Button>
                         </div>
                     </Form>
                 </Spin>
-            </Card>
+            </div>
         </div>
     );
 }
