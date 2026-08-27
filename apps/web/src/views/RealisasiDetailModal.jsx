@@ -84,7 +84,7 @@ const RealisasiDetailModal = ({ open, onClose, record }) => {
             <span style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{record.date || '-'}</span>
           </Space>
         </Descriptions.Item>
-        <Descriptions.Item label="Kode MAK">
+        <Descriptions.Item label="Kode Akun">
           <Text code style={{ color: '#0f172a', fontSize: '12px', whiteSpace: 'nowrap' }}>{record.mak}</Text>
         </Descriptions.Item>
         <Descriptions.Item label="Pembuat / Pengaju">

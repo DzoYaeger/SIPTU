@@ -42,7 +42,10 @@ import {
   SafetyCertificateOutlined,
   CameraOutlined,
   MoreOutlined,
+  FileExcelOutlined,
 } from '@ant-design/icons';
+import * as XLSX from 'xlsx';
+import dayjs from 'dayjs';
 import { useAuth } from '../hooks/useAuth.js';
 import StatisticCard from '../components/StatisticCard.jsx';
 
@@ -283,6 +286,107 @@ const DataPegawai = () => {
     });
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = (exportAll = false) => {
+    try {
+      setExporting(true);
+      const targetData = exportAll ? data : filteredData;
+
+      if (!targetData || targetData.length === 0) {
+        message.warning('Tidak ada data pegawai untuk ditarik.');
+        return;
+      }
+
+      // Build worksheet data with header title
+      const rows = [];
+      rows.push(['DATA PEGAWAI - BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO']);
+      rows.push([`Tanggal Penarikan: ${dayjs().format('DD MMMM YYYY, HH:mm')} WITA`]);
+      rows.push([`Cakupan Data: ${exportAll ? 'Semua Pegawai' : (filterFungsi !== 'all' ? `Unit Kerja: ${filterFungsi}` : (searchTerm ? `Pencarian: "${searchTerm}"` : 'Semua Pegawai Terfilter'))}`]);
+      rows.push([]); // blank row
+
+      // Table headers
+      const headers = [
+        'NO',
+        'NIP',
+        'NAMA LENGKAP',
+        'PANGKAT / GOLONGAN',
+        'JABATAN',
+        'UNIT KERJA / FUNGSI',
+        'NOMOR TELEPON / HP',
+        'RIWAYAT KGB TERAKHIR'
+      ];
+      rows.push(headers);
+
+      // Data rows
+      targetData.forEach((emp, index) => {
+        const lastKgb = emp.kgbHistory && emp.kgbHistory.length > 0 
+          ? `SK: ${emp.kgbHistory[0].nomorSk || '-'} (TMT: ${emp.kgbHistory[0].tmtSk || '-'})`
+          : '-';
+
+        rows.push([
+          index + 1,
+          emp.nip ? `="${emp.nip}"` : '-', // ensure NIP preserves all 18 digits in Excel
+          emp.nama || '-',
+          emp.pangkat || '-',
+          emp.jabatan || '-',
+          emp.fungsiBidang || '-',
+          emp.phone ? `="${emp.phone}"` : '-',
+          lastKgb
+        ]);
+      });
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      // Auto-fit column widths
+      ws['!cols'] = [
+        { wch: 6 },   // NO
+        { wch: 24 },  // NIP
+        { wch: 34 },  // NAMA
+        { wch: 26 },  // PANGKAT
+        { wch: 32 },  // JABATAN
+        { wch: 30 },  // UNIT KERJA
+        { wch: 20 },  // TELEPON
+        { wch: 38 },  // KGB
+      ];
+
+      // Merges for header titles
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Data Pegawai');
+
+      const fileName = `Data_Pegawai_BPOM_Palopo_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      message.success(`Data ${targetData.length} pegawai berhasil ditarik ke file ${fileName}.`);
+    } catch (err) {
+      console.error('Export error:', err);
+      message.error(`Gagal menarik data excel: ${err.message || 'Terjadi kesalahan'}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportMenuItems = [
+    {
+      key: 'filtered',
+      icon: <FileExcelOutlined style={{ color: '#10b981' }} />,
+      label: `Tarik Data Terfilter (${filteredData.length} Pegawai)`,
+      onClick: () => handleExportExcel(false),
+    },
+    {
+      key: 'all',
+      icon: <FileExcelOutlined style={{ color: '#0F5B99' }} />,
+      label: `Tarik Semua Data (${data.length} Pegawai)`,
+      onClick: () => handleExportExcel(true),
+    },
+  ];
+
   // --- Render Components ---
 
   const columns = [
@@ -362,7 +466,17 @@ const DataPegawai = () => {
           <Typography.Title level={4} className="module-title">Data Pegawai</Typography.Title>
           <Typography.Text className="module-subtitle">Kelola database pegawai, kepangkatan, dan unit kerja.</Typography.Text>
         </div>
-        <Space>
+        <Space wrap>
+          <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
+            <Button
+              icon={<FileExcelOutlined style={{ color: '#10b981' }} />}
+              loading={exporting}
+              onClick={() => handleExportExcel(false)}
+              style={{ borderColor: '#10b981', color: '#047857', fontWeight: 500 }}
+            >
+              Tarik Data Excel (.xlsx)
+            </Button>
+          </Dropdown>
           <Button icon={<DownloadOutlined />} onClick={() => window.open('/api/employees/template', '_blank')}>Template</Button>
           <Button icon={<UploadOutlined />} onClick={() => setImportModalOpen(true)}>Impor</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>Tambah Pegawai</Button>

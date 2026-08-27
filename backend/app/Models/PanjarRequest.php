@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PanjarRequest extends Model
 {
@@ -11,6 +12,7 @@ class PanjarRequest extends Model
 
     protected $fillable = [
         'ticket_no',
+        'token',
         'panjar_no',
         'tahun_anggaran',
         'tanggal_pengajuan',
@@ -21,10 +23,20 @@ class PanjarRequest extends Model
         'kegiatan',
         'uraian',
         'penerima_name',
+        'requester_phone',
         'surat_tugas_no',
         'nominal_panjar',
         'terbilang_panjar',
         'status',
+        'ppk_status',
+        'ppk_notes',
+        'ppk_action_at',
+        'ppk_user_id',
+        'bendahara_status',
+        'bendahara_notes',
+        'bendahara_action_at',
+        'bendahara_user_id',
+        'rejection_stage',
         'ppk_name',
         'ppk_nip',
         'bendahara_name',
@@ -42,7 +54,18 @@ class PanjarRequest extends Model
         'tanggal_paling_lambat' => 'date',
         'nominal_panjar' => 'float',
         'approved_at' => 'datetime',
+        'ppk_action_at' => 'datetime',
+        'bendahara_action_at' => 'datetime',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($panjar) {
+            if (empty($panjar->token)) {
+                $panjar->token = Str::random(40);
+            }
+        });
+    }
 
     public function items()
     {
@@ -57,5 +80,15 @@ class PanjarRequest extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function ppkUser()
+    {
+        return $this->belongsTo(User::class, 'ppk_user_id');
+    }
+
+    public function bendaharaUser()
+    {
+        return $this->belongsTo(User::class, 'bendahara_user_id');
     }
 }

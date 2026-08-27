@@ -143,7 +143,7 @@ const RealisasiByMak = () => {
     try {
       const response = await apiFetch('/realisasi-mak');
       if (!response.ok) {
-        throw new Error('Gagal memuat data realisasi per MAK.');
+        throw new Error('Gagal memuat data realisasi per Kode Akun.');
       }
       const payload = await response.json();
       setData(payload ?? []);
@@ -170,7 +170,7 @@ const RealisasiByMak = () => {
   const rawColumns = useMemo(
     () => [
       {
-        title: 'Kode MAK',
+        title: 'Kode Akun',
         dataIndex: 'mak',
         key: 'mak',
         width: colWidths.mak,
@@ -179,7 +179,7 @@ const RealisasiByMak = () => {
         ...getColumnSearchProps('mak', searchInput),
       },
       {
-        title: 'Deskripsi Uraian MAK',
+        title: 'Deskripsi Uraian Akun',
         dataIndex: 'deskripsi',
         key: 'deskripsi',
         width: colWidths.deskripsi,
@@ -243,7 +243,7 @@ const RealisasiByMak = () => {
           const items = [
             {
               key: 'detail',
-              label: <span style={{ fontSize: '12px' }}>Ringkasan MAK</span>,
+              label: <span style={{ fontSize: '12px' }}>Ringkasan Akun</span>,
               icon: <EyeOutlined style={{ color: '#0F5B99', fontSize: '13px' }} />,
               onClick: () => handleOpenDetail(record),
             },
@@ -304,7 +304,7 @@ const RealisasiByMak = () => {
             Tutup
           </Button>,
         ]}
-        title={<span style={{ fontSize: '14px', fontWeight: 600 }}>Ringkasan Realisasi MAK: {selectedRecord?.mak || ''}</span>}
+        title={<span style={{ fontSize: '14px', fontWeight: 600 }}>Ringkasan Realisasi Akun: {selectedRecord?.mak || ''}</span>}
         width={520}
       >
         {selectedRecord && (

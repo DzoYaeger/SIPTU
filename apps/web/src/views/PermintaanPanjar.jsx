@@ -279,7 +279,7 @@ export default function PermintaanPanjar() {
       render: (_, record) => (
         <div className="panjar-activity-cell">
           <Text strong className="text-sm">{record.kegiatan}</Text>
-          <Text className="text-xs">MAK: {record.mak || '-'}</Text>
+          <Text className="text-xs">Akun: {record.mak || '-'}</Text>
         </div>
       ),
     },
@@ -369,7 +369,7 @@ export default function PermintaanPanjar() {
 
       <Card className="panjar-table-card">
         <div className="panjar-filterbar">
-          <Input id="panjar-search-input" allowClear prefix={<SearchOutlined />} placeholder="Cari nomor, MAK, kegiatan, penerima..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <Input id="panjar-search-input" allowClear prefix={<SearchOutlined />} placeholder="Cari nomor, kode akun, kegiatan, penerima..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <Select value={selectedTa} onChange={setSelectedTa} style={{ minWidth: 130 }} options={[{ label: 'Semua TA', value: 'ALL' }, 2026, 2025, 2024].map((v) => typeof v === 'object' ? v : { label: `TA ${v}`, value: String(v) })} />
           <Select value={selectedStatus} onChange={setSelectedStatus} style={{ minWidth: 145 }} options={[{ label: 'Semua Status', value: 'ALL' }, ...STATUS_OPTIONS]} suffixIcon={<FilterOutlined />} />
         </div>
@@ -403,7 +403,7 @@ export default function PermintaanPanjar() {
             <Col xs={24} md={8}><Form.Item label="Nomor Panjar" name="panjar_no"><Input placeholder="Auto jika kosong" /></Form.Item></Col>
           </Row>
           <Row gutter={12}>
-            <Col xs={24} md={10}><Form.Item label="MAK / Akun" name="mak"><Input placeholder="3165.BKB.053.001.524111" /></Form.Item></Col>
+            <Col xs={24} md={10}><Form.Item label="Kode Akun" name="mak"><Input placeholder="3165.BKB.053.001.524111" /></Form.Item></Col>
             <Col xs={24} md={14}><Form.Item label="Penerima" name="penerima_name" rules={[{ required: true, message: 'Pilih penerima dari kepegawaian' }]}>
               <Select showSearch optionFilterProp="label" placeholder="Pilih pegawai" options={employees.map((e) => ({ label: `${e.name}${e.nip ? ` (${e.nip})` : ''}`, value: e.name }))} />
             </Form.Item></Col>
@@ -461,7 +461,7 @@ export default function PermintaanPanjar() {
             <Row gutter={[12, 12]}>
               <Col xs={24} md={12}><Text className="text-xs">Kegiatan</Text><p>{viewRecord.kegiatan}</p></Col>
               <Col xs={24} md={12}><Text className="text-xs">Nominal</Text><p className="panjar-detail-money">{formatCurrency(viewRecord.nominal_panjar)}</p></Col>
-              <Col xs={24} md={12}><Text className="text-xs">MAK</Text><p>{viewRecord.mak || '-'}</p></Col>
+              <Col xs={24} md={12}><Text className="text-xs">Kode Akun</Text><p>{viewRecord.mak || '-'}</p></Col>
               <Col xs={24} md={12}><Text className="text-xs">Penerima</Text><p>{viewRecord.penerima_name || '-'}</p></Col>
               <Col xs={24} md={12}><Text className="text-xs">Nomor Surat Tugas</Text><p>{viewRecord.surat_tugas_no || '-'}</p></Col>
               <Col xs={24} md={12}><Text className="text-xs">Periode Kegiatan</Text><p>{viewRecord.tanggal_mulai_kegiatan ? dayjs(viewRecord.tanggal_mulai_kegiatan).format('DD MMMM YYYY') : '-'} s.d. {viewRecord.tanggal_akhir_kegiatan ? dayjs(viewRecord.tanggal_akhir_kegiatan).format('DD MMMM YYYY') : '-'}</p></Col>

@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 
 use App\Models\NotificationSetting;
 use App\Services\FonnteService;
+use App\Services\PushNotificationService;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use chillerlan\QRCode\QRCode;
@@ -310,15 +311,26 @@ class ItHelpdeskTicketController extends Controller
 
         try {
             $this->sendNotification($ticket, $fonnteService, 'new');
-            $admins = \App\Models\User::whereIn('role', ['admin', 'superadmin'])->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\GeneralNotification(
-                    'Laporan IT Baru',
-                    "Ada laporan IT baru dari {$ticket->employee_name} (No. {$ticket->ticket_number}).",
-                    $ticket->id,
-                    'it_helpdesk'
-                ));
-            }
+            
+            // Dispatch WebPush to Reporter User
+            PushNotificationService::notifyUser(
+                $user,
+                'Tiket IT Berhasil Diajukan',
+                "Tiket IT Anda (No. {$ticket->ticket_number}) berhasil diajukan dan menunggu penanganan teknisi.",
+                '/app/layanan-mandiri',
+                '/logo192.png',
+                'it_helpdesk'
+            );
+
+            // Dispatch WebPush to Admin IT
+            PushNotificationService::notifyRoles(
+                ['admin', 'superadmin'],
+                'Laporan IT Helpdesk Baru',
+                "Laporan IT baru dari {$ticket->employee_name} (No. {$ticket->ticket_number}). Masalah: " . ($ticket->problem_details ?: '-'),
+                '/app/it-helpdesk',
+                '/logo192.png',
+                'it_helpdesk'
+            );
         } catch (\Throwable $e) {}
 
         try {
@@ -379,15 +391,26 @@ class ItHelpdeskTicketController extends Controller
 
         try {
             $this->sendNotification($ticket, $fonnteService, 'new');
-            $admins = \App\Models\User::whereIn('role', ['admin', 'superadmin'])->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\GeneralNotification(
-                    'Laporan IT Baru',
-                    "Ada laporan IT baru dari {$ticket->employee_name} (No. {$ticket->ticket_number}).",
-                    $ticket->id,
-                    'it_helpdesk'
-                ));
-            }
+            
+            // Dispatch WebPush to Reporter
+            PushNotificationService::notifyEmployee(
+                $ticket->employee_id ?? $ticket->employee_nip,
+                'Tiket IT Berhasil Diajukan',
+                "Tiket IT Anda (No. {$ticket->ticket_number}) berhasil diajukan dan menunggu penanganan teknisi.",
+                '/app/layanan-mandiri',
+                '/logo192.png',
+                'it_helpdesk'
+            );
+
+            // Dispatch WebPush to Admin IT
+            PushNotificationService::notifyRoles(
+                ['admin', 'superadmin'],
+                'Laporan IT Helpdesk Baru',
+                "Laporan IT baru dari {$ticket->employee_name} (No. {$ticket->ticket_number}). Masalah: " . ($ticket->problem_details ?: '-'),
+                '/app/it-helpdesk',
+                '/logo192.png',
+                'it_helpdesk'
+            );
         } catch (\Throwable $e) {}
 
         return response()->json(['message' => 'Laporan berhasil dikirim.', 'ticket' => $ticket], 201);
@@ -553,6 +576,16 @@ class ItHelpdeskTicketController extends Controller
 
         $this->sendNotification($ticket, app(FonnteService::class), 'in_progress');
 
+        // Dispatch WebPush to Reporter
+        PushNotificationService::notifyEmployee(
+            $ticket->employee_id ?? $ticket->employee_nip,
+            'Tiket IT Sedang Dikerjakan',
+            "Tiket Anda (No. {$ticket->ticket_number}) telah diterima dan sedang diproses oleh teknisi IT.",
+            '/app/layanan-mandiri',
+            '/logo192.png',
+            'it_helpdesk'
+        );
+
         \App\Services\ActivityLogger::log('approve', 'it_helpdesk', "Menerima dan memproses tiket IT Helpdesk ({$ticket->ticket_number})", $ticket->ticket_number, $ticket);
 
         return response()->json(['message' => 'Tiket berhasil diterima dan sedang diproses.', 'ticket' => $ticket]);
@@ -581,6 +614,16 @@ class ItHelpdeskTicketController extends Controller
             'status' => 'rejected',
             'followup_details' => $request->reason,
         ]);
+
+        // Dispatch WebPush to Reporter
+        PushNotificationService::notifyEmployee(
+            $ticket->employee_id ?? $ticket->employee_nip,
+            'Tiket IT Ditolak',
+            "Tiket Anda (No. {$ticket->ticket_number}) ditolak. Alasan: " . ($request->reason ?: '-'),
+            '/app/layanan-mandiri',
+            '/logo192.png',
+            'it_helpdesk'
+        );
 
         \App\Services\ActivityLogger::log('reject', 'it_helpdesk', "Menolak tiket IT Helpdesk ({$ticket->ticket_number})", $ticket->ticket_number, $ticket);
 
@@ -637,17 +680,15 @@ class ItHelpdeskTicketController extends Controller
 
         $this->sendNotification($ticket, app(FonnteService::class), 'waiting_user_approval');
         
-        if ($ticket->employee_nip) {
-            $empUser = \App\Models\User::where('nip', $ticket->employee_nip)->first();
-            if ($empUser) {
-                $empUser->notify(new \App\Notifications\GeneralNotification(
-                    'Tiket IT Menunggu Konfirmasi Anda',
-                    "Tiket {$ticket->ticket_number} telah diselesaikan oleh admin. Silakan cek aplikasi untuk mengonfirmasi dan memberikan tanda tangan elektronik Anda.",
-                    $ticket->id,
-                    'it_helpdesk'
-                ));
-            }
-        }
+        // Dispatch WebPush to Reporter
+        PushNotificationService::notifyEmployee(
+            $ticket->employee_id ?? $ticket->employee_nip,
+            'Tiket IT Menunggu Konfirmasi Anda',
+            "Tiket {$ticket->ticket_number} telah diselesaikan oleh teknisi. Silakan konfirmasi dan bubuhkan TTE.",
+            '/app/layanan-mandiri',
+            '/logo192.png',
+            'it_helpdesk'
+        );
 
         \App\Services\ActivityLogger::log('complete', 'it_helpdesk', "Menyelesaikan tiket IT Helpdesk ({$ticket->ticket_number}, Menunggu TTD User)", $ticket->ticket_number, $ticket);
 
@@ -703,6 +744,16 @@ class ItHelpdeskTicketController extends Controller
             'status' => 'completed',
             'updated_at' => now(),
         ]);
+
+        // Dispatch WebPush to IT Staff / Admin
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin'],
+            'Tiket IT Selesai Dikonfirmasi',
+            "Tiket {$ticket->ticket_number} telah dikonfirmasi selesai oleh {$ticket->employee_name}.",
+            '/app/it-helpdesk',
+            '/logo192.png',
+            'it_helpdesk'
+        );
 
         \App\Services\ActivityLogger::log('confirm', 'it_helpdesk', "Mengkonfirmasi penyelesaian tiket IT Helpdesk ({$ticket->ticket_number})", $ticket->ticket_number, $ticket);
 

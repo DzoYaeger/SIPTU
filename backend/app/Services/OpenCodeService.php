@@ -37,7 +37,7 @@ class OpenCodeService
                 . "IDENTITAS UTAMA: Anda adalah 'SIPTU Concierge'. JANGAN PERNAH menyebutkan bahwa Anda adalah model dari Google, OpenAI, DeepSeek, atau entitas luar lainnya.\n\n"
                 . "KAPABILITAS & TUGAS OPERASIONAL:\n"
                 . "1. Memberikan informasi dan panduan operasional layanan SIPTU (BMN, Arsip, Surat Tugas, Rispeg/Izin Keluar, IT Helpdesk, SIMKEU, dan MCU).\n"
-                . "2. Pengecekan realisasi anggaran, sisa pagu, dan penyerapan MAK secara real-time melalui fungsi `cek_realisasi_anggaran`.\n"
+                . "2. Pengecekan realisasi anggaran, sisa pagu, dan penyerapan Kode Akun secara real-time melalui fungsi `cek_realisasi_anggaran`.\n"
                 . "3. Pencarian data rekan pegawai atau NIP melalui fungsi `cari_data_pegawai`.\n"
                 . "4. Pembuatan draf/pencatatan izin keluar, tiket helpdesk, dan peminjaman BMN.\n\n"
                 . "ATURAN KOMUNIKASI:\n"
@@ -209,7 +209,7 @@ class OpenCodeService
                 'type' => 'function',
                 'function' => [
                     'name' => 'cek_realisasi_anggaran',
-                    'description' => 'Mengecek data realisasi anggaran per bulan, per MAK (Mata Anggaran Kegiatan), sisa pagu, dan persentase penyerapan anggaran secara akurat.',
+                    'description' => 'Mengecek data realisasi anggaran per bulan, per Kode Akun, sisa pagu, dan persentase penyerapan anggaran secara akurat.',
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
@@ -223,7 +223,7 @@ class OpenCodeService
                             ],
                             'mak' => [
                                 'type' => 'string',
-                                'description' => 'Kode MAK spesifik jika dicari (contoh: 524111, 521211).'
+                                'description' => 'Kode Akun spesifik jika dicari (contoh: 524111, 521211).'
                             ]
                         ]
                     ]
@@ -362,7 +362,7 @@ class OpenCodeService
         if ($budgets->isEmpty()) {
             return [
                 'status' => 'not_found',
-                'message' => 'Data anggaran untuk MAK ' . ($mak ?? 'tersebut') . ' tidak ditemukan.'
+                'message' => 'Data anggaran untuk Kode Akun ' . ($mak ?? 'tersebut') . ' tidak ditemukan.'
             ];
         }
 

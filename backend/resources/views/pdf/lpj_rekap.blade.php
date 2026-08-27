@@ -60,36 +60,20 @@
 <body>
 
 @php
-    $showTransport = false;
-    $showFullboard = false;
-    $showPenginapan = false;
-    $showUangHarian = false;
+    $showTransport = ($grandTransport ?? 0) > 0;
+    $showFullboard = ($grandFullboard ?? 0) > 0;
+    $showPenginapan = ($grandPenginapan ?? 0) > 0;
+    $showUangHarian = ($grandUangHarian ?? 0) > 0;
 
-    foreach ($processedItems as $itemData) {
-        $item = $itemData['item'];
-        $transport = ($item->uang_transport_bus ?? 0)
-            + ($item->uang_transport_taxi ?? 0)
-            + ($item->uang_transport_pesawat ?? 0)
-            + ($item->uang_transport_bbm ?? 0)
-            + ($item->uang_transport_sewa_mobil ?? 0);
-        $fullboard = $item->uang_fullboard ?? 0;
-        $penginapan = $item->uang_penginapan ?? 0;
-        $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
-
-        if ($transport > 0) $showTransport = true;
-        if ($fullboard > 0) $showFullboard = true;
-        if ($penginapan > 0) $showPenginapan = true;
-        if ($uangHarian > 0) $showUangHarian = true;
+    // Fallback if not passed from controller
+    if (!$showTransport && !$showFullboard && !$showPenginapan && !$showUangHarian) {
+        foreach ($processedItems as $itemData) {
+            if (($itemData['transport'] ?? 0) > 0) $showTransport = true;
+            if (($itemData['fullboard'] ?? 0) > 0) $showFullboard = true;
+            if (($itemData['penginapan'] ?? 0) > 0) $showPenginapan = true;
+            if (($itemData['uang_harian'] ?? 0) > 0) $showUangHarian = true;
+        }
     }
-
-    // There are 12 static columns before dynamic ones.
-    // The first column 'No' has its own <td>.
-    // So the second merged <td> needs to span (12 - 1) + shown dynamic columns.
-    $colspanTerbilang = 11
-        + ($showTransport ? 1 : 0) 
-        + ($showFullboard ? 1 : 0) 
-        + ($showPenginapan ? 1 : 0) 
-        + ($showUangHarian ? 1 : 0);
 
     // Define base weights for visible columns
     $baseWidths = [
@@ -161,14 +145,19 @@
             @foreach ($processedItems as $index => $itemData)
                 @php
                     $item = $itemData['item'];
-                    $transport = ($item->uang_transport_bus ?? 0)
+                    $transport = $itemData['transport'] ?? (
+                        ($item->uang_transport_bus ?? 0)
                         + ($item->uang_transport_taxi ?? 0)
                         + ($item->uang_transport_pesawat ?? 0)
                         + ($item->uang_transport_bbm ?? 0)
-                        + ($item->uang_transport_sewa_mobil ?? 0);
-                    $fullboard = $item->uang_fullboard ?? 0;
-                    $penginapan = $item->uang_penginapan ?? 0;
-                    $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
+                        + ($item->uang_transport_sewa_mobil ?? 0)
+                        + ($item->uang_transport_lokal ?? 0)
+                        + ($item->uang_transport_umum ?? 0)
+                    );
+                    $fullboard = $itemData['fullboard'] ?? ($item->uang_fullboard ?? 0);
+                    $penginapan = $itemData['penginapan'] ?? ($item->uang_penginapan ?? 0);
+                    $uangHarian = $itemData['uang_harian'] ?? (($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0));
+                    $rowTotal = $itemData['total'] ?? ($transport + $fullboard + $penginapan + $uangHarian);
                     $duration = $st->tanggal_mulai && $st->tanggal_selesai ? \Carbon\Carbon::parse($st->tanggal_mulai)->diffInDays(\Carbon\Carbon::parse($st->tanggal_selesai)) + 1 : 0;
                 @endphp
                 <tr>
@@ -187,55 +176,59 @@
                     
                     @if($showTransport)
                     <td class="text-right">
-                        @if ($transport > 0)
-                            {{ number_format($transport, 0, ',', '.') }}
-                        @else
-                            -
-                        @endif
+                        {{ $transport > 0 ? number_format($transport, 0, ',', '.') : '-' }}
                     </td>
                     @endif
 
                     @if($showFullboard)
                     <td class="text-right">
-                        @if ($fullboard > 0)
-                            {{ number_format($fullboard, 0, ',', '.') }}
-                        @else
-                            -
-                        @endif
+                        {{ $fullboard > 0 ? number_format($fullboard, 0, ',', '.') : '-' }}
                     </td>
                     @endif
 
                     @if($showPenginapan)
                     <td class="text-right">
-                        @if ($penginapan > 0)
-                            {{ number_format($penginapan, 0, ',', '.') }}
-                        @else
-                            -
-                        @endif
+                        {{ $penginapan > 0 ? number_format($penginapan, 0, ',', '.') : '-' }}
                     </td>
                     @endif
 
                     @if($showUangHarian)
                     <td class="text-right">
-                        @if ($uangHarian > 0)
-                            {{ number_format($uangHarian, 0, ',', '.') }}
-                        @else
-                            -
-                        @endif
+                        {{ $uangHarian > 0 ? number_format($uangHarian, 0, ',', '.') : '-' }}
                     </td>
                     @endif
 
-                    <td class="text-right text-bold">{{ number_format($itemData['total'], 0, ',', '.') }}</td>
+                    <td class="text-right text-bold">{{ number_format($rowTotal, 0, ',', '.') }}</td>
                     <td></td>
                 </tr>
             @endforeach
             <!-- Total Row -->
-            <tr class="text-bold">
+            <tr class="text-bold" style="background-color: #f2f2f2;">
                 <td></td>
-                <td colspan="{{ $colspanTerbilang }}" style="text-align: left; padding: 6px 10px; font-size: 7.5pt; vertical-align: middle;">
+                <td colspan="11" style="text-align: left; padding: 6px 10px; font-size: 7.5pt; vertical-align: middle;">
                     Total &nbsp;|&nbsp; <span style="font-style: italic; font-weight: bold;">{{ $grandTerbilang }}</span>
                 </td>
-                <td class="text-right">{{ number_format($grandTotal, 0, ',', '.') }}</td>
+                @if($showTransport)
+                <td class="text-right text-bold">
+                    {{ $grandTransport > 0 ? number_format($grandTransport, 0, ',', '.') : '-' }}
+                </td>
+                @endif
+                @if($showFullboard)
+                <td class="text-right text-bold">
+                    {{ $grandFullboard > 0 ? number_format($grandFullboard, 0, ',', '.') : '-' }}
+                </td>
+                @endif
+                @if($showPenginapan)
+                <td class="text-right text-bold">
+                    {{ $grandPenginapan > 0 ? number_format($grandPenginapan, 0, ',', '.') : '-' }}
+                </td>
+                @endif
+                @if($showUangHarian)
+                <td class="text-right text-bold">
+                    {{ $grandUangHarian > 0 ? number_format($grandUangHarian, 0, ',', '.') : '-' }}
+                </td>
+                @endif
+                <td class="text-right text-bold">{{ number_format($grandTotal, 0, ',', '.') }}</td>
                 <td></td>
             </tr>
         </tbody>

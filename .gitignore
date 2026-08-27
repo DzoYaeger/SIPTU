@@ -129,3 +129,6 @@ Thumbs.db
 # Semgrep local scan reports
 semgrep-report.txt
 semgrep-full-report.txt
+
+# Flutter temporary scaffolding
+.flutter_scaffold/

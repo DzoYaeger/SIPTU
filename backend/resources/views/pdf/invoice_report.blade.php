@@ -133,7 +133,7 @@
                 <td>{{ $invoice->invoice_no }}</td>
             </tr>
             <tr>
-                <td class="top-meta-label">MAK</td>
+                <td class="top-meta-label">Kode Akun</td>
                 <td class="top-meta-colon">:</td>
                 <td>{{ $invoice->mak ?? '' }}</td>
             </tr>

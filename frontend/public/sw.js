@@ -3,7 +3,7 @@
 // Strategy: Cache First for static, Network First for API
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'siptu-v1';
+const CACHE_VERSION = 'siptu-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -196,35 +196,50 @@ self.addEventListener('message', (event) => {
 });
 
 // ─── Push Notification Events ───
-self.addEventListener('push', function (e) {
-  if (!(self.Notification && self.Notification.permission === 'granted')) {
-      return;
+self.addEventListener('push', function (event) {
+  let msg = {};
+  if (event.data) {
+    try {
+      msg = event.data.json();
+    } catch (err) {
+      msg = { title: 'SIPTU ULTRA Mobile', body: event.data.text() };
+    }
+  } else {
+    msg = { title: 'SIPTU ULTRA Mobile', body: 'Ada pembaruan status pengajuan di SIPTU.' };
   }
 
-  if (e.data) {
-      var msg = e.data.json();
-      e.waitUntil(self.registration.showNotification(msg.title, {
-          body: msg.body,
-          icon: msg.icon || '/logo/favicon.png',
-          badge: '/logo/favicon.png',
-          data: msg.action || '/app/layanan-mandiri',
-          actions: [
-              { action: msg.action || '/app/layanan-mandiri', title: 'Buka Aplikasi' }
-          ]
-      }));
-  }
+  const title = msg.title || 'SIPTU ULTRA Mobile';
+  const targetUrl = (msg.data && msg.data.url) || msg.url || (typeof msg.action === 'string' && msg.action.startsWith('/') ? msg.action : '/app/layanan-mandiri');
+
+  const options = {
+    body: msg.body || 'Ada pengajuan atau pembaruan baru di SIPTU.',
+    icon: msg.icon || '/logo192.png',
+    badge: msg.badge || '/logo/favicon.png',
+    vibrate: [300, 100, 300, 100, 300],
+    tag: msg.tag || ('siptu-notif-' + Date.now()),
+    renotify: true,
+    data: { url: targetUrl },
+    actions: [
+      { action: 'open_app', title: 'Buka Aplikasi' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
 
   // Focus or open the target window
-  var targetUrl = e.notification.data || '/app/layanan-mandiri';
+  var targetUrl = (e.notification.data && e.notification.data.url) || e.notification.data || '/app/layanan-mandiri';
+  
   e.waitUntil(
-      clients.matchAll({ type: 'window' }).then(function (clientList) {
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
           for (var i = 0; i < clientList.length; i++) {
               var client = clientList[i];
-              if (client.url.includes(targetUrl) && 'focus' in client) {
+              if (client.url && client.url.includes(targetUrl) && 'focus' in client) {
                   return client.focus();
               }
           }

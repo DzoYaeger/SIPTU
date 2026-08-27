@@ -908,6 +908,220 @@ export default function AdminPengajuanPdtt() {
         }
     };
 
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case "pending": return "Menunggu";
+            case "approved": return "Disetujui";
+            case "rejected": return "Ditolak";
+            case "processed": return "Diproses";
+            case "updated": return "Diubah";
+            case "reorder": return "Reorder";
+            default: return status || "-";
+        }
+    };
+
+    const handleDownloadRekapanPdf = async (selectedOnly = false) => {
+        const targetRequests = (selectedOnly && selectedRowKeys.length > 0)
+            ? requests.filter(r => selectedRowKeys.includes(r.id))
+            : (selectedRowKeys.length > 0 ? requests.filter(r => selectedRowKeys.includes(r.id)) : requests);
+
+        if (!targetRequests || targetRequests.length === 0) {
+            message.warning("Tidak ada data pengajuan untuk diunduh.");
+            return;
+        }
+
+        setGeneratingPdf(true);
+        try {
+            const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ]);
+
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 14;
+            const periodStr = allPeriodsFilter ? "Semua Periode" : filterPeriod.format("MMMM YYYY");
+
+            // ── Kop & Header ──
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(15, 23, 42);
+            doc.text("BADAN PENGAWAS OBAT DAN MAKANAN", pageWidth / 2, 14, { align: 'center' });
+            
+            doc.setFontSize(11.5);
+            doc.text("BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO", pageWidth / 2, 20, { align: 'center' });
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(71, 85, 105);
+            doc.text(`LAPORAN REKAPITULASI PENGAJUAN PENGADAAN LANGSUNG (PDTT) — ${periodStr.toUpperCase()}`, pageWidth / 2, 26, { align: 'center' });
+
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineWidth(0.5);
+            doc.line(margin, 29, pageWidth - margin, 29);
+
+            // ── Metadata Bar ──
+            doc.setFontSize(8.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Waktu Tarik Laporan: ${dayjs().format('DD MMMM YYYY, HH:mm')} WITA`, margin, 34);
+            doc.text(`Jumlah Pengajuan: ${targetRequests.length} Pegawai  |  Cakupan: ${selectedRowKeys.length > 0 && selectedOnly ? 'Data Terpilih' : (allPeriodsFilter ? 'Semua Periode' : 'Periode Aktif')}`, pageWidth - margin, 34, { align: 'right' });
+
+            // ── Build Data Rows ──
+            let totalAllNominal = 0;
+            let totalAllQty = 0;
+            let totalAllBought = 0;
+            const tableRows = [];
+            let rowNo = 1;
+
+            targetRequests.forEach((req) => {
+                const creatorName = req.creator?.name || "Pegawai";
+                const creatorNip = req.creator?.nip ? `\nNIP. ${req.creator.nip}` : "";
+                const items = req.items || [];
+                const reqPeriod = req.period ? dayjs(req.period).format("MMM YYYY") : "-";
+
+                if (items.length === 0) {
+                    tableRows.push([
+                        rowNo++,
+                        `${creatorName}${creatorNip}`,
+                        reqPeriod,
+                        "Tidak ada rincian barang",
+                        "-",
+                        "-",
+                        "-",
+                        "-",
+                        getStatusLabel(req.status),
+                    ]);
+                } else {
+                    items.forEach((it, itemIdx) => {
+                        const pdttItem = it.pdtt_item || {};
+                        const itemName = getItemDisplayName(pdttItem);
+                        const qty = Number(it.jumlah || 0);
+                        const bought = Number(it.jumlah_terbeli || 0);
+                        const unitPrice = it.harga_terbeli !== null && it.harga_terbeli !== undefined
+                            ? Number(it.harga_terbeli)
+                            : Number(it.harga_saat_ini || pdttItem.price || 0);
+                        const subtotal = (bought > 0 ? bought : qty) * unitPrice;
+
+                        totalAllQty += qty;
+                        totalAllBought += bought;
+                        totalAllNominal += subtotal;
+
+                        tableRows.push([
+                            itemIdx === 0 ? rowNo++ : "",
+                            itemIdx === 0 ? `${creatorName}${creatorNip}` : "",
+                            itemIdx === 0 ? reqPeriod : "",
+                            itemName,
+                            `${qty}`,
+                            `${bought}`,
+                            formatCurrency(unitPrice),
+                            formatCurrency(subtotal),
+                            bought >= qty && qty > 0 ? "Lengkap" : (bought > 0 ? "Sebagian" : "Menunggu"),
+                        ]);
+                    });
+                }
+            });
+
+            // ── Render Table ──
+            autoTable(doc, {
+                startY: 37,
+                margin: { left: margin, right: margin },
+                head: [[
+                    'No',
+                    'Pegawai Pengusul',
+                    'Periode',
+                    'Rincian Barang & Spesifikasi',
+                    'Diajukan',
+                    'Terbeli',
+                    'Harga Satuan',
+                    'Subtotal Realisasi',
+                    'Status'
+                ]],
+                body: tableRows,
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 8.5,
+                    cellPadding: 2.2,
+                    lineColor: [226, 232, 240],
+                    lineWidth: 0.2,
+                    textColor: [30, 41, 59],
+                    valign: 'middle',
+                },
+                headStyles: {
+                    fillColor: [15, 91, 153],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    fontSize: 8.5,
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 250, 252],
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 10 },
+                    1: { halign: 'left', cellWidth: 52 },
+                    2: { halign: 'center', cellWidth: 22 },
+                    3: { halign: 'left' },
+                    4: { halign: 'center', cellWidth: 18 },
+                    5: { halign: 'center', cellWidth: 18 },
+                    6: { halign: 'right', cellWidth: 28 },
+                    7: { halign: 'right', cellWidth: 34, fontStyle: 'bold' },
+                    8: { halign: 'center', cellWidth: 22 },
+                },
+            });
+
+            // ── Bottom Summary & Signature ──
+            let currentY = doc.lastAutoTable.finalY + 6;
+            if (currentY > pageHeight - 45) {
+                doc.addPage();
+                currentY = 16;
+            }
+
+            // Summary Info Box
+            doc.setFillColor(241, 245, 249);
+            doc.setDrawColor(203, 213, 225);
+            doc.roundedRect(margin, currentY, 120, 16, 2, 2, 'FD');
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(71, 85, 105);
+            doc.text(`Total Qty Diajukan: ${totalAllQty} buah  |  Total Terbeli: ${totalAllBought} buah`, margin + 4, currentY + 6);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9.5);
+            doc.setTextColor(15, 91, 153);
+            doc.text(`Akumulasi Total Anggaran: ${formatCurrency(totalAllNominal)}`, margin + 4, currentY + 12);
+
+            // Signature
+            const sigX = pageWidth - margin - 65;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`Palopo, ${dayjs().format('DD MMMM YYYY')}`, sigX, currentY + 4);
+            doc.text("Pejabat Pembuat Komitmen (PPK),", sigX, currentY + 9);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text(ppkName, sigX, currentY + 28);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`NIP. ${ppkNip}`, sigX, currentY + 33);
+
+            const cleanPeriod = allPeriodsFilter ? "Semua_Periode" : filterPeriod.format("YYYY-MM");
+            const fileName = `Laporan_Rekapan_PDTT_${cleanPeriod}_${dayjs().format('YYYYMMDD_HHmm')}.pdf`;
+            doc.save(fileName);
+            message.success(`Laporan PDF ${fileName} berhasil diunduh.`);
+        } catch (err) {
+            console.error("PDF Export error:", err);
+            message.error(`Gagal mengunduh file PDF: ${err.message || 'Terjadi kesalahan'}`);
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
     const rowSelection = {
         selectedRowKeys,
         onChange: (keys) => setSelectedRowKeys(keys),
@@ -1204,6 +1418,37 @@ export default function AdminPengajuanPdtt() {
                     >
                         Tandai Terbeli Semua ({selectedRowKeys.length})
                     </Button>
+                    <Dropdown
+                        menu={{
+                            items: [
+                                {
+                                    key: 'pdf-selected',
+                                    icon: <FilePdfOutlined style={{ color: '#dc2626' }} />,
+                                    label: `Unduh PDF Terpilih (${selectedRowKeys.length || '0'})`,
+                                    disabled: selectedRowKeys.length === 0,
+                                    onClick: () => handleDownloadRekapanPdf(true),
+                                },
+                                {
+                                    key: 'pdf-all',
+                                    icon: <FilePdfOutlined style={{ color: '#0F5B99' }} />,
+                                    label: `Unduh PDF Semua Data (${requests.length})`,
+                                    onClick: () => handleDownloadRekapanPdf(false),
+                                },
+                            ]
+                        }}
+                        placement="bottomRight"
+                    >
+                        <Button
+                            type="primary"
+                            icon={<FilePdfOutlined />}
+                            onClick={() => handleDownloadRekapanPdf(selectedRowKeys.length > 0)}
+                            loading={generatingPdf}
+                            style={{ background: "#dc2626", borderColor: "#dc2626" }}
+                        >
+                            {selectedRowKeys.length > 0 ? `Tarik PDF (${selectedRowKeys.length})` : "Tarik Laporan PDF"}
+                        </Button>
+                    </Dropdown>
+
                     <Button
                         type="primary"
                         icon={<FileExcelOutlined />}

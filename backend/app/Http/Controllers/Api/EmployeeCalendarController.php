@@ -168,7 +168,7 @@ class EmployeeCalendarController extends Controller
         }
         
         if ($st->mak) {
-            $parts[] = "MAK: {$st->mak}";
+            $parts[] = "Kode Akun: {$st->mak}";
         }
         
         if ($st->lokasi_tugas) {

@@ -49,8 +49,13 @@ import {
   SyncOutlined,
   UserOutlined,
   WalletOutlined,
+  FilePdfOutlined,
+  FileExcelOutlined,
+  PrinterOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
 import { useAuth } from "../hooks/useAuth.js";
 import useDebounce from "../hooks/useDebounce.js";
 import "./PemeriksaanKesehatan.css";
@@ -294,6 +299,464 @@ export default function PemeriksaanKesehatan() {
       setLoadingEmployees(false);
     }
   }, [apiFetch, isAdminOrValidator]);
+
+  // ─── Export & Reporting Functions ─────────────────────────────────
+  const [exportingReport, setExportingReport] = useState(false);
+
+  // 1. Export Admin Requests PDF
+  const handleExportAdminRequestsPdf = async () => {
+    if (!adminRequests || adminRequests.length === 0) {
+      message.warning("Tidak ada data pengajuan MCU untuk ditarik.");
+      return;
+    }
+
+    setExportingReport(true);
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const yearText = adminYearFilter === "all" ? "Semua Tahun Anggaran" : `Tahun Anggaran ${adminYearFilter}`;
+      const statusText = adminStatusFilter === "all" ? "Semua Status" : STATUS_CONFIG[adminStatusFilter]?.label || adminStatusFilter;
+
+      // ── Kop Header ──
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text("BADAN PENGAWAS OBAT DAN MAKANAN", pageWidth / 2, 14, { align: "center" });
+
+      doc.setFontSize(11.5);
+      doc.text("BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO", pageWidth / 2, 20, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`LAPORAN REKAPITULASI PENGAJUAN PEMERIKSAAN KESEHATAN (MCU) — ${yearText.toUpperCase()}`, pageWidth / 2, 26, { align: "center" });
+
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(margin, 29, pageWidth - margin, 29);
+
+      // ── Metadata Bar ──
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Waktu Tarik Laporan: ${dayjs().format("DD MMMM YYYY, HH:mm")} WITA`, margin, 34);
+      doc.text(`Filter: ${statusText}  |  Total Data: ${adminRequests.length} Pengajuan`, pageWidth - margin, 34, { align: "right" });
+
+      // ── Build Data Rows ──
+      let totalAllAmount = 0;
+      const tableRows = adminRequests.map((r, idx) => {
+        const items = r.items || [];
+        const itemsStr = items.length > 0 ? items.map((i) => i.package_name).join(", ") : "-";
+        const amount = Number(r.total_amount) || 0;
+        totalAllAmount += amount;
+
+        return [
+          idx + 1,
+          r.request_number || "-",
+          r.created_at ? dayjs(r.created_at).format("DD/MM/YYYY") : "-",
+          `${r.employee_name || "-"}\nNIP. ${r.nip || "-"}`,
+          itemsStr,
+          r.faskes_name || "-",
+          formatRupiah(amount),
+          STATUS_CONFIG[r.status]?.label || r.status || "-",
+        ];
+      });
+
+      // ── Render AutoTable ──
+      autoTable(doc, {
+        startY: 37,
+        margin: { left: margin, right: margin },
+        head: [[
+          "No",
+          "No. Pengajuan",
+          "Tgl Usul",
+          "Pegawai & NIP",
+          "Item Pemeriksaan",
+          "Fasilitas / Lab",
+          "Total Biaya",
+          "Status"
+        ]],
+        body: tableRows,
+        styles: {
+          font: "helvetica",
+          fontSize: 8.5,
+          cellPadding: 2.2,
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [30, 41, 59],
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [15, 91, 153],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          halign: "center",
+          fontSize: 8.5,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 10 },
+          1: { halign: "center", cellWidth: 32 },
+          2: { halign: "center", cellWidth: 22 },
+          3: { halign: "left", cellWidth: 50 },
+          4: { halign: "left" },
+          5: { halign: "left", cellWidth: 40 },
+          6: { halign: "right", cellWidth: 32, fontStyle: "bold" },
+          7: { halign: "center", cellWidth: 28 },
+        },
+      });
+
+      // ── Bottom Summary & Signature ──
+      let currentY = doc.lastAutoTable.finalY + 6;
+      if (currentY > pageHeight - 45) {
+        doc.addPage();
+        currentY = 16;
+      }
+
+      // Summary Box
+      doc.setFillColor(241, 245, 249);
+      doc.setDrawColor(203, 213, 225);
+      doc.roundedRect(margin, currentY, 110, 16, 2, 2, "FD");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Total Pengajuan MCU: ${adminRequests.length} Pengajuan`, margin + 4, currentY + 6);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 91, 153);
+      doc.text(`Total Akumulasi Biaya MCU: ${formatRupiah(totalAllAmount)}`, margin + 4, currentY + 12);
+
+      // Signature
+      const sigX = pageWidth - margin - 65;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Palopo, ${dayjs().format("DD MMMM YYYY")}`, sigX, currentY + 4);
+      doc.text("Pengelola Kepegawaian / PPK,", sigX, currentY + 9);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO", sigX, currentY + 28);
+
+      const fileName = `Rekapan_MCU_${adminYearFilter}_${dayjs().format("YYYYMMDD_HHmm")}.pdf`;
+      doc.save(fileName);
+      message.success(`Laporan PDF ${fileName} berhasil diunduh.`);
+    } catch (err) {
+      console.error("PDF Export error:", err);
+      message.error(`Gagal mengunduh file PDF: ${err.message || "Terjadi kesalahan"}`);
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  // 2. Export Admin Requests Excel
+  const handleExportAdminRequestsExcel = () => {
+    if (!adminRequests || adminRequests.length === 0) {
+      message.warning("Tidak ada data pengajuan MCU untuk ditarik.");
+      return;
+    }
+
+    try {
+      setExportingReport(true);
+      const rows = [];
+      const yearText = adminYearFilter === "all" ? "Semua Tahun Anggaran" : `Tahun Anggaran ${adminYearFilter}`;
+      
+      rows.push(["REKAPITULASI PENGAJUAN PEMERIKSAAN KESEHATAN (MCU) - BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO"]);
+      rows.push([`Tanggal Penarikan: ${dayjs().format("DD MMMM YYYY, HH:mm")} WITA`]);
+      rows.push([`Filter: ${yearText} | Status: ${adminStatusFilter === "all" ? "Semua Status" : STATUS_CONFIG[adminStatusFilter]?.label || adminStatusFilter}`]);
+      rows.push([]);
+
+      const headers = [
+        "NO",
+        "NO. PENGAJUAN",
+        "TANGGAL PENGAJUAN",
+        "NAMA PEGAWAI",
+        "NIP",
+        "TAHUN ANGGARAN",
+        "ITEM PEMERIKSAAN",
+        "FASILITAS / LAB",
+        "TOTAL BIAYA (RP)",
+        "STATUS",
+        "CATATAN PEGAWAI"
+      ];
+      rows.push(headers);
+
+      let totalAmount = 0;
+      adminRequests.forEach((r, idx) => {
+        const items = r.items || [];
+        const itemsStr = items.length > 0 ? items.map((i) => i.package_name).join(", ") : "-";
+        const amt = Number(r.total_amount) || 0;
+        totalAmount += amt;
+
+        rows.push([
+          idx + 1,
+          r.request_number || "-",
+          r.created_at ? dayjs(r.created_at).format("DD/MM/YYYY HH:mm") : "-",
+          r.employee_name || "-",
+          r.nip ? `="${r.nip}"` : "-",
+          r.tahun_anggaran || "-",
+          itemsStr,
+          r.faskes_name || "-",
+          amt,
+          STATUS_CONFIG[r.status]?.label || r.status || "-",
+          r.notes || "-"
+        ]);
+      });
+
+      // Total Row
+      rows.push(["TOTAL", "", "", "", "", "", "", "", totalAmount, "", ""]);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      ws["!cols"] = [
+        { wch: 6 },   // NO
+        { wch: 22 },  // NO PENGAJUAN
+        { wch: 18 },  // TGL
+        { wch: 30 },  // NAMA
+        { wch: 22 },  // NIP
+        { wch: 16 },  // TA
+        { wch: 40 },  // ITEM
+        { wch: 30 },  // FASKES
+        { wch: 18 },  // TOTAL
+        { wch: 20 },  // STATUS
+        { wch: 30 },  // CATATAN
+      ];
+
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap MCU");
+
+      const fileName = `Rekapan_MCU_${adminYearFilter}_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      message.success(`Data rekapan berhasil ditarik ke file ${fileName}.`);
+    } catch (err) {
+      console.error("Excel Export error:", err);
+      message.error(`Gagal menarik data Excel: ${err.message || "Terjadi kesalahan"}`);
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  // 3. Export Balances Excel
+  const handleExportBalancesExcel = () => {
+    if (!adminBalances || adminBalances.length === 0) {
+      message.warning("Tidak ada data saldo pegawai untuk ditarik.");
+      return;
+    }
+
+    try {
+      setExportingReport(true);
+      const rows = [];
+      const yearText = adminYearFilter === "all" ? "Semua Tahun Anggaran" : `Tahun Anggaran ${adminYearFilter}`;
+
+      rows.push(["REKAPITULASI PLAFON & SALDO MCU PEGAWAI - BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO"]);
+      rows.push([`Tanggal Penarikan: ${dayjs().format("DD MMMM YYYY, HH:mm")} WITA`]);
+      rows.push([`Periode: ${yearText}`]);
+      rows.push([]);
+
+      const headers = [
+        "NO",
+        "NAMA PEGAWAI",
+        "NIP",
+        "TAHUN ANGGARAN",
+        "PLAFON AWAL (RP)",
+        "TERPAKAI (RP)",
+        "SISA SALDO (RP)"
+      ];
+      rows.push(headers);
+
+      let totInit = 0;
+      let totUsed = 0;
+      let totRem = 0;
+
+      adminBalances.forEach((b, idx) => {
+        const init = Number(b.initial_balance) || 0;
+        const used = Number(b.used_balance) || 0;
+        const rem = Number(b.current_balance) || 0;
+        totInit += init;
+        totUsed += used;
+        totRem += rem;
+
+        rows.push([
+          idx + 1,
+          b.employee_name || "-",
+          b.nip ? `="${b.nip}"` : "-",
+          b.tahun_anggaran || "-",
+          init,
+          used,
+          rem
+        ]);
+      });
+
+      rows.push(["TOTAL", "", "", "", totInit, totUsed, totRem]);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      ws["!cols"] = [
+        { wch: 6 },
+        { wch: 32 },
+        { wch: 22 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 20 },
+      ];
+
+      ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Saldo MCU Pegawai");
+
+      const fileName = `Rekap_Saldo_MCU_${adminYearFilter}_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      message.success(`Data saldo pegawai berhasil ditarik ke file ${fileName}.`);
+    } catch (err) {
+      console.error("Balances Export error:", err);
+      message.error(`Gagal menarik data saldo: ${err.message || "Terjadi kesalahan"}`);
+    } finally {
+      setExportingReport(false);
+    }
+  };
+
+  // 4. Export My Requests PDF
+  const handleExportMyRequestsPdf = async () => {
+    if (!filteredMyRequests || filteredMyRequests.length === 0) {
+      message.warning("Tidak ada riwayat pengajuan MCU untuk diunduh.");
+      return;
+    }
+
+    setExportingReport(true);
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 14;
+      const empName = employeeInfo?.name || user?.employee?.name || user?.name || "Pegawai";
+      const empNip = employeeInfo?.nip || user?.nip || "-";
+
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text("BADAN PENGAWAS OBAT DAN MAKANAN", pageWidth / 2, 14, { align: "center" });
+
+      doc.setFontSize(11);
+      doc.text("BALAI PENGAWAS OBAT DAN MAKANAN DI PALOPO", pageWidth / 2, 20, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text("BUKTI RIWAYAT PENGAJUAN PEMERIKSAAN KESEHATAN (MCU)", pageWidth / 2, 26, { align: "center" });
+
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(margin, 29, pageWidth - margin, 29);
+
+      // Meta info
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Nama Pegawai : ${empName}`, margin, 35);
+      doc.text(`NIP                 : ${empNip}`, margin, 40);
+      doc.text(`Waktu Unduh  : ${dayjs().format("DD MMMM YYYY, HH:mm")} WITA`, margin, 45);
+
+      let totalAmt = 0;
+      const tableRows = filteredMyRequests.map((r, idx) => {
+        const items = r.items || [];
+        const itemsStr = items.map((i) => i.package_name).join(", ");
+        const amt = Number(r.total_amount) || 0;
+        totalAmt += amt;
+
+        return [
+          idx + 1,
+          r.request_number || "-",
+          r.planned_date ? dayjs(r.planned_date).format("DD/MM/YYYY") : "-",
+          itemsStr || "-",
+          r.faskes_name || "-",
+          formatRupiah(amt),
+          STATUS_CONFIG[r.status]?.label || r.status || "-",
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 50,
+        margin: { left: margin, right: margin },
+        head: [[
+          "No",
+          "No. Pengajuan",
+          "Tgl Periksa",
+          "Item Pemeriksaan",
+          "Fasilitas / Lab",
+          "Biaya",
+          "Status"
+        ]],
+        body: tableRows,
+        styles: {
+          font: "helvetica",
+          fontSize: 8.5,
+          cellPadding: 2.2,
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [30, 41, 59],
+        },
+        headStyles: {
+          fillColor: [15, 91, 153],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          halign: "center",
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 10 },
+          1: { halign: "center", cellWidth: 28 },
+          2: { halign: "center", cellWidth: 22 },
+          3: { halign: "left" },
+          4: { halign: "left", cellWidth: 35 },
+          5: { halign: "right", cellWidth: 26, fontStyle: "bold" },
+          6: { halign: "center", cellWidth: 24 },
+        },
+      });
+
+      const fileName = `Riwayat_MCU_${empName.replace(/[^a-zA-Z0-9]/g, "_")}_${dayjs().format("YYYYMMDD")}.pdf`;
+      doc.save(fileName);
+      message.success("Riwayat pengajuan berhasil diunduh.");
+    } catch (err) {
+      console.error("PDF Export error:", err);
+      message.error(`Gagal mengunduh PDF: ${err.message || "Terjadi kesalahan"}`);
+    } finally {
+      setExportingReport(false);
+    }
+  };
 
   // Initial Data Load
   useEffect(() => {
@@ -1289,7 +1752,17 @@ export default function PemeriksaanKesehatan() {
                 </Dropdown>
               </Col>
 
-              <Col xs={12} sm={6} md={10} style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <Col xs={12} sm={6} md={10} style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                {filteredMyRequests.length > 0 && (
+                  <Button
+                    icon={<FilePdfOutlined style={{ color: "#dc2626" }} />}
+                    onClick={handleExportMyRequestsPdf}
+                    loading={exportingReport}
+                    style={{ height: 34, borderRadius: 6, fontWeight: 500 }}
+                  >
+                    Tarik Riwayat (PDF)
+                  </Button>
+                )}
                 <Tooltip title="Segarkan">
                   <Button
                     icon={<ReloadOutlined />}
@@ -1407,7 +1880,36 @@ export default function PemeriksaanKesehatan() {
                       style={{ width: "100%", height: 34 }}
                     />
                   </Col>
-                  <Col xs={24} sm={24} md={10} style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <Col xs={24} sm={24} md={10} style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                    <Dropdown
+                      menu={{
+                        items: [
+                          {
+                            key: "pdf",
+                            icon: <FilePdfOutlined style={{ color: "#dc2626" }} />,
+                            label: `Tarik Laporan PDF (${adminRequests.length} Data)`,
+                            onClick: handleExportAdminRequestsPdf,
+                          },
+                          {
+                            key: "excel",
+                            icon: <FileExcelOutlined style={{ color: "#10b981" }} />,
+                            label: `Tarik Laporan Excel (.xlsx)`,
+                            onClick: handleExportAdminRequestsExcel,
+                          },
+                        ],
+                      }}
+                      placement="bottomRight"
+                    >
+                      <Button
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        loading={exportingReport}
+                        style={{ background: "#0F5B99", borderRadius: 6, fontWeight: 500 }}
+                      >
+                        Tarik Laporan Rekapan
+                      </Button>
+                    </Dropdown>
+
                     <Button icon={<ReloadOutlined />} onClick={fetchAdminRequests} loading={loadingAdminRequests}>
                       Segarkan
                     </Button>
@@ -1599,6 +2101,14 @@ export default function PemeriksaanKesehatan() {
                     />
                   </Col>
                   <Col xs={24} sm={24} md={12} style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                    <Button
+                      icon={<FileExcelOutlined style={{ color: "#10b981" }} />}
+                      onClick={handleExportBalancesExcel}
+                      loading={exportingReport}
+                      style={{ borderRadius: 6, fontWeight: 500 }}
+                    >
+                      Tarik Saldo (.xlsx)
+                    </Button>
                     {adminBalances.length > 0 && (
                       <Button danger onClick={handleClearAllBalances}>
                         Kosongkan Saldo

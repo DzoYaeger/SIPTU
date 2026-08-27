@@ -796,7 +796,7 @@ const Anggaran = () => {
       next.add(budget.mak);
       return next;
     });
-    message.success(`MAK ${budget.mak} ditandai Draft Hapus. Klik Simpan untuk memproses.`);
+    message.success(`Akun ${budget.mak} ditandai Draft Hapus. Klik Simpan untuk memproses.`);
   };
 
   const handleHistory = (budget) => {
@@ -808,7 +808,7 @@ const Anggaran = () => {
   const rawColumns = useMemo(() => {
     const base = [
       {
-        title: 'Kode MAK (Hierarki 6 Segmen)',
+        title: 'Kode Akun (Hierarki 6 Segmen)',
         dataIndex: 'mak',
         key: 'mak',
         width: colWidths.mak,
@@ -1049,7 +1049,7 @@ const Anggaran = () => {
           </Col>
           <Col xs={24} sm={8}>
             <Card size="small" style={{ background: '#f8fafc', borderRadius: 8, borderColor: '#cbd5e1' }}>
-              <Text type="secondary" style={{ fontSize: '11.5px' }}>Total Alokasi Rincian MAK</Text>
+              <Text type="secondary" style={{ fontSize: '11.5px' }}>Total Alokasi Rincian Akun</Text>
               <Title level={4} style={{ margin: 0, fontSize: '16px', color: '#059669', fontWeight: 700, marginTop: 2 }}>
                 {mergedBudgets.length} Item Segmen
               </Title>
@@ -1354,7 +1354,7 @@ const Anggaran = () => {
                                                                   onClick={() => handleOpenAddSegment('akun', sk.fullPrefix, sk)}
                                                                   style={{ fontSize: '11px', height: '24px', background: '#d97706', borderColor: '#d97706' }}
                                                                 >
-                                                                  + Akun BAS (MAK)
+                                                                  + Akun BAS
                                                                 </Button>
                                                                 <Button
                                                                   type="text"
@@ -1378,7 +1378,7 @@ const Anggaran = () => {
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, paddingLeft: 8 }}>
                                                           {sk.akunItems.length === 0 ? (
                                                             <Text type="secondary" style={{ fontSize: '11px', fontStyle: 'italic', display: 'block', padding: '4px 0' }}>
-                                                              Belum ada Akun BAS (MAK). Klik "+ Akun BAS (MAK)" untuk menambah item belanja.
+                                                              Belum ada Akun BAS. Klik "+ Akun BAS" untuk menambah item belanja.
                                                             </Text>
                                                           ) : (
                                                             sk.akunItems.map((akItem) => (
@@ -1584,7 +1584,7 @@ const Anggaran = () => {
             Perencanaan Anggaran APBN
           </Title>
           <Text type="secondary" style={{ fontSize: '12px' }}>
-            Struktur alokasi hierarki 6 segmen MAK APBN & pagu alokasi belanja.
+            Struktur alokasi hierarki 6 segmen Kode Akun APBN & pagu alokasi belanja.
           </Text>
         </div>
 
@@ -1612,7 +1612,7 @@ const Anggaran = () => {
 
           <Input
             allowClear
-            placeholder="Cari MAK atau deskripsi..."
+            placeholder="Cari Kode Akun atau deskripsi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             prefix={<SearchOutlined style={{ color: '#94a3b8', fontSize: 12 }} />}
@@ -1792,7 +1792,7 @@ const Anggaran = () => {
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, paddingLeft: 8 }}>
                                                           {sk.akunItems.length === 0 ? (
                                                             <Text type="secondary" style={{ fontSize: '11px', fontStyle: 'italic', display: 'block', padding: '4px 0' }}>
-                                                              Belum ada Akun BAS (MAK).
+                                                              Belum ada Akun BAS.
                                                             </Text>
                                                           ) : (
                                                             sk.akunItems.map((akItem) => (
@@ -1864,7 +1864,7 @@ const Anggaran = () => {
           }}
           columns={columns}
           dataSource={budgets}
-          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `Total ${total} MAK` }}
+          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `Total ${total} Akun` }}
           scroll={{ x: '100%' }}
           size="small"
           bordered

@@ -75,9 +75,10 @@ import {
   SaveOutlined,
   FileTextOutlined,
   TeamOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 
-import { Modal, Steps, Tag, Spin, Button, Tooltip, Input, Badge, Tabs, Select, Popconfirm, notification, Radio } from "antd";
+import { Modal, Steps, Tag, Spin, Button, Tooltip, Input, Badge, Tabs, Select, Popconfirm, notification, Radio, Upload, message } from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/id";
@@ -171,6 +172,7 @@ const LayananMandiri = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [customLayananIcons, setCustomLayananIcons] = useState({});
+  const [editingCustomIcons, setEditingCustomIcons] = useState({});
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [showWaffleMenu, setShowWaffleMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -512,11 +514,59 @@ const LayananMandiri = () => {
   const handleOpenFilterManager = () => {
     setEditingCategories(JSON.parse(JSON.stringify(categories)));
     setEditingMapping({ ...serviceCategoryMapping });
+    setEditingCustomIcons({ ...customLayananIcons });
     setFilterManagerTab("mapping");
     setMappingSearchTerm("");
     setNewCatLabel("");
     setNewCatIcon("AppstoreOutlined");
     setIsFilterManagerOpen(true);
+  };
+
+  const handleUploadServiceIcon = (serviceId, file) => {
+    if (!file) return false;
+    const isImage = file.type.startsWith("image/");
+    if (!isImage) {
+      notification.error({
+        message: "Format File Tidak Sesuai",
+        description: "Hanya file gambar (PNG, JPG, SVG, WEBP, GIF) yang dapat diunggah.",
+      });
+      return false;
+    }
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      notification.error({
+        message: "Ukuran Gambar Terlalu Besar",
+        description: "Ukuran file gambar maksimal 5MB.",
+      });
+      return false;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      setEditingCustomIcons((prev) => ({
+        ...prev,
+        [serviceId]: base64,
+      }));
+      notification.success({
+        message: "Ikon Berhasil Diunggah",
+        description: "Preview ikon berhasil diperbarui. Klik 'Simpan Pengelompokan' untuk menerapkan ke seluruh card layanan.",
+      });
+    };
+    reader.readAsDataURL(file);
+    return false; // prevent standard HTTP POST upload
+  };
+
+  const handleResetServiceIcon = (serviceId) => {
+    setEditingCustomIcons((prev) => {
+      const next = { ...prev };
+      delete next[serviceId];
+      return next;
+    });
+    notification.info({
+      message: "Ikon Direset",
+      description: "Ikon dikembalikan ke default bawaan. Klik 'Simpan Pengelompokan' untuk menerapkan.",
+    });
   };
 
   const handleSaveFilterConfig = async () => {
@@ -539,12 +589,15 @@ const LayananMandiri = () => {
 
       setCategories(editingCategories);
       setServiceCategoryMapping(editingMapping);
+      setCustomLayananIcons(editingCustomIcons);
       localStorage.setItem("siptu_layanan_categories", JSON.stringify(editingCategories));
       localStorage.setItem("siptu_layanan_mapping", JSON.stringify(editingMapping));
+      localStorage.setItem("siptu_custom_layanan_icons", JSON.stringify(editingCustomIcons));
+      window.dispatchEvent(new Event("siptu_layanan_icons_updated"));
 
       notification.success({
-        message: "Berhasil",
-        description: "Pengaturan pengelompokan dan filter layanan berhasil disimpan.",
+        message: "Berhasil Disimpan",
+        description: "Pengaturan pengelompokan, kategori filter, dan ikon card layanan berhasil disimpan.",
       });
       setIsFilterManagerOpen(false);
     } catch (e) {
@@ -1388,13 +1441,14 @@ const LayananMandiri = () => {
                     </span>
                   </div>
 
-                  <div style={{ maxHeight: 380, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 8 }}>
+                  <div style={{ maxHeight: 420, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 8 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <thead>
                         <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left" }}>
-                          <th style={{ padding: "8px 12px", color: "#64748b", fontWeight: 700, fontSize: 11 }}>NAMA LAYANAN</th>
-                          <th style={{ padding: "8px 12px", color: "#64748b", fontWeight: 700, fontSize: 11 }}>DESKRIPSI</th>
-                          <th style={{ padding: "8px 12px", color: "#64748b", fontWeight: 700, fontSize: 11, width: 220 }}>KATEGORI FILTER</th>
+                          <th style={{ padding: "10px 14px", color: "#64748b", fontWeight: 700, fontSize: 11 }}>NAMA & IKON LAYANAN</th>
+                          <th style={{ padding: "10px 14px", color: "#64748b", fontWeight: 700, fontSize: 11 }}>DESKRIPSI</th>
+                          <th style={{ padding: "10px 14px", color: "#64748b", fontWeight: 700, fontSize: 11, width: 200 }}>KATEGORI FILTER</th>
+                          <th style={{ padding: "10px 14px", color: "#64748b", fontWeight: 700, fontSize: 11, width: 140, textAlign: "center" }}>GANTI IKON</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1406,20 +1460,46 @@ const LayananMandiri = () => {
                           })
                           .map((srv) => {
                             const currentCatKey = editingMapping[srv.id] || srv.category || "kepegawaian";
+                            const hasCustomIcon = Boolean(editingCustomIcons[srv.id]);
                             return (
-                              <tr key={srv.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td style={{ padding: "8px 12px", fontWeight: 600, color: "#0f172a" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <div style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                      {srv.icon}
+                              <tr key={srv.id} style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.15s" }}>
+                                <td style={{ padding: "10px 14px", fontWeight: 600, color: "#0f172a" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 8,
+                                      background: "#f8fafc",
+                                      border: "1px solid #e2e8f0",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      overflow: "hidden",
+                                      flexShrink: 0,
+                                      boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+                                    }}>
+                                      {hasCustomIcon ? (
+                                        <img
+                                          src={editingCustomIcons[srv.id]}
+                                          alt={srv.title}
+                                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                        />
+                                      ) : (
+                                        srv.icon
+                                      )}
                                     </div>
-                                    <span>{srv.title}</span>
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0f172a" }}>{srv.title}</span>
+                                      {hasCustomIcon && (
+                                        <span style={{ fontSize: 10, color: "#10b981", fontWeight: 600 }}>● Ikon Kustom Aktif</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
-                                <td style={{ padding: "8px 12px", color: "#64748b", fontSize: 11.5 }}>
+                                <td style={{ padding: "10px 14px", color: "#64748b", fontSize: 11.5 }}>
                                   {srv.description}
                                 </td>
-                                <td style={{ padding: "8px 12px" }}>
+                                <td style={{ padding: "10px 14px" }}>
                                   <Select
                                     size="small"
                                     style={{ width: "100%" }}
@@ -1440,6 +1520,35 @@ const LayananMandiri = () => {
                                         </Select.Option>
                                       ))}
                                   </Select>
+                                </td>
+                                <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                                    <Upload
+                                      accept="image/*"
+                                      showUploadList={false}
+                                      beforeUpload={(file) => handleUploadServiceIcon(srv.id, file)}
+                                    >
+                                      <Button
+                                        size="small"
+                                        icon={<UploadOutlined />}
+                                        style={{ fontSize: 11, borderColor: "#bae0ff", color: "#0F5B99" }}
+                                      >
+                                        {hasCustomIcon ? "Ganti" : "Upload"}
+                                      </Button>
+                                    </Upload>
+                                    {hasCustomIcon && (
+                                      <Tooltip title="Reset ke ikon bawaan">
+                                        <Button
+                                          size="small"
+                                          danger
+                                          type="text"
+                                          icon={<DeleteOutlined />}
+                                          onClick={() => handleResetServiceIcon(srv.id)}
+                                          style={{ height: 24, width: 24, padding: 0 }}
+                                        />
+                                      </Tooltip>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             );

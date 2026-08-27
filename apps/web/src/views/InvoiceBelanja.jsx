@@ -577,7 +577,7 @@ export default function InvoiceBelanja() {
         <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={10}>
             <Input
-              placeholder="Cari nomor invoice, MAK, atau uraian belanja..."
+              placeholder="Cari nomor invoice, kode akun, atau uraian belanja..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -623,7 +623,7 @@ export default function InvoiceBelanja() {
                 <Row gutter={[16, 12]}>
                   <Col xs={24} sm={12} md={6}>
                     <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 2 }}>
-                      Kode MAK
+                      Kode Akun
                     </Text>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
                       {record.mak || '-'}
@@ -733,7 +733,7 @@ export default function InvoiceBelanja() {
                   TA {viewInvoice.tahun_anggaran}
                 </Tag>
                 <Tag color="geekblue" className="inv-view-tag">
-                  MAK: {viewInvoice.mak}
+                  Akun: {viewInvoice.mak}
                 </Tag>
               </Space>
             </div>
@@ -871,7 +871,7 @@ export default function InvoiceBelanja() {
               <Col span={8}>
                 <Form.Item
                   name="mak"
-                  label="Mata Anggaran (MAK)"
+                  label="Kode Akun (Mata Anggaran)"
                   rules={[{ required: true, message: 'Wajib diisi' }]}
                 >
                   <Input placeholder="521111 - Keperluan Kantor" />

@@ -8,6 +8,7 @@ use App\Models\BmnLoan;
 use App\Models\Employee;
 use App\Models\NotificationSetting;
 use App\Services\FonnteService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -1030,6 +1031,16 @@ class BmnLoanController extends Controller
             $message
         );
 
+        // Dispatch WebPush to Admin/Pengelola BMN
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin', 'validator'],
+            'Pengajuan Peminjaman BMN Baru',
+            "{$loan->borrower_name} mengajukan peminjaman aset BMN (No. SPA: {$loan->spa_number}).",
+            '/app/bmn-peminjaman-aset',
+            '/logo192.png',
+            'bmn'
+        );
+
         \Illuminate\Support\Facades\Log::info('[BmnLoan] notifyAdmins result.', [
             'loan_id' => $loan->id,
             'spa_number' => $loan->spa_number,
@@ -1069,6 +1080,16 @@ class BmnLoanController extends Controller
             $setting->fonnte_token ?? '',
             $targets,
             $message
+        );
+
+        // Dispatch WebPush for return request
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin', 'validator'],
+            'Pengajuan Pengembalian Aset BMN',
+            "{$loan->borrower_name} mengajukan pengembalian aset BMN (No. SPA: {$loan->spa_number}).",
+            '/app/bmn-peminjaman-aset',
+            '/logo192.png',
+            'bmn'
         );
 
         \Illuminate\Support\Facades\Log::info('[BmnLoan] notifyAdminsReturnRequest result.', [
@@ -1127,6 +1148,16 @@ class BmnLoanController extends Controller
             $message
         );
 
+        // Dispatch WebPush to Borrower
+        PushNotificationService::notifyEmployee(
+            $loan->borrower_id ?? $loan->borrower_nip,
+            'Pengajuan BMN Terkirim',
+            "Pengajuan peminjaman aset (No. SPA: {$loan->spa_number}) telah berhasil dikirim.",
+            "/peminjaman-aset/track/{$loan->token}",
+            '/logo192.png',
+            'bmn'
+        );
+
         \Illuminate\Support\Facades\Log::info('[BmnLoan] notifyBorrowerSubmitted result.', [
             'loan_id' => $loan->id,
             'spa_number' => $loan->spa_number,
@@ -1183,6 +1214,16 @@ class BmnLoanController extends Controller
             $message
         );
 
+        // Dispatch WebPush to Borrower
+        PushNotificationService::notifyEmployee(
+            $loan->borrower_id ?? $loan->borrower_nip,
+            'Peminjaman BMN Disetujui',
+            "Peminjaman aset (No. SPA: {$loan->spa_number}) telah disetujui petugas.",
+            "/peminjaman-aset/track/{$loan->token}",
+            '/logo192.png',
+            'bmn'
+        );
+
         \Illuminate\Support\Facades\Log::info("[BmnLoan] Fonnte result: " . json_encode($result));
     }
 
@@ -1231,6 +1272,16 @@ class BmnLoanController extends Controller
             $setting->fonnte_token ?? '',
             [$target],
             $message
+        );
+
+        // Dispatch WebPush to Borrower
+        PushNotificationService::notifyEmployee(
+            $loan->borrower_id ?? $loan->borrower_nip,
+            'Pengembalian BMN Selesai',
+            "Pengembalian aset (No. SPA: {$loan->spa_number}) telah selesai dikonfirmasi.",
+            "/peminjaman-aset/track/{$loan->token}",
+            '/logo192.png',
+            'bmn'
         );
 
         \Illuminate\Support\Facades\Log::info("[BmnLoan] Fonnte result: " . json_encode($result));

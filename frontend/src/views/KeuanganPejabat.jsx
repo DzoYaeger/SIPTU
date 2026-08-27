@@ -69,6 +69,20 @@ export default function KeuanganPejabat() {
 
     return (
         <div className="kp-module-container">
+            <section className="simkeu-config-overview">
+                <div className="simkeu-config-status">
+                    <span className="simkeu-config-pulse" aria-hidden="true" />
+                    <div>
+                        <span>Konfigurasi dokumen</span>
+                        <strong>{selectedPPK && selectedBendahara ? "Siap digunakan" : "Perlu dilengkapi"}</strong>
+                    </div>
+                </div>
+                <p>Pejabat yang aktif akan diterapkan otomatis pada keluaran dokumen LPJ dan Invoice.</p>
+                <div className="simkeu-config-progress">
+                    <strong>{[selectedPPK, selectedBendahara].filter(Boolean).length}/2</strong>
+                    <span>jabatan terisi</span>
+                </div>
+            </section>
             <div className="kp-main-card">
                 <div className="kp-card-header">
                     <h2 className="kp-card-title">Penetapan Pejabat Perbendaharaan Global</h2>

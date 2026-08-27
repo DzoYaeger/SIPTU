@@ -195,7 +195,7 @@ class RevisionTicketController extends Controller
             foreach ($ticket->adjustments as $adj) {
                 $budget = Budget::firstOrCreate(
                     ['mak' => trim($adj->mak)],
-                    ['deskripsi' => 'Budget MAK ' . $adj->mak, 'anggaran' => 0]
+                    ['deskripsi' => 'Budget Akun ' . $adj->mak, 'anggaran' => 0]
                 );
 
                 $change = ($adj->tipe === 'Tambah Anggaran') ? (float) $adj->nilai : -(float) $adj->nilai;

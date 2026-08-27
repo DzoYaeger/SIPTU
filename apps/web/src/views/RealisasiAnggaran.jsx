@@ -21,7 +21,7 @@ const RealisasiAnggaran = () => {
       key: '2',
       label: (
         <span>
-          <AuditOutlined /> Ringkasan Pagu & Realisasi per MAK
+          <AuditOutlined /> Ringkasan Pagu & Realisasi per Kode Akun
         </span>
       ),
       children: <RealisasiByMak />,

@@ -776,14 +776,14 @@ const SuratTugasForm = ({ isEmbedded = false, editData = null, onEditSuccess = n
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Form.Item
               name="mak"
-              label="Kode DIPA / MAK Anggaran"
-              rules={[{ required: true, message: "Kode MAK wajib diisi." }]}
+              label="Kode Akun / DIPA Anggaran"
+              rules={[{ required: true, message: "Kode Akun wajib diisi." }]}
               style={{ marginBottom: 12 }}
             >
               <AutoComplete
                 options={makSuggestions}
                 onSearch={handleMakSearch}
-                placeholder="Cari atau ketik kode MAK..."
+                placeholder="Cari atau ketik Kode Akun..."
                 style={{ borderRadius: 6 }}
               />
             </Form.Item>

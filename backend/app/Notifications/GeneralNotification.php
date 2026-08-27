@@ -7,24 +7,29 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+use NotificationChannels\WebPush\WebPushMessage;
+use NotificationChannels\WebPush\WebPushChannel;
+
 class GeneralNotification extends Notification
 {
     use Queueable;
 
-    protected $title;
-    protected $message;
-    protected $idLayanan;
-    protected $tipeLayanan;
+    public $title;
+    public $message;
+    public $idLayanan;
+    public $tipeLayanan;
+    public $url;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct($title, $message, $idLayanan, $tipeLayanan)
+    public function __construct($title, $message, $idLayanan = null, $tipeLayanan = null, $url = '/app/layanan-mandiri')
     {
         $this->title = $title;
         $this->message = $message;
         $this->idLayanan = $idLayanan;
         $this->tipeLayanan = $tipeLayanan;
+        $this->url = $url;
     }
 
     /**
@@ -34,8 +39,7 @@ class GeneralNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        // Currently sending to database. In Phase 3, we'll add 'fcm' or call it externally.
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     /**
@@ -50,6 +54,22 @@ class GeneralNotification extends Notification
             'message' => $this->message,
             'id_layanan' => $this->idLayanan,
             'tipe_layanan' => $this->tipeLayanan,
+            'url' => $this->url,
         ];
+    }
+
+    /**
+     * Get the web push representation of the notification.
+     */
+    public function toWebPush(object $notifiable, $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title($this->title)
+            ->icon('/logo192.png')
+            ->badge('/logo/favicon.png')
+            ->body($this->message)
+            ->action('Buka Aplikasi', 'open_app')
+            ->data(['url' => $this->url ?? '/app/layanan-mandiri'])
+            ->options(['TTL' => 86400]);
     }
 }

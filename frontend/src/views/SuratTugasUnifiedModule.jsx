@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   Tag,
@@ -34,6 +35,8 @@ import {
   ClockCircleOutlined,
   EditOutlined,
   MoreOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth.js";
@@ -44,6 +47,7 @@ import "./SuratTugasUnifiedModule.css";
 
 const SuratTugasUnifiedModule = () => {
   const { user, apiFetch, markMfaSessionActive } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("form"); // 'form' | 'my-assignments' | 'validator'
   const [collapsed, setCollapsed] = useState(false);
   const [customModuleIcon, setCustomModuleIcon] = useState(null);
@@ -313,14 +317,19 @@ const SuratTugasUnifiedModule = () => {
       key: "status",
       render: (val) => {
         const statusMap = {
-          draft: "Draft",
-          pending: "Proses TTE",
-          lengkap: "Disetujui / Lengkap",
-          selesai: "Selesai",
-          rejected: "Ditolak",
+          draft: { label: "Draft", dotColor: "#f59e0b" },
+          pending: { label: "Proses TTE", dotColor: "#0284c7" },
+          lengkap: { label: "Disetujui", dotColor: "#10b981" },
+          selesai: { label: "Selesai", dotColor: "#10b981" },
+          rejected: { label: "Ditolak", dotColor: "#ef4444" },
         };
-        const label = statusMap[val] || val || "Draft";
-        return <span className={`st-history-status st-history-status--${val || "default"}`}>{label}</span>;
+        const meta = statusMap[val] || { label: val || "Draft", dotColor: "#94a3b8" };
+        return (
+          <span className="st-status-indicator">
+            <span className="st-status-dot" style={{ backgroundColor: meta.dotColor }} />
+            <span className="st-status-text">{meta.label}</span>
+          </span>
+        );
       },
     },
     {
@@ -384,20 +393,28 @@ const SuratTugasUnifiedModule = () => {
   return (
     <div className="st-module">
       <aside className={`st-sidebar ${collapsed ? "st-sidebar--collapsed" : "st-sidebar--expanded"}`} aria-label="Navigasi Surat Tugas">
+        {/* ── Sidebar Header ── */}
         <div className={`st-sidebar-header ${collapsed ? "st-sidebar-header--collapsed" : ""}`}>
           <div className={`st-sidebar-header__top ${collapsed ? "st-sidebar-header__top--collapsed" : ""}`}>
-            <div className="st-sidebar-brand">
+            <div
+              className="st-sidebar-brand"
+              onClick={() => setActiveTab("form")}
+              title="Pengajuan Surat Tugas"
+            >
               <div className="st-sidebar-brand__icon" aria-hidden="true">
                 <img
                   src={customModuleIcon || suratTugasIcon}
                   alt="Surat Tugas"
-                  style={{ width: 34, height: 34, objectFit: "contain" }}
+                  style={{ width: 22, height: 22, objectFit: "contain" }}
                 />
               </div>
               {!collapsed && (
-                <div>
-                  <h1 className="st-sidebar-brand__title">SURAT TUGAS</h1>
-                  <span className="st-sidebar-brand__subtitle">Administrasi perjalanan dinas</span>
+                <div className="st-sidebar-brand__meta">
+                  <div className="st-sidebar-brand__title-row">
+                    <h1 className="st-sidebar-brand__title">SURAT TUGAS</h1>
+                    <span className="st-sidebar-brand__badge">ULTRA</span>
+                  </div>
+                  <span className="st-sidebar-brand__subtitle">Administrasi Perjalanan Dinas</span>
                 </div>
               )}
             </div>
@@ -405,62 +422,157 @@ const SuratTugasUnifiedModule = () => {
               type="button"
               className="st-toggle-btn"
               onClick={() => setCollapsed(!collapsed)}
-              title={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
-              aria-label={collapsed ? "Perluas sidebar" : "Ciutkan sidebar"}
+              title={collapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
+              aria-label={collapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
             >
-              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              {collapsed ? <RightOutlined style={{ fontSize: 11, color: "#0F5B99" }} /> : <LeftOutlined style={{ fontSize: 11, color: "#0F5B99" }} />}
             </button>
           </div>
-          {!collapsed && <p className="st-sidebar-intro">Buat, pantau, dan kelola surat tugas Anda.</p>}
         </div>
 
+        {/* ── Sidebar Menu Navigation ── */}
         <nav className={`st-sidebar-menu ${collapsed ? "st-sidebar-menu--collapsed" : ""}`}>
-          {!collapsed && <div className="st-menu-section-label">Menu utama</div>}
+          {!collapsed && <div className="st-menu-section-label">Menu Utama</div>}
           <div className={`st-menu-group ${collapsed ? "st-menu-group--collapsed" : ""}`}>
-            <button
-              type="button"
-              className={`st-menu-item ${activeTab === "form" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
-              onClick={() => setActiveTab("form")}
-              title="Pengajuan Surat Tugas Baru"
-              aria-current={activeTab === "form" ? "page" : undefined}
-            >
-              <span className="st-menu-item__icon" aria-hidden="true"><FormOutlined /></span>
-              {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Pengajuan Baru</span><span className="st-menu-item__hint">Buat surat tugas baru</span></span>}
-            </button>
-            <button
-              type="button"
-              className={`st-menu-item ${activeTab === "my-assignments" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
-              onClick={() => setActiveTab("my-assignments")}
-              title="Riwayat Penugasan Saya"
-              aria-current={activeTab === "my-assignments" ? "page" : undefined}
-            >
-              <span className="st-menu-item__icon" aria-hidden="true"><HistoryOutlined /></span>
-              {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Riwayat Saya</span><span className="st-menu-item__hint">Lihat semua penugasan</span></span>}
-            </button>
+            {collapsed ? (
+              <Tooltip title={<div className="st-tooltip-popover"><strong>Pengajuan Baru</strong><div>Buat formulir ST baru</div></div>} placement="right">
+                <button
+                  type="button"
+                  className={`st-menu-item ${activeTab === "form" ? "st-menu-item--active" : ""} st-menu-item--collapsed`}
+                  onClick={() => setActiveTab("form")}
+                  aria-label="Pengajuan Surat Tugas Baru"
+                  aria-current={activeTab === "form" ? "page" : undefined}
+                >
+                  <span className="st-menu-item__icon" aria-hidden="true"><FormOutlined /></span>
+                </button>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                className={`st-menu-item ${activeTab === "form" ? "st-menu-item--active" : ""}`}
+                onClick={() => setActiveTab("form")}
+                title="Pengajuan Surat Tugas Baru"
+                aria-current={activeTab === "form" ? "page" : undefined}
+              >
+                <span className="st-menu-item__icon" aria-hidden="true"><FormOutlined /></span>
+                <span className="st-menu-item__copy">
+                  <span className="st-menu-item__text">Pengajuan Baru</span>
+                  <span className="st-menu-item__hint">Buat formulir ST baru</span>
+                </span>
+              </button>
+            )}
+
+            {collapsed ? (
+              <Tooltip title={<div className="st-tooltip-popover"><strong>Riwayat Saya</strong><div>Daftar penugasan & status TTE</div></div>} placement="right">
+                <button
+                  type="button"
+                  className={`st-menu-item ${activeTab === "my-assignments" ? "st-menu-item--active" : ""} st-menu-item--collapsed`}
+                  onClick={() => setActiveTab("my-assignments")}
+                  aria-label="Riwayat Penugasan Saya"
+                  aria-current={activeTab === "my-assignments" ? "page" : undefined}
+                >
+                  <span className="st-menu-item__icon" aria-hidden="true">
+                    <Badge count={assignments.length} size="small" offset={[4, -2]} overflowCount={99}>
+                      <HistoryOutlined />
+                    </Badge>
+                  </span>
+                </button>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                className={`st-menu-item ${activeTab === "my-assignments" ? "st-menu-item--active" : ""}`}
+                onClick={() => setActiveTab("my-assignments")}
+                title="Riwayat Penugasan Saya"
+                aria-current={activeTab === "my-assignments" ? "page" : undefined}
+              >
+                <span className="st-menu-item__icon" aria-hidden="true"><HistoryOutlined /></span>
+                <span className="st-menu-item__copy">
+                  <span className="st-menu-item__text">Riwayat Saya</span>
+                  <span className="st-menu-item__hint">Daftar penugasan & TTE</span>
+                </span>
+                {assignments.length > 0 && (
+                  <span className="st-menu-item__badge-count">{assignments.length}</span>
+                )}
+              </button>
+            )}
           </div>
 
           {isValidatorOrAdmin && (
             <div className={`st-menu-group ${collapsed ? "st-menu-group--collapsed" : ""}`}>
               {!collapsed && <div className="st-menu-section-label st-menu-section-label--secondary">Administrasi</div>}
-              <button
-                type="button"
-                className={`st-menu-item ${activeTab === "validator" ? "st-menu-item--active" : ""} ${collapsed ? "st-menu-item--collapsed" : ""}`}
-                onClick={() => setActiveTab("validator")}
-                title="Monitoring & Validasi Surat Tugas"
-                aria-current={activeTab === "validator" ? "page" : undefined}
-              >
-                <span className="st-menu-item__icon" aria-hidden="true"><SafetyCertificateOutlined /></span>
-                {!collapsed && <span className="st-menu-item__copy"><span className="st-menu-item__text">Monitoring ST</span><span className="st-menu-item__hint">Validasi dan tindak lanjut</span></span>}
-              </button>
+              {collapsed ? (
+                <Tooltip title={<div className="st-tooltip-popover"><strong>Monitoring ST</strong><div>Validasi dan tindak lanjut</div></div>} placement="right">
+                  <button
+                    type="button"
+                    className={`st-menu-item ${activeTab === "validator" ? "st-menu-item--active" : ""} st-menu-item--collapsed`}
+                    onClick={() => setActiveTab("validator")}
+                    aria-label="Monitoring & Validasi Surat Tugas"
+                    aria-current={activeTab === "validator" ? "page" : undefined}
+                  >
+                    <span className="st-menu-item__icon" aria-hidden="true"><SafetyCertificateOutlined /></span>
+                  </button>
+                </Tooltip>
+              ) : (
+                <button
+                  type="button"
+                  className={`st-menu-item ${activeTab === "validator" ? "st-menu-item--active" : ""}`}
+                  onClick={() => setActiveTab("validator")}
+                  title="Monitoring & Validasi Surat Tugas"
+                  aria-current={activeTab === "validator" ? "page" : undefined}
+                >
+                  <span className="st-menu-item__icon" aria-hidden="true"><SafetyCertificateOutlined /></span>
+                  <span className="st-menu-item__copy">
+                    <span className="st-menu-item__text">Monitoring ST</span>
+                    <span className="st-menu-item__hint">Validasi dan tindak lanjut</span>
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </nav>
 
+        {/* ── Sidebar Footer ── */}
         <div className={`st-sidebar-footer ${collapsed ? "st-sidebar-footer--collapsed" : ""}`}>
-          <a href="/app/layanan-mandiri" className={`st-back-btn ${collapsed ? "st-back-btn--collapsed" : ""}`} title="Kembali ke Layanan Mandiri">
-            <ArrowLeftOutlined aria-hidden="true" />
-            {!collapsed && <span>Kembali ke Layanan Mandiri</span>}
-          </a>
+          {!collapsed && (
+            <div className="st-sidebar-user-card">
+              <div className="st-sidebar-user-avatar">
+                <UserOutlined />
+              </div>
+              <div className="st-sidebar-user-meta">
+                <span className="st-sidebar-user-name" title={user?.name || "Pengguna"}>
+                  {user?.name || "Pengguna"}
+                </span>
+                <span className="st-sidebar-user-status">
+                  <span className="st-sidebar-user-dot" />
+                  {user?.role ? user.role.toUpperCase() : "PEGAWAI"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {collapsed ? (
+            <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
+              <button
+                type="button"
+                onClick={() => navigate("/app/layanan-mandiri")}
+                className="st-back-btn st-back-btn--collapsed"
+                aria-label="Kembali ke Layanan Mandiri"
+              >
+                <ArrowLeftOutlined aria-hidden="true" />
+              </button>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate("/app/layanan-mandiri")}
+              className="st-back-btn"
+              title="Kembali ke Layanan Mandiri"
+            >
+              <ArrowLeftOutlined aria-hidden="true" />
+              <span>Kembali ke Layanan Mandiri</span>
+            </button>
+          )}
         </div>
       </aside>
 
@@ -592,7 +704,7 @@ const SuratTugasUnifiedModule = () => {
                   </span>
                 </div>
                 <div className="simba-detail-item">
-                  <span className="simba-detail-label">DIPA / MAK</span>
+                  <span className="simba-detail-label">Kode Akun / DIPA</span>
                   <span className="simba-detail-value">{selectedST.mak || "-"}</span>
                 </div>
               </div>
@@ -637,9 +749,9 @@ const SuratTugasUnifiedModule = () => {
                       </div>
 
                       {isMe && (
-                        <Tag color="indigo" style={{ borderRadius: 4, fontSize: 10.5, fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#0F5B99", background: "#f0f7ff", border: "1px solid #bfdbfe", padding: "2px 8px", borderRadius: 4 }}>
                           Ditagging
-                        </Tag>
+                        </span>
                       )}
                     </div>
                   );
@@ -662,7 +774,7 @@ const SuratTugasUnifiedModule = () => {
                   const protokolUrl = `${baseUrl.replace(/\/+$/, "")}/public/surat-tugas/${selectedST.id}/protokol-kerja?with_qr=1&token=${tokenStr}`;
                   window.open(protokolUrl, "_blank");
                 }}
-                style={{ borderRadius: 8, fontWeight: 600, backgroundColor: "#4f46e5", borderColor: "#4f46e5" }}
+                style={{ borderRadius: 8, fontWeight: 600, backgroundColor: "#0F5B99", borderColor: "#0F5B99" }}
               >
                 Cetak / Lihat Protokol Kerja
               </Button>

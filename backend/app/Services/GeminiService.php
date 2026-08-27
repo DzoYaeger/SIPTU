@@ -189,7 +189,7 @@ PROMPT;
                     3. Pencatatan Izin Keluar.
                     4. Pelaporan Kendala IT (Helpdesk).
                     5. Pencarian data rekan pegawai atau NIP.
-                    6. Pengecekan realisasi anggaran bulanan / per MAK / sisa pagu anggaran (menggunakan tool `cek_realisasi_anggaran`).
+                    6. Pengecekan realisasi anggaran bulanan / per Kode Akun / sisa pagu anggaran (menggunakan tool `cek_realisasi_anggaran`).
 
                     ATURAN & PERILAKU:
                     - Gunakan Bahasa Indonesia formal, santun, ramah, dan profesional.
@@ -317,13 +317,13 @@ PROMPT;
                     ],
                     [
                         'name' => 'cek_realisasi_anggaran',
-                        'description' => 'Mengecek data realisasi anggaran per bulan, per MAK (Mata Anggaran Kegiatan), sisa pagu, dan persentase penyerapan anggaran.',
+                        'description' => 'Mengecek data realisasi anggaran per bulan, per Kode Akun, sisa pagu, dan persentase penyerapan anggaran.',
                         'parameters' => [
                             'type' => 'OBJECT',
                             'properties' => [
                                 'tahun' => ['type' => 'INTEGER', 'description' => 'Tahun anggaran, default tahun berjalan.'],
                                 'bulan' => ['type' => 'INTEGER', 'description' => 'Angka bulan 1-12 (misal: 1=Januari, 8=Agustus). Kosongkan untuk total setahun.'],
-                                'mak' => ['type' => 'STRING', 'description' => 'Kode MAK spesifik jika dicari (contoh: 524111).']
+                                'mak' => ['type' => 'STRING', 'description' => 'Kode Akun spesifik jika dicari (contoh: 524111).']
                             ]
                         ]
                     ],
@@ -440,7 +440,7 @@ PROMPT;
         if ($budgets->isEmpty()) {
             return [
                 'status' => 'not_found',
-                'message' => 'Data anggaran untuk MAK ' . ($mak ?? 'tersebut') . ' tidak ditemukan.'
+                'message' => 'Data anggaran untuk Kode Akun ' . ($mak ?? 'tersebut') . ' tidak ditemukan.'
             ];
         }
 

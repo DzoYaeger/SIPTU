@@ -19,6 +19,7 @@ use App\Models\NotificationSetting;
 use App\Models\User;
 use App\Models\MakSuggestion;
 use App\Services\FonnteService;
+use App\Services\PushNotificationService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Common\EccLevel;
@@ -677,6 +678,7 @@ class SuratTugasController extends Controller
             '{TANGGAL_MULAI}'         => $st->tanggal_mulai ? \Carbon\Carbon::parse($st->tanggal_mulai)->translatedFormat('d F Y') : '',
             '{TANGGAL_SELESAI}'       => $st->tanggal_selesai ? \Carbon\Carbon::parse($st->tanggal_selesai)->translatedFormat('d F Y') : '',
             '{MAK}'                   => $st->mak,
+            '{KODE_AKUN}'             => $st->mak,
             '{LOKASI_TUGAS}'          => $st->lokasi_tugas,
             '{DESKRIPSI_TUGAS}'       => $st->deskripsi_tugas,
             
@@ -1028,7 +1030,8 @@ class SuratTugasController extends Controller
                 '{TANGGAL_SELESAI}'       => 'Tanggal Selesai Tugas',
                 '{LOKASI_TUGAS}'          => 'Lokasi Tujuan Tugas',
                 '{DESKRIPSI_TUGAS}'       => 'Deskripsi Tugas / Agenda',
-                '{MAK}'                   => 'Mata Anggaran Keluaran',
+                '{KODE_AKUN}'             => 'Kode Akun Anggaran',
+                '{MAK}'                   => 'Kode Akun (Mata Anggaran Keluaran)',
                 
                 // Data Pegawai (Bisa diganti angkanya untuk pegawai ke-2, ke-3 dst: {NAMA_PEGAWAI_2})
                 // Atau cukup {NAMA_PEGAWAI} jika ingin otomatis dicopy ke bawah
@@ -1461,6 +1464,13 @@ class SuratTugasController extends Controller
             [$phone],
             $message
         );
+
+        // Dispatch WebPush to Kepala Balai
+        PushNotificationService::notifyKepalaBalai(
+            "Surat Tugas Menunggu TTE ({$st->nomor_st})",
+            "Dokumen Surat Tugas telah ditandatangani Katim ({$katim}) dan menunggu TTE Anda.",
+            "/app/kepegawaian-surat-tugas?id={$st->id}"
+        );
     }
 
     /**
@@ -1823,6 +1833,16 @@ class SuratTugasController extends Controller
             $normalizedTargets,
             $message
         );
+
+        // Dispatch WebPush to Admin & Katim
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin'],
+            'Pengajuan Surat Tugas Baru',
+            "Surat Tugas baru ({$st->nomor_st}) diajukan. Agenda: " . ($st->deskripsi_tugas ?: '-'),
+            "/app/kepegawaian-surat-tugas?id={$st->id}",
+            '/logo192.png',
+            'surat_tugas'
+        );
     }
 
     /**
@@ -1959,6 +1979,16 @@ class SuratTugasController extends Controller
             $setting->fonnte_token ?? '',
             [$phone],
             $message
+        );
+
+        // Dispatch WebPush to Ketua Tim
+        PushNotificationService::notifyEmployee(
+            $st->ketua_tim_id ?? $st->ketua_tim_nip,
+            "Permohonan TTE Ketua Tim ({$st->nomor_st})",
+            "Surat Tugas baru menunggu TTE Anda sebagai Ketua Tim. Agenda: " . ($st->deskripsi_tugas ?: '-'),
+            "/app/kepegawaian-surat-tugas?id={$st->id}",
+            '/logo192.png',
+            'surat_tugas'
         );
     }
 }

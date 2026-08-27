@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Services\PushNotificationService;
 
 class ZoomController extends Controller
 {
@@ -180,6 +181,17 @@ class ZoomController extends Controller
 
             // Cache until the end of the day
             Cache::put($cacheKey, $meetingData, now()->endOfDay());
+
+            if ($request->user()) {
+                PushNotificationService::notifyUser(
+                    $request->user(),
+                    "Ruang Zoom Siap: {$meetingData['topic']}",
+                    "Ruang meeting Zoom Anda telah dibuat. Ketuk untuk membuka tautan.",
+                    $meetingData['join_url'] ?? '/app/layanan-mandiri',
+                    '/logo192.png',
+                    'zoom'
+                );
+            }
 
             return response()->json([
                 'success' => true,

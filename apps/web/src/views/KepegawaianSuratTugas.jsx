@@ -691,9 +691,9 @@ const KepegawaianSuratTugas = () => {
                 value ? <Text strong>{value}</Text> : <Text type="secondary">Belum diisi</Text>,
         },
         {
-            title: "MAK",
+            title: "KODE AKUN",
             dataIndex: "mak",
-            width: 130,
+            width: 140,
             render: (value) => value || "-",
         },
         {
@@ -749,7 +749,7 @@ const KepegawaianSuratTugas = () => {
                     <Row gutter={[10, 10]} align="middle">
                         <Col xs={24} sm={12} md={6} lg={5}>
                             <Input
-                                placeholder="Cari pegawai, nomor ST, MAK..."
+                                placeholder="Cari pegawai, nomor ST, kode akun..."
                                 prefix={<SearchOutlined />}
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
@@ -1073,7 +1073,7 @@ const KepegawaianSuratTugas = () => {
                         </Radio.Group>
                     </Form.Item>
 
-                    <Form.Item name="mak" label="MAK (Mata Anggaran Keluaran)">
+                    <Form.Item name="mak" label="Kode Akun (Mata Anggaran)">
                         <AutoComplete
                             options={makSuggestions}
                             onSearch={handleMakSearch}

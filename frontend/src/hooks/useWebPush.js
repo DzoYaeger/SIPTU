@@ -3,7 +3,7 @@ import { useAuth } from './useAuth.js';
 import { App } from 'antd';
 
 // Use the public VAPID key from your .env
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BBeMWHMjQ09nZdy2y84i4p-SKyqjL-CIjuWCje2egW-6sqkxQkEWlRofIvArN7rybsLW7kFX122IADNNgPmBmmU';
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BFrbpJpn1aY1RDiOuVGGRCB1McBMdni3V94M7nE6TAYkYSArLvedwPJjM_mrtynk6JwAnm9cCvY1peB1areS-6w';
 
 // Utility to convert Base64 URL to Uint8Array
 function urlBase64ToUint8Array(base64String) {
@@ -58,6 +58,16 @@ export function useWebPush() {
 
       const registration = await navigator.serviceWorker.ready;
       
+      // Clean up any stale subscription first
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        try {
+          await existing.unsubscribe();
+        } catch (e) {
+          console.warn('Old subscription cleanup error:', e);
+        }
+      }
+
       // Subscribe to PushManager
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,

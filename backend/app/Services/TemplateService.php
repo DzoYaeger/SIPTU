@@ -553,6 +553,7 @@ class TemplateService
             'LOKASI_TUGAS',
             'DESKRIPSI_TUGAS',
             'MAK',
+            'KODE_AKUN',
             'NAMA_PEGAWAI',
             'NIP_PEGAWAI',
             'PANGKAT_PEGAWAI',

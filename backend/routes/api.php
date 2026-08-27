@@ -158,6 +158,11 @@ Route::middleware('throttle:public-api')->group(function () {
     Route::put('/public/inventory-requests/{token}/approve', [InventoryRequestController::class, 'approvePublic']);
     Route::put('/public/inventory-requests/{token}/reject', [InventoryRequestController::class, 'rejectPublic']);
 
+    // Panjar Requests Validation (public via token from WhatsApp)
+    Route::get('/public/panjar/{token}', [PanjarRequestController::class, 'showPublic']);
+    Route::post('/public/panjar/{token}/validate-ppk', [PanjarRequestController::class, 'validatePpkPublic']);
+    Route::post('/public/panjar/{token}/validate-bendahara', [PanjarRequestController::class, 'validateBendaharaPublic']);
+
     // Letters file proxy (works even if /public/storage symlink is unavailable)
     Route::get('/public/letters/files/{id}/{kind}', [LetterController::class, 'serveFile'])
         ->whereNumber('id')
@@ -585,6 +590,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/lpj/{suratTugasId}/exclude', [LpjController::class, 'exclude'])->whereNumber('suratTugasId');
     Route::delete('/lpj/{suratTugasId}', [LpjController::class, 'destroy'])->whereNumber('suratTugasId');
 
+    // ─── KKP (Kertas Kerja Perhitungan) ─────────────
+    Route::get('/kkp/{suratTugasId}', [\App\Http\Controllers\Api\KkpController::class, 'show'])->whereNumber('suratTugasId');
+    Route::get('/kkp/{suratTugasId}/export-pdf', [\App\Http\Controllers\Api\KkpController::class, 'exportPdf'])->whereNumber('suratTugasId');
+    Route::get('/kkp/{suratTugasId}/export-rekap', [\App\Http\Controllers\Api\KkpController::class, 'exportRekap'])->whereNumber('suratTugasId');
+    Route::get('/kkp/{suratTugasId}/export-rill', [\App\Http\Controllers\Api\KkpController::class, 'exportRill'])->whereNumber('suratTugasId');
+    Route::post('/kkp/{suratTugasId}', [\App\Http\Controllers\Api\KkpController::class, 'store'])->whereNumber('suratTugasId');
+    Route::put('/kkp/{suratTugasId}/items', [\App\Http\Controllers\Api\KkpController::class, 'updateItems'])->whereNumber('suratTugasId');
+    Route::post('/kkp/{suratTugasId}/mark-manual', [\App\Http\Controllers\Api\KkpController::class, 'markManual'])->whereNumber('suratTugasId');
+    Route::delete('/kkp/{suratTugasId}', [\App\Http\Controllers\Api\KkpController::class, 'destroy'])->whereNumber('suratTugasId');
+
     // ─── Permintaan Panjar ─────────────
     Route::get('/panjar-requests', [PanjarRequestController::class, 'index']);
     Route::post('/panjar-requests', [PanjarRequestController::class, 'store']);
@@ -592,8 +607,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/panjar-requests/{id}/export-pdf', [PanjarRequestController::class, 'exportPdf'])->whereNumber('id');
     Route::put('/panjar-requests/{id}', [PanjarRequestController::class, 'update'])->whereNumber('id');
     Route::delete('/panjar-requests/{id}', [PanjarRequestController::class, 'destroy'])->whereNumber('id');
-    Route::put('/panjar-requests/{id}/approve', [PanjarRequestController::class, 'approve'])->whereNumber('id');
-    Route::put('/panjar-requests/{id}/reject', [PanjarRequestController::class, 'reject'])->whereNumber('id');
+    Route::post('/panjar-requests/{id}/submit', [PanjarRequestController::class, 'submit'])->whereNumber('id');
+    Route::post('/panjar-requests/{id}/validate-ppk', [PanjarRequestController::class, 'validatePpk'])->whereNumber('id');
+    Route::post('/panjar-requests/{id}/validate-bendahara', [PanjarRequestController::class, 'validateBendahara'])->whereNumber('id');
 
     // ─── Pejabat Perbendaharaan ─────────────
     Route::get('/pejabat-perbendaharaan', [PejabatPerbendaharaanController::class, 'show']);

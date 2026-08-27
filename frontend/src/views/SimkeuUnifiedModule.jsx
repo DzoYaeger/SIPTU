@@ -1,157 +1,130 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  FileProtectOutlined,
-  DollarOutlined,
-  CalculatorOutlined,
-  TeamOutlined,
   ArrowLeftOutlined,
+  CalculatorOutlined,
   ClockCircleOutlined,
+  DollarOutlined,
+  FileProtectOutlined,
+  SafetyCertificateOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
+
 import { useAuth } from "../hooks/useAuth.js";
-import dayjs from "dayjs";
-import "dayjs/locale/id";
-
-// Sub-modules
-import KeuanganLpj from "./KeuanganLpj.jsx";
-import PermintaanPanjar from "./PermintaanPanjar.jsx";
+import simkeuIcon from "../assets/icons/simkeu-icon.png";
 import InvoiceBelanja from "./InvoiceBelanja.jsx";
+import KeuanganLpj from "./KeuanganLpj.jsx";
 import KeuanganPejabat from "./KeuanganPejabat.jsx";
-
+import PermintaanPanjar from "./PermintaanPanjar.jsx";
 import "./SimkeuUnifiedModule.css";
 
-dayjs.locale("id");
-
 const TABS = [
-  {
-    key: "lpj",
-    label: "Pertanggungjawaban (LPJ)",
-    icon: <FileProtectOutlined />,
-    desc: "Rincian biaya riil tiket, transport, harian & penginapan",
-  },
-  {
-    key: "panjar",
-    label: "Permintaan Panjar",
-    icon: <DollarOutlined />,
-    desc: "Uang muka kegiatan operasional & form persetujuan",
-  },
-  {
-    key: "invoice",
-    label: "Invoice & Bukti Belanja",
-    icon: <CalculatorOutlined />,
-    desc: "Perekaman bukti nota pembelian & pemotongan pajak",
-  },
-  {
-    key: "pejabat",
-    label: "Pejabat Perbendaharaan",
-    icon: <TeamOutlined />,
-    desc: "Pengaturan PPK & Bendahara Pengeluaran",
-  },
+  { key: "lpj", label: "Pertanggungjawaban (LPJ)", icon: <FileProtectOutlined />, desc: "Kelola pertanggungjawaban perjalanan dinas secara rapi dan terpantau." },
+  { key: "panjar", label: "Permintaan Panjar", icon: <DollarOutlined />, desc: "Ajukan dan pantau kebutuhan uang muka kegiatan operasional." },
+  { key: "invoice", label: "Invoice & Bukti Belanja", icon: <CalculatorOutlined />, desc: "Rekam invoice, bukti transaksi, dan pemotongan pajak dalam satu alur." },
+  { key: "pejabat", label: "Pejabat Perbendaharaan", icon: <TeamOutlined />, desc: "Kelola data PPK dan Bendahara Pengeluaran yang aktif." },
 ];
+
+const formatWitaTime = () => new Intl.DateTimeFormat("id-ID", {
+  timeZone: "Asia/Makassar",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+}).format(new Date()).replaceAll(".", ":");
 
 export default function SimkeuUnifiedModule() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  const currentTab = searchParams.get("tab") || "lpj";
-  const [activeTab, setActiveTab] = useState(currentTab);
-  const [currentTime, setCurrentTime] = useState(dayjs().format("HH:mm:ss"));
-
-  useEffect(() => {
-    setActiveTab(currentTab);
-  }, [currentTab]);
+  const requestedTab = searchParams.get("tab");
+  const activeTab = TABS.some((tab) => tab.key === requestedTab) ? requestedTab : "lpj";
+  const activeTabMeta = TABS.find((tab) => tab.key === activeTab) || TABS[0];
+  const [currentTime, setCurrentTime] = useState(formatWitaTime);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(dayjs().format("HH:mm:ss"));
-    }, 1000);
-    return () => clearInterval(timer);
+    const timer = window.setInterval(() => setCurrentTime(formatWitaTime()), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const handleTabChange = (key) => {
-    setActiveTab(key);
-    setSearchParams({ tab: key });
+    if (key === activeTab) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("tab", key);
+    setSearchParams(nextParams);
   };
 
   const renderModuleView = () => {
-    switch (activeTab) {
-      case "lpj":
-        return <KeuanganLpj />;
-      case "panjar":
-        return <PermintaanPanjar />;
-      case "invoice":
-        return <InvoiceBelanja />;
-      case "pejabat":
-        return <KeuanganPejabat />;
-      default:
-        return <KeuanganLpj />;
-    }
+    if (activeTab === "panjar") return <PermintaanPanjar />;
+    if (activeTab === "invoice") return <InvoiceBelanja />;
+    if (activeTab === "pejabat") return <KeuanganPejabat />;
+    return <KeuanganLpj />;
   };
-
-  const activeTabMeta = TABS.find((t) => t.key === activeTab) || TABS[0];
 
   return (
     <div className="simkeu-unified-root">
-      {/* ── Top Frosted Navigation Bar with Embedded Horizontal Tabs ── */}
       <header className="simkeu-top-navbar">
         <div className="simkeu-navbar-container">
-          {/* Left: Quick Back + Brand Header */}
           <div className="simkeu-brand-block">
             <button
+              type="button"
               className="simkeu-back-btn"
               onClick={() => navigate("/app/layanan-mandiri")}
+              aria-label="Kembali ke Layanan Mandiri"
               title="Kembali ke Layanan Mandiri"
             >
               <ArrowLeftOutlined />
             </button>
+            <div className="simkeu-brand-mark" aria-hidden="true">
+              <img src={simkeuIcon} alt="" />
+            </div>
             <div className="simkeu-brand-titles">
               <div className="simkeu-brand-row">
                 <span className="simkeu-brand-name">SIMKEU</span>
-                <span className="simkeu-badge-pill">ULTRA</span>
+                <span className="simkeu-brand-edition">ULTRA</span>
               </div>
               <span className="simkeu-brand-sub">Sistem Informasi Keuangan</span>
             </div>
           </div>
 
-          {/* Center: Horizontal Navigation Tabs (Azure & Facebook Style) */}
-          <nav className="simkeu-nav-tabs">
+          <nav className="simkeu-nav-tabs" aria-label="Navigasi utama SIMKEU">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key;
               return (
                 <button
+                  type="button"
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
                   className={`simkeu-tab-pill ${isActive ? "active" : ""}`}
+                  aria-current={isActive ? "page" : undefined}
+                  title={tab.desc}
                 >
-                  <span className="tab-icon">{tab.icon}</span>
-                  <span className="tab-label">{tab.label}</span>
+                  <span className="simkeu-tab-icon">{tab.icon}</span>
+                  <span className="simkeu-tab-label">{tab.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* Right: Live Clock & Profile */}
           <div className="simkeu-navbar-right">
-            <div className="simkeu-clock-badge">
-              <ClockCircleOutlined style={{ color: "#64748b" }} />
-              <span>{currentTime} WITA</span>
+            <div className="simkeu-clock-badge" aria-label={`${currentTime} WITA`}>
+              <ClockCircleOutlined />
+              <span>{currentTime}</span>
+              <span className="simkeu-clock-zone">WITA</span>
             </div>
-
-            <div className="simkeu-user-chip">
-              <div className="user-avatar-circle">
-                {(user?.name?.[0] || "U").toUpperCase()}
-              </div>
-              <span className="user-display-name">{user?.name || "Pegawai"}</span>
+            <div className="simkeu-user-chip" title={user?.name || "Pegawai"}>
+              <div className="simkeu-user-avatar">{(user?.name?.[0] || "U").toUpperCase()}</div>
+              <span className="simkeu-user-name">{user?.name || "Pegawai"}</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── Main 100% Full-Width Content Canvas ── */}
       <main className="simkeu-full-canvas">
         <div className="simkeu-canvas-container">
-          {renderModuleView()}
+          <div key={activeTab} className="simkeu-view-transition">
+            {renderModuleView()}
+          </div>
         </div>
       </main>
     </div>

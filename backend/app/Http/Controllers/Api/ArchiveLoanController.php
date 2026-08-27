@@ -8,6 +8,7 @@ use App\Models\ArchiveUnit;
 use App\Models\Employee;
 use App\Models\NotificationSetting;
 use App\Services\FonnteService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -354,6 +355,16 @@ class ArchiveLoanController extends Controller
             $targets,
             $message
         );
+
+        // Dispatch WebPush to Admin Kearsipan
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin'],
+            'Pengajuan Peminjaman Arsip Baru',
+            "{$loan->borrower_name} mengajukan peminjaman arsip No. {$loan->archive_number} (No. Pengajuan: {$loan->request_number})",
+            '/app/kearsipan-peminjaman',
+            '/logo192.png',
+            'kearsipan'
+        );
     }
 
     private function sendBorrowerNotification(ArchiveLoan $loan, FonnteService $fonnteService): void
@@ -400,6 +411,16 @@ class ArchiveLoanController extends Controller
             [$phone],
             $message
         );
+
+        // Dispatch WebPush to Borrower
+        PushNotificationService::notifyEmployee(
+            $loan->borrower_nip,
+            'Peminjaman Arsip Disetujui',
+            "Peminjaman arsip No. {$loan->archive_number} telah disetujui petugas.",
+            "/kearsipan-peminjaman/{$loan->public_token}",
+            '/logo192.png',
+            'kearsipan'
+        );
     }
 
     private function sendReturnRequestNotification(ArchiveLoan $loan): void
@@ -444,6 +465,16 @@ class ArchiveLoanController extends Controller
             $setting->fonnte_token ?? '',
             $targets,
             $message
+        );
+
+        // Dispatch WebPush to Admin Kearsipan
+        PushNotificationService::notifyRoles(
+            ['admin', 'superadmin'],
+            'Pengajuan Pengembalian Arsip',
+            "{$loan->borrower_name} mengajukan pengembalian arsip No. {$loan->archive_number}",
+            '/app/kearsipan-peminjaman',
+            '/logo192.png',
+            'kearsipan'
         );
     }
 

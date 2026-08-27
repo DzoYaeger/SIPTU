@@ -18,15 +18,28 @@ class TestPushNotification extends Notification
 
     public function via($notifiable)
     {
-        return [WebPushChannel::class];
+        return ['database', WebPushChannel::class];
+    }
+
+    public function toArray($notifiable)
+    {
+        return [
+            'title' => 'Halo dari SIPTU!',
+            'message' => 'Ini adalah notifikasi uji coba dari SIPTU Mobile.',
+            'url' => '/app/layanan-mandiri',
+            'tipe_layanan' => 'test',
+        ];
     }
 
     public function toWebPush($notifiable, $notification)
     {
         return (new WebPushMessage)
             ->title('Halo dari SIPTU!')
-            ->icon('/logo/favicon.png')
-            ->body('Ini adalah notifikasi uji coba dari SIPTU Mobile.')
-            ->action('Buka Aplikasi', '/app/layanan-mandiri');
+            ->icon('/logo192.png')
+            ->badge('/logo/favicon.png')
+            ->body('Ini adalah notifikasi uji coba dari SIPTU Mobile. Notifikasi Push PWA Anda aktif!')
+            ->action('Buka Aplikasi', 'open_app')
+            ->data(['url' => '/app/layanan-mandiri'])
+            ->options(['TTL' => 86400]);
     }
 }

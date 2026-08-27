@@ -229,7 +229,7 @@ const PermintaanRevisi = () => {
 
       const hasInvalidAdj = adjustments.some(adj => !adj.mak || !adj.tipe || !adj.nilai || Number(adj.nilai) <= 0);
       if (hasInvalidAdj) {
-        throw new Error('Semua baris penyesuaian anggaran wajib diisi (MAK, Tipe, dan Nominal > 0).');
+        throw new Error('Semua baris penyesuaian anggaran wajib diisi (Kode Akun, Tipe, dan Nominal > 0).');
       }
 
       const totalAdd = adjustments.filter(adj => adj.tipe === 'Tambah Anggaran').reduce((sum, adj) => sum + Number(adj.nilai || 0), 0);
@@ -408,7 +408,7 @@ const PermintaanRevisi = () => {
 
   const adjustmentColumns = useMemo(() => [
     {
-      title: 'MAK',
+      title: 'Kode Akun',
       dataIndex: 'mak',
       key: 'mak',
       width: 150,
@@ -420,7 +420,7 @@ const PermintaanRevisi = () => {
             <Select
               showSearch
               allowClear
-              placeholder="Pilih kode MAK"
+              placeholder="Pilih Kode Akun"
               options={budgetOptions}
               loading={budgetLoading}
               optionFilterProp="label"

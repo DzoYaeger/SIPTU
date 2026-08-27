@@ -1,145 +1,87 @@
-import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth.js';
-import {
-  ArrowLeftOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  BankOutlined,
-  FileProtectOutlined,
-  CalculatorOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
-import { Tooltip } from 'antd';
-import KeuanganLpj from './KeuanganLpj.jsx';
-import InvoiceBelanja from './InvoiceBelanja.jsx';
-import PermintaanPanjar from './PermintaanPanjar.jsx';
-import simkeuIcon from '../assets/icons/simkeu-icon.png';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeftOutlined, CalculatorOutlined, ClockCircleOutlined, DollarOutlined, FileProtectOutlined, SafetyCertificateOutlined, TeamOutlined } from "@ant-design/icons";
+import { useAuth } from "../hooks/useAuth.js";
+import simkeuIcon from "../assets/icons/simkeu-icon.png";
+import InvoiceBelanja from "./InvoiceBelanja.jsx";
+import KeuanganLpj from "./KeuanganLpj.jsx";
+import KeuanganPejabat from "./KeuanganPejabat.jsx";
+import PermintaanPanjar from "./PermintaanPanjar.jsx";
+import "./SimkeuUnifiedModule.css";
 
-import './SimkeuUnifiedModule.css';
+const TABS = [
+  { key: "lpj", label: "Pertanggungjawaban (LPJ)", icon: <FileProtectOutlined />, desc: "Kelola pertanggungjawaban perjalanan dinas secara rapi dan terpantau." },
+  { key: "panjar", label: "Permintaan Panjar", icon: <DollarOutlined />, desc: "Ajukan dan pantau kebutuhan uang muka kegiatan operasional." },
+  { key: "invoice", label: "Invoice & Bukti Belanja", icon: <CalculatorOutlined />, desc: "Rekam invoice, bukti transaksi, dan pemotongan pajak dalam satu alur." },
+  { key: "pejabat", label: "Pejabat Perbendaharaan", icon: <TeamOutlined />, desc: "Kelola data PPK dan Bendahara Pengeluaran yang aktif." },
+];
 
-const SimkeuUnifiedModule = () => {
+const formatWitaTime = () => new Intl.DateTimeFormat("id-ID", {
+  timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+}).format(new Date()).replaceAll(".", ":");
+
+export default function SimkeuUnifiedModule() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('lpj');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const requestedTab = searchParams.get("tab");
+  const activeTab = TABS.some((tab) => tab.key === requestedTab) ? requestedTab : "lpj";
+  const activeTabMeta = TABS.find((tab) => tab.key === activeTab) || TABS[0];
+  const [currentTime, setCurrentTime] = useState(formatWitaTime);
 
-  const menuItems = [
-    {
-      group: 'KEUANGAN',
-      items: [
-        {
-          key: 'lpj',
-          label: 'Pembuatan / Kelola LPJ',
-          icon: <FileProtectOutlined />,
-        },
-        {
-          key: 'panjar',
-          label: 'Permintaan Panjar',
-          icon: <WalletOutlined />,
-        },
-        {
-          key: 'invoice',
-          label: 'Pembuatan / Kelola Invoice Belanja',
-          icon: <CalculatorOutlined />,
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(formatWitaTime()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleTabChange = (key) => {
+    if (key === activeTab) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("tab", key);
+    setSearchParams(nextParams);
+  };
+
+  const renderModuleView = () => {
+    if (activeTab === "panjar") return <PermintaanPanjar />;
+    if (activeTab === "invoice") return <InvoiceBelanja />;
+    if (activeTab === "pejabat") return <KeuanganPejabat />;
+    return <KeuanganLpj />;
+  };
 
   return (
-    <div className="simkeu-module">
-      {/* ── Sub-Sidebar Navigation SIMKEU ── */}
-      <aside className={`simkeu-sidebar ${sidebarCollapsed ? 'simkeu-sidebar--collapsed' : 'simkeu-sidebar--expanded'}`}>
-        {/* Module Title Header */}
-        <div className={`simkeu-sidebar-header ${sidebarCollapsed ? 'simkeu-sidebar-header--collapsed' : ''}`}>
-          <div className={`simkeu-sidebar-header__top ${sidebarCollapsed ? 'simkeu-sidebar-header__top--collapsed' : ''}`}>
-            <div className="simkeu-sidebar-brand">
-              <div className="simkeu-sidebar-brand__icon">
-                <img src={simkeuIcon} alt="SIMKEU" style={{ width: 34, height: 34, objectFit: "contain" }} />
-              </div>
-              {!sidebarCollapsed && (
-                <div>
-                  <h2 className="simkeu-sidebar-brand__title">SIMKEU</h2>
-                  <span className="simkeu-sidebar-brand__subtitle">
-                    Sistem Informasi Keuangan
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
-              className="simkeu-toggle-btn"
-            >
-              {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </button>
+    <div className="simkeu-unified-root">
+      <div className="simkeu-ambient-glow" aria-hidden="true" />
+      <header className="simkeu-top-navbar">
+        <div className="simkeu-navbar-container">
+          <div className="simkeu-brand-block">
+            <button type="button" className="simkeu-back-btn" onClick={() => navigate("/app/layanan-mandiri")} aria-label="Kembali ke Layanan Mandiri" title="Kembali ke Layanan Mandiri"><ArrowLeftOutlined /></button>
+            <div className="simkeu-brand-mark" aria-hidden="true"><img src={simkeuIcon} alt="" /></div>
+            <div className="simkeu-brand-titles"><div className="simkeu-brand-row"><span className="simkeu-brand-name">SIMKEU</span><span className="simkeu-brand-edition">ULTRA</span></div><span className="simkeu-brand-sub">Sistem Informasi Keuangan</span></div>
+          </div>
+          <nav className="simkeu-nav-tabs" aria-label="Navigasi utama SIMKEU">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              return <button type="button" key={tab.key} onClick={() => handleTabChange(tab.key)} className={`simkeu-tab-pill ${isActive ? "active" : ""}`} aria-current={isActive ? "page" : undefined} title={tab.desc}><span className="simkeu-tab-icon">{tab.icon}</span><span className="simkeu-tab-label">{tab.label}</span></button>;
+            })}
+          </nav>
+          <div className="simkeu-navbar-right">
+            <div className="simkeu-clock-badge" aria-label={`${currentTime} WITA`}><ClockCircleOutlined /><span>{currentTime}</span><span className="simkeu-clock-zone">WITA</span></div>
+            <div className="simkeu-user-chip" title={user?.name || "Pegawai"}><div className="simkeu-user-avatar">{(user?.name?.[0] || "U").toUpperCase()}</div><span className="simkeu-user-name">{user?.name || "Pegawai"}</span></div>
           </div>
         </div>
-
-        {/* Sidebar Menu Items */}
-        <div className={`simkeu-sidebar-menu ${sidebarCollapsed ? 'simkeu-sidebar-menu--collapsed' : ''}`}>
-          {menuItems.map((group, idx) => (
-            <div key={idx} className={`simkeu-menu-group ${sidebarCollapsed ? 'simkeu-menu-group--collapsed' : ''}`}>
-              {!sidebarCollapsed && (
-                <div className="simkeu-menu-group__label">
-                  {group.group}
-                </div>
-              )}
-              {group.items.map((item) => {
-                const isActive = activeTab === item.key;
-                const buttonContent = (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveTab(item.key)}
-                    className={`simkeu-menu-item ${isActive ? 'simkeu-menu-item--active' : ''} ${sidebarCollapsed ? 'simkeu-menu-item--collapsed' : ''}`}
-                  >
-                    <span className="simkeu-menu-item__icon">
-                      {item.icon}
-                    </span>
-                    {!sidebarCollapsed && (
-                      <span className="simkeu-menu-item__label">
-                        {item.label}
-                      </span>
-                    )}
-                  </button>
-                );
-
-                return sidebarCollapsed ? (
-                  <Tooltip key={item.key} title={item.label} placement="right">
-                    {buttonContent}
-                  </Tooltip>
-                ) : (
-                  buttonContent
-                );
-              })}
+      </header>
+      <main className="simkeu-full-canvas">
+        <div className="simkeu-canvas-container">
+          <section className="simkeu-workspace-context" aria-labelledby="simkeu-workspace-title">
+            <div className="simkeu-context-main">
+              <div className="simkeu-context-icon" aria-hidden="true">{activeTabMeta.icon}</div>
+              <div className="simkeu-context-copy"><span className="simkeu-context-eyebrow">Finance operations / {activeTab.toUpperCase()}</span><div className="simkeu-context-title-row"><h1 id="simkeu-workspace-title">{activeTabMeta.label}</h1></div><p>{activeTabMeta.desc}</p></div>
             </div>
-          ))}
+            <div className="simkeu-context-aside"><span className="simkeu-system-state"><i /> Sistem aktif</span><span className="simkeu-secure-label"><SafetyCertificateOutlined /> Data keuangan internal</span></div>
+          </section>
+          <div key={activeTab} className="simkeu-view-transition">{renderModuleView()}</div>
         </div>
-
-        {/* Sidebar Footer — Back Button */}
-        <div className={`simkeu-sidebar-footer ${sidebarCollapsed ? 'simkeu-sidebar-footer--collapsed' : ''}`}>
-          {sidebarCollapsed ? (
-            <Tooltip title="Kembali ke Layanan Mandiri" placement="right">
-              <a href="/app/layanan-mandiri" className="simkeu-back-btn simkeu-back-btn--collapsed">
-                <ArrowLeftOutlined style={{ fontSize: 13 }} />
-              </a>
-            </Tooltip>
-          ) : (
-            <a href="/app/layanan-mandiri" className="simkeu-back-btn">
-              <ArrowLeftOutlined style={{ fontSize: 11 }} /> Kembali ke Layanan Mandiri
-            </a>
-          )}
-        </div>
-      </aside>
-
-      {/* ── Main Dynamic Workspace ── */}
-      <main className="simkeu-main">
-        {activeTab === 'lpj' && <KeuanganLpj />}
-        {activeTab === 'panjar' && <PermintaanPanjar />}
-        {activeTab === 'invoice' && <InvoiceBelanja />}
       </main>
     </div>
   );
-};
-
-export default SimkeuUnifiedModule;
+}

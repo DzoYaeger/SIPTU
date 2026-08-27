@@ -1,72 +1,111 @@
 /* ═══════════════════════════════════════════════════════════════
-   SIMKEU UNIFIED MODULE — MODERN MINIMALIST ENTERPRISE
-   Microsoft Azure + Facebook Desktop Header Tabs Standard
+   SIMKEU ULTRA — MODERN MINIMALIST ENTERPRISE
+   Microsoft Azure Portal + Linear Clean Density Standards
    ═══════════════════════════════════════════════════════════════ */
 
 .simkeu-unified-root {
+  --siptu-primary: #0F5B99;
+  --siptu-primary-dark: #0a4373;
+  --siptu-primary-light: #f0f7ff;
+  --siptu-primary-border: #bae0ff;
+  --siptu-ink: #0f172a;
+  --siptu-subtle: #334155;
+  --siptu-muted: #64748b;
+  --siptu-border: #e2e8f0;
+  --siptu-border-subtle: #f1f5f9;
+  --siptu-canvas: #f8fafc;
+  --siptu-surface: #ffffff;
   min-height: 100vh;
-  background-color: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  color: #0f172a;
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
+  color: var(--siptu-ink);
+  background: var(--siptu-canvas);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.simkeu-unified-root *,
+.simkeu-unified-root *::before,
+.simkeu-unified-root *::after {
+  box-sizing: border-box;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   1. TOP COMMAND BAR WITH EMBEDDED HORIZONTAL TABS
+   TOP COMMAND NAVBAR (NO GLASSMORPHISM)
    ═══════════════════════════════════════════════════════════════ */
 .simkeu-top-navbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  border-bottom: 1px solid var(--siptu-border);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
 .simkeu-navbar-container {
-  max-width: 1560px;
+  width: min(100%, 1600px);
+  min-height: 58px;
   margin: 0 auto;
-  padding: 0 24px;
-  height: 54px;
-  display: flex;
+  padding: 6px 24px;
+  display: grid;
+  grid-template-columns: 240px minmax(400px, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 20px;
 }
 
-/* Left Brand */
 .simkeu-brand-block {
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 10px;
 }
 
 .simkeu-back-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--siptu-border);
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  color: var(--siptu-subtle);
   background: #ffffff;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
   cursor: pointer;
+  font-size: 13px;
   transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .simkeu-back-btn:hover {
-  background: #f1f5f9;
-  color: #0F5B99;
-  border-color: #cbd5e1;
+  border-color: var(--siptu-primary);
+  color: var(--siptu-primary);
+  background: var(--siptu-primary-light);
+  transform: translateX(-1px);
+}
+
+.simkeu-back-btn:focus-visible,
+.simkeu-tab-pill:focus-visible,
+.simkeu-row-action:focus-visible {
+  outline: 2px solid var(--siptu-primary);
+  outline-offset: 2px;
+}
+
+.simkeu-brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: var(--siptu-primary);
+}
+
+.simkeu-brand-mark img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .simkeu-brand-titles {
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -74,175 +113,239 @@
 .simkeu-brand-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .simkeu-brand-name {
-  font-size: 14.5px;
+  color: var(--siptu-ink);
+  font-size: 14px;
   font-weight: 700;
-  color: #0F5B99;
   letter-spacing: -0.2px;
 }
 
-.simkeu-badge-pill {
-  background: #eff6ff;
-  color: #0078d4;
-  border: 1px solid #bfdbfe;
+.simkeu-brand-edition {
+  color: var(--siptu-primary);
   font-size: 9px;
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
   letter-spacing: 0.5px;
+  padding: 1px 4px;
+  background: var(--siptu-primary-light);
+  border: 1px solid var(--siptu-primary-border);
+  border-radius: 3px;
 }
 
 .simkeu-brand-sub {
+  color: var(--siptu-muted);
   font-size: 10.5px;
-  color: #64748b;
-  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
-/* Center Horizontal Tabs */
+/* Horizontal Tabs Navigation */
 .simkeu-nav-tabs {
+  min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 4px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.simkeu-nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .simkeu-tab-pill {
-  border: none;
+  position: relative;
+  min-height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 6px;
+  color: var(--siptu-subtle);
   background: transparent;
-  border-radius: 4px;
-  padding: 5px 12px;
+  font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s ease;
+  font-weight: 500;
   white-space: nowrap;
-}
-
-.simkeu-tab-pill .tab-icon {
-  font-size: 12px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .simkeu-tab-pill:hover {
-  color: #0F5B99;
-  background: rgba(255, 255, 255, 0.6);
+  color: var(--siptu-primary);
+  background: #f1f5f9;
 }
 
 .simkeu-tab-pill.active {
-  background: #ffffff;
-  color: #0F5B99;
-  font-weight: 700;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  color: var(--siptu-primary);
+  background: var(--siptu-primary-light);
+  font-weight: 600;
 }
 
-.simkeu-tab-pill.active .tab-icon {
-  color: #0078d4;
+.simkeu-tab-icon {
+  display: inline-flex;
+  font-size: 13px;
+  color: var(--siptu-muted);
 }
 
-/* Right Section */
+.simkeu-tab-pill.active .simkeu-tab-icon {
+  color: var(--siptu-primary);
+}
+
+/* Navbar Right */
 .simkeu-navbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.simkeu-clock-badge,
+.simkeu-user-chip {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--siptu-border);
+  border-radius: 6px;
+  background: #ffffff;
 }
 
 .simkeu-clock-badge {
-  font-size: 11px;
-  font-weight: 500;
-  color: #475569;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 3px 8px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
   gap: 6px;
+  padding: 0 10px;
+  color: var(--siptu-subtle);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.simkeu-clock-badge .anticon {
+  color: var(--siptu-primary);
+  font-size: 12px;
+}
+
+.simkeu-clock-zone {
+  color: var(--siptu-muted);
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .simkeu-user-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px 2px 2px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  max-width: 170px;
+  gap: 7px;
+  padding: 3px 10px 3px 4px;
 }
 
-.user-avatar-circle {
-  width: 22px;
-  height: 22px;
-  border-radius: 3px;
-  background: #0F5B99;
+.simkeu-user-avatar {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
   color: #ffffff;
+  background: var(--siptu-primary);
   font-size: 10.5px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.user-display-name {
+.simkeu-user-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--siptu-ink);
   font-size: 11.5px;
   font-weight: 600;
-  color: #0f172a;
-  max-width: 130px;
-  white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   2. MAIN 100% FULL-WIDTH CANVAS
+   FULL-WIDTH PRODUCTIVITY CANVAS (NO HERO)
    ═══════════════════════════════════════════════════════════════ */
 .simkeu-full-canvas {
+  width: min(100%, 1600px);
   flex: 1;
-  padding: 16px 24px;
+  margin: 0 auto;
+  padding: 16px 24px 36px;
 }
 
 .simkeu-canvas-container {
-  max-width: 1560px;
+  width: 100%;
   margin: 0 auto;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   3. RESPONSIVE BREAKPOINTS
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 1024px) {
-  .simkeu-navbar-container {
-    height: auto;
-    padding: 8px 16px;
-    flex-wrap: wrap;
+.simkeu-view-transition {
+  animation: simkeu-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes simkeu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
   }
-  .simkeu-nav-tabs {
-    order: 3;
-    width: 100%;
-    overflow-x: auto;
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .simkeu-navbar-container {
+    grid-template-columns: 210px minmax(360px, 1fr) auto;
+    gap: 14px;
+    padding-inline: 16px;
   }
   .simkeu-full-canvas {
-    padding: 14px;
+    padding-inline: 16px;
+  }
+  .simkeu-brand-sub {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .simkeu-navbar-container {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .simkeu-nav-tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-top: 6px;
+    border-top: 1px solid var(--siptu-border);
   }
 }
 
 @media (max-width: 640px) {
-  .simkeu-clock-badge {
+  .simkeu-navbar-container {
+    min-height: 52px;
+    padding: 6px 10px;
+  }
+  .simkeu-brand-sub,
+  .simkeu-clock-badge,
+  .simkeu-user-name {
     display: none;
   }
-  .user-display-name {
-    display: none;
+  .simkeu-navbar-right {
+    gap: 0;
+  }
+  .simkeu-nav-tabs {
+    margin-inline: -10px;
+    padding-inline: 8px;
+  }
+  .simkeu-tab-pill {
+    padding-inline: 9px;
+    font-size: 11px;
+  }
+  .simkeu-full-canvas {
+    padding: 12px 10px 24px;
   }
 }

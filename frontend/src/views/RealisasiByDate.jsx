@@ -237,7 +237,7 @@ const RealisasiByDate = () => {
         ...getColumnSearchProps('transaction_number', searchInput),
       },
       {
-        title: 'MAK',
+        title: 'Kode Akun',
         dataIndex: 'mak',
         key: 'mak',
         width: colWidths.mak,

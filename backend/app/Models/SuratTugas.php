@@ -86,4 +86,9 @@ class SuratTugas extends Model
     {
         return $this->hasOne(LpjHeader::class, 'surat_tugas_id');
     }
+
+    public function kkpHeader()
+    {
+        return $this->hasOne(KkpHeader::class, 'surat_tugas_id');
+    }
 }

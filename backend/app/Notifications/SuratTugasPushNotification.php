@@ -9,7 +9,7 @@ use NotificationChannels\WebPush\WebPushMessage;
 use NotificationChannels\WebPush\WebPushChannel;
 use App\Models\SuratTugas;
 
-class SuratTugasPushNotification extends Notification implements ShouldQueue
+class SuratTugasPushNotification extends Notification
 {
     use Queueable;
 
@@ -30,8 +30,24 @@ class SuratTugasPushNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        // Deliver via WebPushChannel for PWA
-        return [WebPushChannel::class];
+        // Deliver via WebPushChannel for PWA and Database
+        return ['database', WebPushChannel::class];
+    }
+
+    /**
+     * Get the array representation of the notification for database.
+     */
+    public function toArray(object $notifiable): array
+    {
+        $st = $this->suratTugas;
+        $lokasi = $st->lokasi_tugas ?? ($st->sarana_nama ?: 'lokasi penugasan');
+        return [
+            'title' => 'Penugasan Baru: ' . ($st->nomor_st ?? 'ST Baru'),
+            'message' => "Anda ditugaskan ke {$lokasi}.",
+            'id_layanan' => $st->id,
+            'tipe_layanan' => 'surat_tugas',
+            'url' => "/app/kepegawaian-surat-tugas?id={$st->id}",
+        ];
     }
 
     /**

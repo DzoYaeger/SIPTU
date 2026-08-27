@@ -35,6 +35,10 @@ import {
   CloseOutlined,
   FilterOutlined,
   DownOutlined,
+  FileDoneOutlined,
+  WalletOutlined,
+  PercentageOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth.js';
 import useDebounce from '../hooks/useDebounce.js';
@@ -166,6 +170,13 @@ export default function InvoiceBelanja() {
     if (selectedTa === 'ALL') return data;
     return data.filter(item => String(item.tahun_anggaran) === String(selectedTa));
   }, [data, selectedTa]);
+
+  const dashboardMetrics = useMemo(() => filteredData.reduce((metrics, item) => ({
+    count: metrics.count + 1,
+    gross: metrics.gross + (Number(item.nilai_kotor) || 0),
+    tax: metrics.tax + (Number(item.total_pajak) || 0),
+    net: metrics.net + (Number(item.nilai_bersih) || 0),
+  }), { count: 0, gross: 0, tax: 0, net: 0 }), [filteredData]);
 
   const handleResetFilter = () => {
     setSearchTerm('');
@@ -396,20 +407,24 @@ export default function InvoiceBelanja() {
       dataIndex: 'invoice_no',
       key: 'invoice_no',
       width: 220,
+      fixed: 'left',
       render: (text, record) => (
-        <div className="inv-no-cell">
-          <div className="inv-no-text-row">
-            <span className="inv-no-main">{text || record.ticket_no}</span>
-            <Tooltip title="Salin nomor invoice">
-              <Button
-                type="text"
-                size="small"
-                icon={copiedId === record.id ? <CheckOutlined style={{ color: '#10b981' }} /> : <CopyOutlined />}
-                onClick={() => handleCopyText(text || record.ticket_no, record.id)}
-              />
-            </Tooltip>
+        <div className="simkeu-record-identity">
+          <span className="simkeu-record-icon"><FileDoneOutlined /></span>
+          <div className="inv-no-cell">
+            <div className="inv-no-text-row">
+              <span className="inv-no-main">{text || record.ticket_no}</span>
+              <Tooltip title="Salin nomor invoice">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={copiedId === record.id ? <CheckOutlined style={{ color: '#10b981' }} /> : <CopyOutlined />}
+                  onClick={() => handleCopyText(text || record.ticket_no, record.id)}
+                />
+              </Tooltip>
+            </div>
+            <span className="inv-no-meta">TA {record.tahun_anggaran} • {record.penerima_name || 'Tanpa Penerima'}</span>
           </div>
-          <span className="inv-no-meta">TA {record.tahun_anggaran} • {record.penerima_name || 'Tanpa Penerima'}</span>
         </div>
       ),
     },
@@ -422,12 +437,12 @@ export default function InvoiceBelanja() {
       ),
     },
     {
-      title: 'KODE MAK',
+      title: 'KODE AKUN',
       dataIndex: 'mak',
       key: 'mak',
-      width: 170,
+      width: 200,
       render: (text) => (
-        <span className="inv-mak-tag">{text || '-'}</span>
+        <span className="inv-mak-tag" title={text || '-'}>{text || '-'}</span>
       ),
     },
     {
@@ -435,7 +450,7 @@ export default function InvoiceBelanja() {
       dataIndex: 'nilai_kotor',
       key: 'nilai_kotor',
       align: 'right',
-      width: 140,
+      width: 160,
       render: (val) => (
         <span className="inv-val-gross">{formatCurrency(val)}</span>
       ),
@@ -445,7 +460,7 @@ export default function InvoiceBelanja() {
       dataIndex: 'nilai_bersih',
       key: 'nilai_bersih',
       align: 'right',
-      width: 150,
+      width: 160,
       render: (val) => (
         <span className="inv-val-net">
           {formatCurrency(val)}
@@ -455,8 +470,9 @@ export default function InvoiceBelanja() {
     {
       title: 'AKSI',
       key: 'actions',
-      width: 50,
+      width: 90,
       align: 'center',
+      fixed: 'right',
       render: (_, record) => {
         const actionMenuItems = [
           {
@@ -499,7 +515,7 @@ export default function InvoiceBelanja() {
 
         return (
           <Dropdown menu={{ items: actionMenuItems }} trigger={['click']} placement="bottomRight">
-            <Button type="text" shape="circle" icon={<MoreOutlined style={{ color: '#64748b', fontSize: 16 }} />} />
+            <Button className="simkeu-row-action" icon={<MoreOutlined />}>Kelola</Button>
           </Dropdown>
         );
       },
@@ -508,6 +524,28 @@ export default function InvoiceBelanja() {
 
   return (
     <div className="inv-module-container">
+      {/* ── Quick Summary Ribbon ── */}
+      <div className="klpj-status-ribbon">
+        <div className="klpj-ribbon-item active" style={{ cursor: 'default' }}>
+          <span>Total Dokumen Invoice</span>
+          <strong>{dashboardMetrics.count}</strong>
+        </div>
+        <div className="klpj-ribbon-divider" />
+        <div className="klpj-ribbon-item" style={{ cursor: 'default' }}>
+          <span>Nilai Bruto:</span>
+          <strong style={{ background: '#f0f7ff', color: '#0F5B99', fontFamily: 'ui-monospace, monospace' }}>{formatCurrency(dashboardMetrics.gross)}</strong>
+        </div>
+        <div className="klpj-ribbon-divider" />
+        <div className="klpj-ribbon-item" style={{ cursor: 'default' }}>
+          <span>Total Potongan Pajak:</span>
+          <strong style={{ background: '#fff1f2', color: '#e11d48', fontFamily: 'ui-monospace, monospace' }}>{formatCurrency(dashboardMetrics.tax)}</strong>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', paddingRight: 8 }}>
+          <span>Net Dibayarkan:</span>
+          <strong style={{ color: '#10b981', fontWeight: 700, fontSize: 13.5, fontFamily: 'ui-monospace, monospace' }}>{formatCurrency(dashboardMetrics.net)}</strong>
+        </div>
+      </div>
+
       {/* ── Toolbar & Filter Box (Surat Tugas Standard) ── */}
       <Card
         variant="borderless"
@@ -519,7 +557,7 @@ export default function InvoiceBelanja() {
           {/* Search */}
           <Col xs={24} sm={12} md={8} lg={7}>
             <Input
-              placeholder="Cari nomor invoice, MAK, uraian..."
+              placeholder="Cari nomor invoice, kode akun, uraian..."
               prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -580,7 +618,7 @@ export default function InvoiceBelanja() {
       <Card
         variant="borderless"
         style={{ borderRadius: 8 }}
-        styles={{ body: { padding: '8px 8px 0 8px' } }}
+        styles={{ body: { padding: 0 } }}
         className="inv-main-card"
       >
         <Table
@@ -590,14 +628,27 @@ export default function InvoiceBelanja() {
           rowKey="id"
           size="middle"
           loading={loading}
+          scroll={{ x: 1300 }}
           pagination={{
             defaultPageSize: 10,
             showSizeChanger: true,
+            showLessItems: true,
+            responsive: true,
             pageSizeOptions: ['10', '25', '50', '100'],
             showTotal: (total, range) => `${range[0]}-${range[1]} dari ${total} data`,
           }}
           locale={{
-            emptyText: <Empty description="Belum ada data invoice belanja" />,
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <span className="simkeu-empty-copy">
+                    <strong>Belum ada invoice belanja</strong>
+                    <small>Buat invoice baru atau sesuaikan filter pencarian.</small>
+                  </span>
+                }
+              />
+            ),
           }}
         />
       </Card>
@@ -608,7 +659,7 @@ export default function InvoiceBelanja() {
         open={openViewModal}
         onCancel={() => setOpenViewModal(false)}
         footer={null}
-        width={700}
+        width={860}
         centered
         destroyOnClose
         className="inv-modal"
@@ -636,7 +687,7 @@ export default function InvoiceBelanja() {
                 <span className="inv-section-lbl">URAIAN BELANJA</span>
                 <p className="inv-desc-body">{viewInvoice.deskripsi}</p>
                 <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
-                  <span className="inv-mak-tag">MAK: {viewInvoice.mak || '-'}</span>
+                  <span className="inv-mak-tag">Akun: {viewInvoice.mak || '-'}</span>
                   <span style={{ fontSize: 11, color: '#64748b' }}>Penerima: <strong>{viewInvoice.penerima_name || '-'}</strong></span>
                 </div>
               </div>
@@ -718,7 +769,7 @@ export default function InvoiceBelanja() {
         title={null}
         open={openModal}
         onCancel={() => setOpenModal(false)}
-        width={820}
+        width={1040}
         destroyOnClose
         centered
         footer={null}
@@ -736,7 +787,7 @@ export default function InvoiceBelanja() {
           <div className="inv-modal-header">
             <div>
               <h3 className="inv-modal-title">{mode === 'edit' ? 'Edit Invoice Belanja' : 'Buat Invoice Belanja Baru'}</h3>
-              <span className="inv-modal-sub">Rincian belanja barang, jasa, MAK, dan potongan pajak</span>
+              <span className="inv-modal-sub">Rincian belanja barang, jasa, kode akun, dan potongan pajak</span>
             </div>
           </div>
 
@@ -760,7 +811,7 @@ export default function InvoiceBelanja() {
 
                 <Row gutter={12}>
                   <Col xs={24} md={10}>
-                    <Form.Item label="Kode MAK" name="mak" rules={[{ required: true, message: 'MAK wajib diisi' }]}>
+                    <Form.Item label="Kode Akun" name="mak" rules={[{ required: true, message: 'Kode Akun wajib diisi' }]}>
                       <Input placeholder="Contoh: 3165.BKB.053.001" />
                     </Form.Item>
                   </Col>

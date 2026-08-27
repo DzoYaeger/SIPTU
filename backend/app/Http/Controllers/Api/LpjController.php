@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\LpjHeader;
 use App\Models\LpjItem;
+use App\Models\KkpHeader;
 use App\Models\SuratTugas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -100,14 +102,21 @@ class LpjController extends Controller
         $perPage = min((int)$request->input('per_page', 1000), 2000);
         $data = $query->orderBy('tanggal_mulai', 'desc')->paginate($perPage);
 
-        // Inject status LPJ ke setiap record
+        // Inject status LPJ & KKP ke setiap record
         $suratTugasIds = collect($data->items())->pluck('id')->toArray();
         $lpjMap = LpjHeader::whereIn('surat_tugas_id', $suratTugasIds)
             ->pluck('status', 'surat_tugas_id');
 
-        $items = collect($data->items())->map(function ($st) use ($lpjMap) {
+        $kkpMap = [];
+        if (Schema::hasTable('kkp_headers')) {
+            $kkpMap = KkpHeader::whereIn('surat_tugas_id', $suratTugasIds)
+                ->pluck('status', 'surat_tugas_id');
+        }
+
+        $items = collect($data->items())->map(function ($st) use ($lpjMap, $kkpMap) {
             $arr = $st->toArray();
             $arr['lpj_status'] = $lpjMap->get($st->id, null); // null = belum ada LPJ
+            $arr['kkp_status'] = is_array($kkpMap) ? ($kkpMap[$st->id] ?? null) : $kkpMap->get($st->id, null); // null = belum ada KKP
             return $arr;
         });
 
@@ -252,9 +261,13 @@ class LpjController extends Controller
                 $st->update($stUpdates);
             }
 
-            // Sync data pegawai bertugas di Surat Tugas jika dikirimkan
+            // Sync data pegawai bertugas di Surat Tugas jika dikirimkan (mempertahankan susunan urutan pegawai)
             if ($request->has('employee_ids') && is_array($request->employee_ids)) {
-                $st->employees()->sync($request->employee_ids);
+                $syncData = [];
+                foreach ($request->employee_ids as $index => $empId) {
+                    $syncData[$empId] = ['sort_order' => $index + 1];
+                }
+                $st->employees()->sync($syncData);
             }
 
             // Update header jika sudah ada
@@ -771,51 +784,27 @@ class LpjController extends Controller
         }
 
         $processedItems = [];
+        $grandTransport = 0;
+        $grandFullboard = 0;
+        $grandPenginapan = 0;
+        $grandUangHarian = 0;
+        $grandTotal = 0;
+
         foreach ($items as $item) {
-            $totalAmount = 0;
+            $transport = (float)($item->uang_transport_bus ?? 0)
+                + (float)($item->uang_transport_taxi ?? 0)
+                + (float)($item->uang_transport_pesawat ?? 0)
+                + (float)($item->uang_transport_bbm ?? 0)
+                + (float)($item->uang_transport_sewa_mobil ?? 0)
+                + (float)($item->uang_transport_lokal ?? 0)
+                + (float)($item->uang_transport_umum ?? 0);
 
-            // Transport Bus
-            if ($item->uang_transport_bus !== null && $item->uang_transport_bus > 0) {
-                $totalAmount += $item->uang_transport_bus;
-            }
-            // Transport Taxi
-            if ($item->uang_transport_taxi !== null && $item->uang_transport_taxi > 0) {
-                $totalAmount += $item->uang_transport_taxi;
-            }
-            // Transport Pesawat
-            if ($item->uang_transport_pesawat !== null && $item->uang_transport_pesawat > 0) {
-                $totalAmount += $item->uang_transport_pesawat;
-            }
-            // Transport BBM
-            if ($item->uang_transport_bbm !== null && $item->uang_transport_bbm > 0) {
-                $totalAmount += $item->uang_transport_bbm;
-            }
-            // Transport Sewa Mobil
-            if ($item->uang_transport_sewa_mobil !== null && $item->uang_transport_sewa_mobil > 0) {
-                $totalAmount += $item->uang_transport_sewa_mobil;
-            }
-            // Transport Lokal
-            if ($item->uang_transport_lokal !== null && $item->uang_transport_lokal > 0) {
-                $totalAmount += $item->uang_transport_lokal;
-            }
-            // Uang Harian
-            if ($item->uang_harian !== null && $item->uang_harian > 0) {
-                $totalAmount += $item->uang_harian;
-            }
-            // Penginapan
-            if ($item->uang_penginapan !== null && $item->uang_penginapan > 0) {
-                $totalAmount += $item->uang_penginapan;
-            }
-            // Fullboard
-            if ($item->uang_fullboard !== null && $item->uang_fullboard > 0) {
-                $totalAmount += $item->uang_fullboard;
-            }
-            // Uang Harian Fullboard
-            if ($item->uang_harian_fullboard !== null && $item->uang_harian_fullboard > 0) {
-                $totalAmount += $item->uang_harian_fullboard;
-            }
+            $fullboard = (float)($item->uang_fullboard ?? 0);
+            $penginapan = (float)($item->uang_penginapan ?? 0);
+            $uangHarian = (float)($item->uang_harian ?? 0) + (float)($item->uang_harian_fullboard ?? 0);
 
-            // Skip if the total LPJ amount is 0 (tidak usah tampilkan jika nilainya 0)
+            $totalAmount = $transport + $fullboard + $penginapan + $uangHarian;
+
             if ($totalAmount <= 0) {
                 continue;
             }
@@ -828,34 +817,19 @@ class LpjController extends Controller
 
             $processedItems[] = [
                 'item' => $item,
+                'transport' => $transport,
+                'fullboard' => $fullboard,
+                'penginapan' => $penginapan,
+                'uang_harian' => $uangHarian,
                 'total' => $totalAmount,
                 'pangkat' => $pangkat
             ];
-        }
-
-        $grandTransport = 0;
-        $grandFullboard = 0;
-        $grandPenginapan = 0;
-        $grandUangHarian = 0;
-        $grandTotal = 0;
-
-        foreach ($processedItems as $itemData) {
-            $item = $itemData['item'];
-            $transport = ($item->uang_transport_bus ?? 0)
-                + ($item->uang_transport_taxi ?? 0)
-                + ($item->uang_transport_pesawat ?? 0)
-                + ($item->uang_transport_bbm ?? 0)
-                + ($item->uang_transport_sewa_mobil ?? 0)
-                + ($item->uang_transport_lokal ?? 0);
-            $fullboard = $item->uang_fullboard ?? 0;
-            $penginapan = $item->uang_penginapan ?? 0;
-            $uangHarian = ($item->uang_harian ?? 0) + ($item->uang_harian_fullboard ?? 0);
 
             $grandTransport += $transport;
             $grandFullboard += $fullboard;
             $grandPenginapan += $penginapan;
             $grandUangHarian += $uangHarian;
-            $grandTotal += $itemData['total'];
+            $grandTotal += $totalAmount;
         }
 
         $grandTerbilang = $grandTotal > 0 ? (preg_replace('/\s+/', ' ', trim($this->terbilang($grandTotal))) . ' Rupiah') : 'Nol Rupiah';
@@ -973,6 +947,16 @@ class LpjController extends Controller
                     'title' => 'Transport Lokal',
                     'desc' => 'Klaim Transport Lokal',
                     'value' => $item->uang_transport_lokal
+                ];
+            }
+
+            // 7. Transport (Umum)
+            if ($item->uang_transport_umum !== null && $item->uang_transport_umum > 0) {
+                $rows[] = [
+                    'no' => $no++,
+                    'title' => 'Transport (Umum)',
+                    'desc' => 'Klaim Transport Umum',
+                    'value' => $item->uang_transport_umum
                 ];
             }
 

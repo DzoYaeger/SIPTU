@@ -16,6 +16,7 @@ import PublicResolveUnfinishedExitPermitPage from "./pages/PublicResolveUnfinish
 import ItHelpdeskForm from "./pages/ItHelpdeskForm.jsx";
 import ItHelpdeskReporterSignature from "./pages/ItHelpdeskReporterSignature.jsx";
 import InventoryRequestApprovalPage from "./pages/InventoryRequestApprovalPage.jsx";
+import PanjarValidationPage from "./pages/PanjarValidationPage.jsx";
 import BmnMaintenanceReportForm from "./pages/BmnMaintenanceReportForm.jsx";
 import ProcurementProposalPage from "./pages/ProcurementProposalPage.jsx";
 import PengajuanPdttForm from "./pages/PengajuanPdttForm.jsx";
@@ -332,6 +333,10 @@ function App() {
       <Route
         path="/permintaan-persediaan/approve/:token"
         element={<InventoryRequestApprovalPage />}
+      />
+      <Route
+        path="/panjar/validasi/:token"
+        element={<PanjarValidationPage />}
       />
       <Route path="/peminjaman-aset/new" element={<PublicAssetLoanPage />} />
       <Route
