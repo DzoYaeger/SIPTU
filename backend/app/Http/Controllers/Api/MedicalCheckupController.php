@@ -359,6 +359,118 @@ class MedicalCheckupController extends Controller
     }
 
     /**
+     * 4b. Update pending medical checkup request (Pre-checked items edit)
+     */
+    public function updateMyRequest(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $employee = $this->resolveEmployee($user);
+        $nip = $employee?->nip ?? $user->nip;
+        $isAdmin = $this->isAdminOrValidator($user);
+
+        $mcuRequest = MedicalCheckupRequest::where('id', $id)
+            ->when(!$isAdmin, function ($query) use ($user, $nip, $employee) {
+                $query->where(function ($q) use ($user, $nip, $employee) {
+                    $q->where('user_id', $user->id);
+                    if ($nip) {
+                        $q->orWhere('nip', $nip);
+                    }
+                    if ($employee) {
+                        $q->orWhere('employee_id', $employee->id);
+                    }
+                });
+            })
+            ->first();
+
+        if (!$mcuRequest) {
+            return response()->json(['message' => 'Pengajuan MCU tidak ditemukan atau Anda tidak memiliki akses.'], 404);
+        }
+
+        if ($mcuRequest->status !== 'pending') {
+            return response()->json(['message' => 'Hanya pengajuan dengan status Menunggu Verifikasi (Pending) yang dapat diubah datanya.'], 422);
+        }
+
+        $payload = $request->validate([
+            'package_ids' => ['required', 'array', 'min:1'],
+            'package_ids.*' => ['integer', 'exists:medical_checkup_packages,id'],
+            'planned_date' => ['required', 'date'],
+            'faskes_name' => ['required', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        // Get selected packages
+        $packages = MedicalCheckupPackage::whereIn('id', $payload['package_ids'])
+            ->where('is_active', true)
+            ->get();
+
+        if ($packages->isEmpty()) {
+            return response()->json(['message' => 'Pilih minimal satu jenis pemeriksaan yang valid.'], 422);
+        }
+
+        $newTotalAmount = (float) $packages->sum('price');
+        $oldTotalAmount = (float) $mcuRequest->total_amount;
+        $diff = $newTotalAmount - $oldTotalAmount;
+
+        return DB::transaction(function () use ($user, $mcuRequest, $packages, $newTotalAmount, $oldTotalAmount, $diff, $payload) {
+            $balance = EmployeeMedicalBalance::where('nip', $mcuRequest->nip)
+                ->where('tahun_anggaran', $mcuRequest->tahun_anggaran)
+                ->lockForUpdate()
+                ->first();
+
+            if ($balance) {
+                $availableHeadroom = (float) $balance->current_balance + $oldTotalAmount;
+                if ($newTotalAmount > $availableHeadroom) {
+                    return response()->json([
+                        'message' => "Saldo tidak mencukupi! Total biaya pemeriksaan baru (Rp " . number_format($newTotalAmount, 0, ',', '.') . ") melebihi sisa saldo yang tersedia (Rp " . number_format($availableHeadroom, 0, ',', '.') . ").",
+                    ], 422);
+                }
+
+                $balance->used_balance = max(0, (float) $balance->used_balance + $diff);
+                $balance->current_balance = (float) $balance->initial_balance - (float) $balance->used_balance;
+                $balance->save();
+            }
+
+            // Update Request Details
+            $mcuRequest->planned_date = $payload['planned_date'];
+            $mcuRequest->faskes_name = $payload['faskes_name'];
+            $mcuRequest->notes = $payload['notes'] ?? null;
+            $mcuRequest->total_amount = $newTotalAmount;
+            if ($balance) {
+                $mcuRequest->balance_before = (float) $balance->current_balance + $newTotalAmount;
+                $mcuRequest->balance_after = (float) $balance->current_balance;
+            }
+            $mcuRequest->save();
+
+            // Recreate Items
+            $mcuRequest->items()->delete();
+            foreach ($packages as $pkg) {
+                MedicalCheckupRequestItem::create([
+                    'medical_checkup_request_id' => $mcuRequest->id,
+                    'medical_checkup_package_id' => $pkg->id,
+                    'package_name' => $pkg->name,
+                    'package_category' => $pkg->category,
+                    'price' => $pkg->price,
+                    'notes' => $pkg->code,
+                ]);
+            }
+
+            if (class_exists(ActivityLogger::class)) {
+                ActivityLogger::log('update', 'medical_checkup', "Memperbarui data pengajuan MCU ({$mcuRequest->request_number}) sebesar Rp " . number_format($newTotalAmount, 0, ',', '.'), $mcuRequest->request_number);
+            }
+
+            return response()->json([
+                'message' => 'Pengajuan pemeriksaan kesehatan berhasil diperbarui.',
+                'data' => $mcuRequest->fresh(['items', 'approver:id,name']),
+                'balance' => $balance,
+            ]);
+        });
+    }
+
+    /**
      * 5. Cancel pending request by user (Refunds balance)
      */
     public function cancelMyRequest(Request $request, string $id)

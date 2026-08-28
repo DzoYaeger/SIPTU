@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   App as AntdApp,
   Button,
@@ -116,9 +116,12 @@ export default function PemeriksaanKesehatan() {
   const [selectedPackageIds, setSelectedPackageIds] = useState([]);
   const [packageSearch, setPackageSearch] = useState("");
 
-  // Request Form State
+  // Request Form State & Edit Mode
   const [requestForm] = Form.useForm();
   const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [userMode, setUserMode] = useState("auto"); // "auto" | "edit" | "new"
+  const hasAutoLoadedRef = useRef(false);
 
   // History State
   const [myRequests, setMyRequests] = useState([]);
@@ -783,9 +786,14 @@ export default function PemeriksaanKesehatan() {
   }, [activeTab, adminSubTab, isAdminOrValidator, fetchAdminRequests, fetchAdminBalances, fetchEmployeeOptions, fetchPackages]);
 
   // ─── Balance & Selection Calculations ───────────────────────────
+  // Available balance headroom (includes pending request's amount if editing it)
   const currentAvailableBalance = useMemo(() => {
-    return Number(balanceData?.current_balance ?? 0);
-  }, [balanceData]);
+    const rawBalance = Number(balanceData?.current_balance ?? 0);
+    if (editingRequest) {
+      return rawBalance + Number(editingRequest.total_amount ?? 0);
+    }
+    return rawBalance;
+  }, [balanceData, editingRequest]);
 
   const totalSelectedPrice = useMemo(() => {
     return selectedPackageIds.reduce((sum, id) => {
@@ -822,7 +830,92 @@ export default function PemeriksaanKesehatan() {
     });
   }, [packages, packageSearch]);
 
-  // ─── Submit MCU Request ─────────────────────────────────────────
+  // ─── Load Request Data for Editing ──────────────────────────────
+  const loadRequestForEdit = useCallback(
+    (request) => {
+      if (!request) return;
+      setEditingRequest(request);
+      setUserMode("edit");
+
+      // Match package IDs from request items
+      const pkgIds = (request.items || [])
+        .map((item) => {
+          if (item.medical_checkup_package_id) return item.medical_checkup_package_id;
+          const matched = packages.find(
+            (p) => p.name === item.package_name || (p.code && p.code === item.notes)
+          );
+          return matched?.id;
+        })
+        .filter(Boolean);
+
+      setSelectedPackageIds(pkgIds);
+      requestForm.setFieldsValue({
+        planned_date: request.planned_date ? dayjs(request.planned_date) : dayjs().add(1, "day"),
+        faskes_name: request.faskes_name || "",
+        notes: request.notes || "",
+      });
+    },
+    [packages, requestForm]
+  );
+
+  // ─── Reset Form to New Request Mode ─────────────────────────────
+  const handleResetToNew = () => {
+    setEditingRequest(null);
+    setUserMode("new");
+    requestForm.resetFields();
+    setSelectedPackageIds([]);
+    requestForm.setFieldsValue({
+      planned_date: dayjs().add(1, "day"),
+      faskes_name: "Klinik / Lab Rekanan BPOM Palopo",
+      notes: "",
+    });
+    message.info("Formulir dialihkan ke mode pengajuan baru.");
+  };
+
+  // ─── Auto-load Pending Request on Initial Load ──────────────────
+  useEffect(() => {
+    if (userMode === "auto" && myRequests.length > 0 && packages.length > 0 && !hasAutoLoadedRef.current) {
+      const pendingReq = myRequests.find((r) => r.status === "pending");
+      if (pendingReq) {
+        hasAutoLoadedRef.current = true;
+        loadRequestForEdit(pendingReq);
+      }
+    }
+  }, [userMode, myRequests, packages, loadRequestForEdit]);
+
+  // Sync package checkmarks when editingRequest & packages are loaded
+  useEffect(() => {
+    if (editingRequest && packages.length > 0 && selectedPackageIds.length === 0) {
+      const pkgIds = (editingRequest.items || [])
+        .map((item) => {
+          if (item.medical_checkup_package_id) return item.medical_checkup_package_id;
+          const matched = packages.find(
+            (p) => p.name === item.package_name || (p.code && p.code === item.notes)
+          );
+          return matched?.id;
+        })
+        .filter(Boolean);
+      if (pkgIds.length > 0) {
+        setSelectedPackageIds(pkgIds);
+      }
+    }
+  }, [editingRequest, packages, selectedPackageIds.length]);
+
+  // ─── Edit Action (From History Table or Detail Drawer) ──────────
+  const handleEditRequest = (record) => {
+    if (record.status !== "pending") {
+      message.warning("Hanya pengajuan dengan status Menunggu Verifikasi yang dapat diubah.");
+      return;
+    }
+    loadRequestForEdit(record);
+    setActiveTab("form");
+    if (detailDrawerOpen) {
+      setDetailDrawerOpen(false);
+    }
+    message.success(`Memuat data pengajuan ${record.request_number} untuk diedit.`);
+  };
+
+  // ─── Submit or Update MCU Request ───────────────────────────────
   const handleSubmitRequest = async (values) => {
     if (selectedPackageIds.length === 0) {
       message.warning("Pilih minimal 1 jenis pemeriksaan kesehatan.");
@@ -840,17 +933,38 @@ export default function PemeriksaanKesehatan() {
         planned_date: values.planned_date.format("YYYY-MM-DD"),
         faskes_name: values.faskes_name,
         notes: values.notes,
-        tahun_anggaran: new Date().getFullYear(),
+        tahun_anggaran: editingRequest?.tahun_anggaran || new Date().getFullYear(),
       };
 
-      const res = await apiFetch("/medical-checkup/requests", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message ?? "Gagal mengirim pengajuan.");
+      let res;
+      if (editingRequest) {
+        res = await apiFetch(`/medical-checkup/requests/${editingRequest.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await apiFetch("/medical-checkup/requests", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
 
-      message.success("Pengajuan pemeriksaan kesehatan berhasil dikirim!");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          data?.message ?? (editingRequest ? "Gagal memperbarui pengajuan." : "Gagal mengirim pengajuan.")
+        );
+      }
+
+      message.success(
+        editingRequest
+          ? `Perubahan pengajuan MCU (${editingRequest.request_number}) berhasil disimpan!`
+          : "Pengajuan pemeriksaan kesehatan berhasil dikirim!"
+      );
+
+      setEditingRequest(null);
+      setUserMode("auto");
+      hasAutoLoadedRef.current = false;
       requestForm.resetFields();
       setSelectedPackageIds([]);
       fetchMyBalance();
@@ -894,6 +1008,12 @@ export default function PemeriksaanKesehatan() {
           if (!res.ok) throw new Error(data?.message ?? "Gagal membatalkan pengajuan");
 
           message.success("Pengajuan berhasil dibatalkan dan saldo telah dikembalikan.");
+          if (editingRequest?.id === record.id) {
+            setEditingRequest(null);
+            setUserMode("new");
+            requestForm.resetFields();
+            setSelectedPackageIds([]);
+          }
           if (detailDrawerOpen && selectedRequest?.id === record.id) {
             setDetailDrawerOpen(false);
           }
@@ -1339,7 +1459,7 @@ export default function PemeriksaanKesehatan() {
     {
       title: "Aksi",
       key: "action",
-      width: 90,
+      width: 120,
       fixed: "right",
       align: "center",
       render: (_, r) => (
@@ -1354,15 +1474,26 @@ export default function PemeriksaanKesehatan() {
             </button>
           </Tooltip>
           {r.status === "pending" && (
-            <Tooltip title="Batalkan Pengajuan">
-              <button
-                type="button"
-                className="mcu-action-btn danger"
-                onClick={() => handleCancelRequest(r)}
-              >
-                <CloseCircleOutlined style={{ fontSize: 13 }} />
-              </button>
-            </Tooltip>
+            <>
+              <Tooltip title="Ubah Data Pengajuan">
+                <button
+                  type="button"
+                  className="mcu-action-btn"
+                  onClick={() => handleEditRequest(r)}
+                >
+                  <EditOutlined style={{ fontSize: 13, color: "#0284c7" }} />
+                </button>
+              </Tooltip>
+              <Tooltip title="Batalkan Pengajuan">
+                <button
+                  type="button"
+                  className="mcu-action-btn danger"
+                  onClick={() => handleCancelRequest(r)}
+                >
+                  <CloseCircleOutlined style={{ fontSize: 13 }} />
+                </button>
+              </Tooltip>
+            </>
           )}
         </Space>
       ),
@@ -1378,7 +1509,7 @@ export default function PemeriksaanKesehatan() {
           className={`mcu-nav-btn ${activeTab === "form" ? "active" : ""}`}
           onClick={() => setActiveTab("form")}
         >
-          <MedicineBoxOutlined /> Form Pengajuan & Kalkulator Saldo
+          <MedicineBoxOutlined /> {editingRequest ? "Form Ubah Pengajuan & Saldo" : "Form Pengajuan & Kalkulator Saldo"}
         </button>
 
         <button
@@ -1406,6 +1537,63 @@ export default function PemeriksaanKesehatan() {
       {/* ── 2. TAB 1: FORM PENGAJUAN & REAL-TIME CALCULATOR ── */}
       {activeTab === "form" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Edit Mode Alert Banner */}
+          {editingRequest && (
+            <div
+              style={{
+                background: "#f0f9ff",
+                border: "1px solid #bae6fd",
+                borderRadius: 10,
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: "#e0f2fe",
+                    color: "#0284c7",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  <EditOutlined />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+                      Mode Perubahan Pengajuan: {editingRequest.request_number}
+                    </span>
+                    <div className="status-indicator">
+                      <span className="status-dot pending" />
+                      <span className="status-text">Menunggu Verifikasi</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>
+                    Pengajuan Anda belum diverifikasi admin. Data checklist pemeriksaan, tanggal, dan faskes rujukan di bawah telah dimuat dan dapat Anda ubah.
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="small"
+                onClick={handleResetToNew}
+                style={{ borderRadius: 6, fontSize: 12, height: 30 }}
+              >
+                Batal Ubah / Pengajuan Baru
+              </Button>
+            </div>
+          )}
+
           {/* Balance Hero Card */}
           <div className="mcu-balance-card">
             <div className="mcu-balance-grid">
@@ -1464,7 +1652,9 @@ export default function PemeriksaanKesehatan() {
               </div>
 
               <div className="mcu-sim-item">
-                <span className="mcu-sim-label">Estimasi Sisa Saldo</span>
+                <span className="mcu-sim-label">
+                  {editingRequest ? "Estimasi Sisa Saldo Setelah Edit" : "Estimasi Sisa Saldo"}
+                </span>
                 <span
                   className={`mcu-sim-value ${
                     simulatedRemainingBalance < 0
@@ -1496,7 +1686,7 @@ export default function PemeriksaanKesehatan() {
                     ? Math.min(
                         100,
                         Math.round(
-                          ((Number(balanceData.used_balance) + totalSelectedPrice) /
+                          ((Number(balanceData.used_balance) + totalSelectedPrice - (editingRequest ? Number(editingRequest.total_amount || 0) : 0)) /
                             Number(balanceData.initial_balance)) *
                             100
                         )
@@ -1608,8 +1798,16 @@ export default function PemeriksaanKesehatan() {
             {/* Right: Submission Form */}
             <Col xs={24} lg={9}>
               <div className="mcu-section-card" style={{ position: "sticky", top: 16 }}>
-                <div className="mcu-section-title">
-                  <CalendarOutlined style={{ color: "#059669" }} /> Formulir Pengajuan
+                <div className="mcu-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <CalendarOutlined style={{ color: editingRequest ? "#0284c7" : "#059669" }} />
+                    <span>{editingRequest ? "Perbarui Formulir Pengajuan" : "Formulir Pengajuan"}</span>
+                  </div>
+                  {editingRequest && (
+                    <Button size="small" type="link" onClick={handleResetToNew} style={{ padding: 0, fontSize: 12, height: "auto" }}>
+                      Reset Baru
+                    </Button>
+                  )}
                 </div>
 
                 <Form
@@ -1667,12 +1865,18 @@ export default function PemeriksaanKesehatan() {
                       fontSize: 12,
                     }}
                   >
+                    {editingRequest && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ color: "#64748b" }}>Biaya Semula:</span>
+                        <strong style={{ color: "#64748b" }}>{formatRupiah(editingRequest.total_amount)}</strong>
+                      </div>
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                       <span style={{ color: "#64748b" }}>Item Terpilih:</span>
                       <strong style={{ color: "#0f172a" }}>{selectedPackageIds.length} item</strong>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ color: "#64748b" }}>Total Biaya:</span>
+                      <span style={{ color: "#64748b" }}>Total Biaya Baru:</span>
                       <strong style={{ color: "#0284c7" }}>{formatRupiah(totalSelectedPrice)}</strong>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #cbd5e1", paddingTop: 6, marginTop: 6 }}>
@@ -1695,8 +1899,22 @@ export default function PemeriksaanKesehatan() {
                       fontWeight: 600,
                     }}
                   >
-                    Kirim Pengajuan MCU
+                    {editingRequest ? "Simpan Perubahan Pengajuan" : "Kirim Pengajuan MCU"}
                   </Button>
+                  {editingRequest && (
+                    <Button
+                      block
+                      onClick={handleResetToNew}
+                      style={{
+                        borderRadius: 6,
+                        height: 34,
+                        marginTop: 8,
+                        fontSize: 12,
+                      }}
+                    >
+                      Batal Ubah (Form Baru)
+                    </Button>
+                  )}
                 </Form>
               </div>
             </Col>
@@ -1774,7 +1992,10 @@ export default function PemeriksaanKesehatan() {
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
-                  onClick={() => setActiveTab("form")}
+                  onClick={() => {
+                    handleResetToNew();
+                    setActiveTab("form");
+                  }}
                   style={{ height: 34, borderRadius: 6, fontWeight: 600 }}
                 >
                   + Pengajuan Baru
@@ -2326,11 +2547,22 @@ export default function PemeriksaanKesehatan() {
         footer={
           selectedRequest && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              {selectedRequest.status === "pending" && (
-                <Button danger icon={<CloseCircleOutlined />} onClick={() => handleCancelRequest(selectedRequest)}>
-                  Batalkan Pengajuan
-                </Button>
-              )}
+              <Space>
+                {selectedRequest.status === "pending" && (
+                  <>
+                    <Button
+                      type="primary"
+                      icon={<EditOutlined />}
+                      onClick={() => handleEditRequest(selectedRequest)}
+                    >
+                      Ubah Pengajuan
+                    </Button>
+                    <Button danger icon={<CloseCircleOutlined />} onClick={() => handleCancelRequest(selectedRequest)}>
+                      Batalkan Pengajuan
+                    </Button>
+                  </>
+                )}
+              </Space>
               <Space style={{ marginLeft: "auto" }}>
                 <Button onClick={() => setDetailDrawerOpen(false)}>Tutup</Button>
                 {isAdminOrValidator && (

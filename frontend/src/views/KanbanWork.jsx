@@ -19,8 +19,17 @@ import {
     Badge,
     Tabs,
     Spin,
+    Popover,
 } from 'antd';
 import {
+    DownOutlined,
+    UpOutlined,
+    CompressOutlined,
+    ExpandOutlined,
+    WarningOutlined,
+    FireOutlined,
+    FilterOutlined,
+    CloseOutlined,
     ArrowLeftOutlined,
     PlusOutlined,
     SearchOutlined,
@@ -55,15 +64,19 @@ import {
     HistoryOutlined,
     MessageOutlined,
     CommentOutlined,
+    MenuFoldOutlined,
+    MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { buildMessageAdapter } from '../utils/notify.js';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/id';
 import './KanbanWork.css';
 
 dayjs.locale('id');
+dayjs.extend(relativeTime);
 
 const DATE_API = 'YYYY-MM-DD';
 const DATE_UI = 'DD/MM/YYYY';
@@ -130,6 +143,11 @@ function getGroupIcon(iconName) {
     }
 }
 
+function formatChannelName(name) {
+    if (!name || typeof name !== 'string') return 'channel';
+    return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 function KanbanWorkInner() {
     const { apiFetch, user } = useAuth();
     const navigate = useNavigate();
@@ -161,10 +179,39 @@ function KanbanWorkInner() {
     const [priorityFilter, setPriorityFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [employeeFilter, setEmployeeFilter] = useState('all');
+    const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+
+    const hasActiveFilters = priorityFilter !== 'all' || categoryFilter !== 'all' || employeeFilter !== 'all';
+    const activeFilterCount = (priorityFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0) + (employeeFilter !== 'all' ? 1 : 0);
+    const handleResetAllFilters = () => {
+        setPriorityFilter('all');
+        setCategoryFilter('all');
+        setEmployeeFilter('all');
+        setSearch('');
+    };
+
+    // Sidebar Collapsed / Expanded state (for maximizing board workspace)
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+    // Discord Sidebar Category Collapse state
+    const [collapsedCategories, setCollapsedCategories] = useState(new Set());
+    const toggleCategory = (catKey) => {
+        setCollapsedCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(catKey)) next.delete(catKey);
+            else next.add(catKey);
+            return next;
+        });
+    };
+
+    // Minimize & Maximize Task Cards State (Default: Minimized / Empty Set)
+    const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
 
     // Inline Card Subtask Adder
     const [addingSubtaskTaskId, setAddingSubtaskTaskId] = useState(null);
     const [cardSubtaskInput, setCardSubtaskInput] = useState('');
+    const [cardSubtaskPic, setCardSubtaskPic] = useState(undefined);
+    const [cardSubtaskDueDate, setCardSubtaskDueDate] = useState(null);
     const [uploadingSubtaskId, setUploadingSubtaskId] = useState(null);
 
     // Create / Edit Modal State
@@ -179,6 +226,8 @@ function KanbanWorkInner() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [detailTask, setDetailTask] = useState(null);
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+    const [newSubtaskPic, setNewSubtaskPic] = useState(undefined);
+    const [newSubtaskDueDate, setNewSubtaskDueDate] = useState(null);
 
     // Dedicated Report Modal State
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -194,27 +243,47 @@ function KanbanWorkInner() {
     const [activeDetailTab, setActiveDetailTab] = useState('subtasks');
 
     // ── Unread Reports Red Bubble State & Helpers ──
-    const [unreadRefreshTick, setUnreadRefreshTick] = useState(0);
+    const [readReportIds, setReadReportIds] = useState(() => {
+        try {
+            const saved = localStorage.getItem('siptu_kanban_read_reports');
+            return saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch {
+            return new Set();
+        }
+    });
 
     const isTaskReportUnread = (task) => {
-        if (!task) return false;
-        const count = task.reports_count || (task.reports ? task.reports.length : 0);
-        if (count === 0) return false;
-        const lastRead = localStorage.getItem(`kanban_read_task_${task.id}`);
-        if (!lastRead) return true;
-        if (task.latest_report_at) {
-            return new Date(task.latest_report_at).getTime() > Number(lastRead);
-        }
-        return false;
+        if (!task || !task.reports_count || task.reports_count === 0) return false;
+        if (!task.latest_report_id) return false;
+        return !readReportIds.has(task.latest_report_id);
     };
 
-    const markTaskReportRead = (taskId) => {
-        if (!taskId) return;
-        localStorage.setItem(`kanban_read_task_${taskId}`, String(Date.now()));
-        setUnreadRefreshTick((prev) => prev + 1);
+    const markTaskReportsAsRead = (taskOrId) => {
+        if (!taskOrId) return;
+        const task = typeof taskOrId === 'object' ? taskOrId : (tasks || []).find((t) => t.id === taskOrId);
+        setReadReportIds((prev) => {
+            const next = new Set(prev);
+            if (task?.latest_report_id) {
+                next.add(task.latest_report_id);
+            }
+            if (task?.reports && Array.isArray(task.reports)) {
+                task.reports.forEach((r) => next.add(r.id));
+            }
+            if (typeof taskOrId === 'number' || typeof taskOrId === 'string') {
+                next.add(taskOrId);
+            }
+            try {
+                localStorage.setItem('siptu_kanban_read_reports', JSON.stringify([...next]));
+            } catch (e) {
+                console.error('Failed to save read report IDs:', e);
+            }
+            return next;
+        });
     };
 
-    // ── Activity Logs (Audit Trail) State ──
+    const markTaskReportRead = markTaskReportsAsRead;
+
+    // Activity Logs Modal State
     const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const [activityLoading, setActivityLoading] = useState(false);
@@ -223,14 +292,13 @@ function KanbanWorkInner() {
     const fetchActivityLogs = async (groupId = null) => {
         setActivityLoading(true);
         try {
-            const targetGroup = groupId !== null ? groupId : activeGroupId;
-            const url = (targetGroup && targetGroup !== 'all')
-                ? `/kanban-activities?group_id=${targetGroup}`
-                : '/kanban-activities';
+            const url = groupId && groupId !== 'all'
+                ? `/kanban-groups/${groupId}/activities`
+                : '/kanban-tasks/activities';
             const res = await apiFetch(url);
-            if (!res.ok) throw new Error('Gagal memuat log aktivitas.');
-            const json = await res.json();
-            setActivityLogs(json.data || []);
+            if (!res.ok) throw new Error('Gagal memuat riwayat log aktivitas');
+            const body = await res.json();
+            setActivityLogs(body.data ?? []);
         } catch (e) {
             notification.error({ message: 'Gagal', description: e.message });
         } finally {
@@ -295,7 +363,6 @@ function KanbanWorkInner() {
                 const body = await res.json();
                 const data = body.data ?? [];
                 setGroups(data);
-                // If activeGroupId is 'all' and groups exist, keep 'all' or select first
             }
         } catch (e) {
             console.error('Failed to fetch kanban groups:', e);
@@ -342,15 +409,99 @@ function KanbanWorkInner() {
     // Active Group Data Object
     const activeGroupObj = useMemo(() => {
         if (activeGroupId === 'all') return null;
-        return groups.find((g) => String(g.id) === String(activeGroupId)) || null;
+        return (groups || []).find((g) => String(g?.id) === String(activeGroupId)) || null;
     }, [groups, activeGroupId]);
 
     // Filtered Groups for Right Sidebar
     const filteredGroups = useMemo(() => {
+        if (!Array.isArray(groups)) return [];
         if (!groupSearch.trim()) return groups;
         const q = groupSearch.toLowerCase();
-        return groups.filter((g) => g.name.toLowerCase().includes(q) || (g.description && g.description.toLowerCase().includes(q)));
+        return groups.filter((g) => (g?.name || '').toLowerCase().includes(q) || ((g?.description || '').toLowerCase().includes(q)));
     }, [groups, groupSearch]);
+
+    // Main & Project group channels memoized safely
+    const mainChannels = useMemo(() => {
+        return filteredGroups.filter(g => (g?.name || '').toLowerCase() === 'umum' || g?.is_public || g?.type === 'public');
+    }, [filteredGroups]);
+
+    const projectChannels = useMemo(() => {
+        return filteredGroups.filter(g => (g?.name || '').toLowerCase() !== 'umum' && !g?.is_public && g?.type !== 'public');
+    }, [filteredGroups]);
+
+    // Helper to get allowed employees for a given group/workspace
+    const getAvailableEmployeesForGroup = useCallback((groupId) => {
+        if (!groupId || groupId === 'all') return employees;
+        const targetGroup = groups.find((g) => String(g.id) === String(groupId));
+        if (!targetGroup) return employees;
+        // If workspace is public or Umum, all employees are eligible
+        if (targetGroup.is_public || targetGroup.type === 'public' || targetGroup.slug === 'umum' || targetGroup.name?.toLowerCase() === 'umum') {
+            return employees;
+        }
+        // If private or team workspace, include workspace members + creator
+        const memberIds = new Set((targetGroup.members || []).map((m) => m.id));
+        if (targetGroup.created_by_employee_id) {
+            memberIds.add(targetGroup.created_by_employee_id);
+        }
+        const filtered = employees.filter((emp) => memberIds.has(emp.id));
+        return filtered.length > 0 ? filtered : employees;
+    }, [groups, employees]);
+
+    // Helper to get all eligible PICs for a specific task (workspace members + task assignees + creator)
+    const getAvailableEmployeesForTask = useCallback((task) => {
+        if (!task) return employees;
+        const groupEmployees = getAvailableEmployeesForGroup(task.group_id);
+        const map = new Map();
+        groupEmployees.forEach((emp) => map.set(emp.id, emp));
+        if (task.assignees && Array.isArray(task.assignees)) {
+            task.assignees.forEach((emp) => map.set(emp.id, emp));
+        }
+        if (task.created_by_employee_id) {
+            const creator = employees.find((e) => e.id === task.created_by_employee_id);
+            if (creator) map.set(creator.id, creator);
+        }
+        if (task.subtasks && Array.isArray(task.subtasks)) {
+            task.subtasks.forEach((st) => {
+                if (st.assigned_employee) {
+                    map.set(st.assigned_employee.id, st.assigned_employee);
+                }
+            });
+        }
+        const result = Array.from(map.values());
+        return result.length > 0 ? result : employees;
+    }, [getAvailableEmployeesForGroup, employees]);
+
+    // Authorization: only task creator or administrator can change PIC & deadline
+    const canEditTaskPicAndDeadline = useCallback((task) => {
+        if (!task || !user) return false;
+        if (user.role === 'admin' || user.role === 'superadmin' || user.is_admin) return true;
+        if (task.created_by_user_id && Number(task.created_by_user_id) === Number(user.id)) return true;
+        if (user.employee_id && task.created_by_employee_id && Number(task.created_by_employee_id) === Number(user.employee_id)) return true;
+        return false;
+    }, [user]);
+
+    // Toggle single task card expand/collapse
+    const toggleTaskExpand = (taskId, e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        setExpandedTaskIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(taskId)) {
+                next.delete(taskId);
+            } else {
+                next.add(taskId);
+            }
+            return next;
+        });
+    };
+
+    // Toggle expand/collapse all cards
+    const handleToggleExpandAll = () => {
+        if (expandedTaskIds.size > 0) {
+            setExpandedTaskIds(new Set()); // Collapse all (default minimized)
+        } else {
+            setExpandedTaskIds(new Set(tasks.map((t) => t.id))); // Expand all
+        }
+    };
 
     // ── Group Modal Handlers ──
     const handleOpenCreateGroup = () => {
@@ -495,7 +646,7 @@ function KanbanWorkInner() {
         setModalMode('create');
         setEditingTask(null);
         setInitialSubtasks([
-            { id: Date.now(), title: '' },
+            { id: Date.now(), title: '', assigned_employee_id: undefined, due_date: null },
         ]);
         form.resetFields();
         const defaultGId = activeGroupId !== 'all' ? Number(activeGroupId) : (groups[0]?.id || null);
@@ -528,9 +679,11 @@ function KanbanWorkInner() {
 
     // Open Detail Modal
     const handleOpenDetail = (task) => {
-        markTaskReportRead(task.id);
+        markTaskReportRead(task);
         setDetailTask(task);
         setNewSubtaskTitle('');
+        setNewSubtaskPic(undefined);
+        setNewSubtaskDueDate(null);
         setReportContent('');
         setReportStatusUpdate(undefined);
         setReportFile(null);
@@ -542,7 +695,7 @@ function KanbanWorkInner() {
     // Open Dedicated Reports Modal from Card Bottom-Right
     const handleOpenReportsModal = (task, e) => {
         if (e && e.stopPropagation) e.stopPropagation();
-        markTaskReportRead(task.id);
+        markTaskReportRead(task);
         setReportingTask(task);
         setReportContent('');
         setReportStatusUpdate(undefined);
@@ -637,7 +790,11 @@ function KanbanWorkInner() {
             if (modalMode === 'create') {
                 const validSubtasks = initialSubtasks
                     .filter((s) => s.title && s.title.trim() !== '')
-                    .map((s) => ({ title: s.title.trim() }));
+                    .map((s) => ({
+                        title: s.title.trim(),
+                        assigned_employee_id: s.assigned_employee_id || null,
+                        due_date: s.due_date ? dayjs(s.due_date).format(DATE_API) : null,
+                    }));
                 payload.subtasks = validSubtasks;
 
                 const res = await apiFetch('/kanban-tasks', {
@@ -719,6 +876,24 @@ function KanbanWorkInner() {
         }
     };
 
+    // Update Subtask field (PIC, due date, etc.)
+    const handleUpdateSubtaskField = async (subtaskId, fieldData, taskId) => {
+        try {
+            const res = await apiFetch(`/kanban-tasks/subtasks/${subtaskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(fieldData),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || 'Gagal memperbarui rincian tahapan.');
+            }
+            refreshSingleTask(taskId);
+        } catch (e) {
+            notification.error({ message: 'Gagal', description: e.message });
+        }
+    };
+
     // Upload Evidence to Nextcloud (Works from Card & Modal)
     const handleUploadEvidence = async (subtaskId, file, taskId) => {
         if (!isAllowedFileType(file)) {
@@ -755,21 +930,28 @@ function KanbanWorkInner() {
     };
 
     // Add Subtask from Card Directly
-    const handleAddSubtaskFromCard = async (taskId) => {
+    const handleAddSubtaskFromCard = async (task) => {
         if (!cardSubtaskInput || !cardSubtaskInput.trim()) {
             setAddingSubtaskTaskId(null);
             return;
         }
         try {
-            const res = await apiFetch(`/kanban-tasks/${taskId}/subtasks`, {
+            const payload = {
+                title: cardSubtaskInput.trim(),
+                assigned_employee_id: cardSubtaskPic || null,
+                due_date: cardSubtaskDueDate ? dayjs(cardSubtaskDueDate).format(DATE_API) : null,
+            };
+            const res = await apiFetch(`/kanban-tasks/${task.id}/subtasks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: cardSubtaskInput.trim() }),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) throw new Error('Gagal menambah tahapan.');
             setCardSubtaskInput('');
+            setCardSubtaskPic(undefined);
+            setCardSubtaskDueDate(null);
             setAddingSubtaskTaskId(null);
-            refreshSingleTask(taskId);
+            refreshSingleTask(task.id);
         } catch (e) {
             notification.error({ message: 'Gagal', description: e.message });
         }
@@ -779,13 +961,20 @@ function KanbanWorkInner() {
     const handleAddSubtaskInDetail = async () => {
         if (!newSubtaskTitle || !newSubtaskTitle.trim() || !detailTask) return;
         try {
+            const payload = {
+                title: newSubtaskTitle.trim(),
+                assigned_employee_id: newSubtaskPic || null,
+                due_date: newSubtaskDueDate ? dayjs(newSubtaskDueDate).format(DATE_API) : null,
+            };
             const res = await apiFetch(`/kanban-tasks/${detailTask.id}/subtasks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: newSubtaskTitle.trim() }),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) throw new Error('Gagal menambah tahapan.');
             setNewSubtaskTitle('');
+            setNewSubtaskPic(undefined);
+            setNewSubtaskDueDate(null);
             refreshSingleTask(detailTask.id);
         } catch (e) {
             notification.error({ message: 'Gagal', description: e.message });
@@ -984,606 +1173,805 @@ function KanbanWorkInner() {
     ];
 
     return (
-        <div className="kanban-module-root">
-            {/* ── TOP COMMAND TOOLBAR ── */}
-            <div className="kanban-top-bar">
-                <div className="kanban-top-bar__left">
-                    <Button
-                        type="text"
-                        icon={<ArrowLeftOutlined />}
-                        className="kanban-back-btn"
-                        onClick={() => navigate('/app/layanan-mandiri')}
-                        title="Kembali ke Layanan Mandiri"
-                    >
-                        Layanan Mandiri
-                    </Button>
-
-                    <div className="kanban-bar-divider" />
-                    <span className="kanban-page-title">Kanban Work</span>
-                    <div className="kanban-bar-divider" />
-
-                    {/* Search */}
-                    <Input
-                        placeholder="Cari tugas, pegawai..."
-                        prefix={<SearchOutlined style={{ color: '#8c939d' }} />}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        allowClear
-                        className="kanban-search-input"
-                    />
-
-                    {/* Filters Group */}
-                    <div className="kanban-top-bar__filters">
-                        <Select
-                            value={priorityFilter}
-                            onChange={setPriorityFilter}
-                            className="kanban-select"
-                            style={{ width: 120 }}
-                        >
-                            <Select.Option value="all">Prioritas</Select.Option>
-                            <Select.Option value="urgent">● Mendesak</Select.Option>
-                            <Select.Option value="high">● Tinggi</Select.Option>
-                            <Select.Option value="medium">● Sedang</Select.Option>
-                            <Select.Option value="low">● Rendah</Select.Option>
-                        </Select>
-
-                        <Select
-                            value={categoryFilter}
-                            onChange={setCategoryFilter}
-                            className="kanban-select"
-                            style={{ width: 120 }}
-                        >
-                            <Select.Option value="all">Kategori</Select.Option>
-                            {categories.map((cat) => (
-                                <Select.Option key={cat} value={cat}>{cat}</Select.Option>
-                            ))}
-                        </Select>
-
-                        <Select
-                            value={employeeFilter}
-                            onChange={setEmployeeFilter}
-                            className="kanban-select"
-                            style={{ width: 140 }}
-                        >
-                            <Select.Option value="all">Semua Pegawai</Select.Option>
-                            <Select.Option value="my">★ Tugas Saya</Select.Option>
-                            {employees.map((emp) => (
-                                <Select.Option key={emp.id} value={String(emp.id)}>{emp.name}</Select.Option>
-                            ))}
-                        </Select>
-
-                        {(search || priorityFilter !== 'all' || categoryFilter !== 'all' || employeeFilter !== 'all') && (
-                            <Button
-                                type="text"
-                                icon={<ClearOutlined />}
-                                onClick={() => {
-                                    setSearch('');
-                                    setPriorityFilter('all');
-                                    setCategoryFilter('all');
-                                    setEmployeeFilter('all');
-                                }}
-                                style={{ color: '#ef4444', fontSize: 11.5, fontWeight: 600, padding: '0 4px' }}
-                            >
-                                Reset
-                            </Button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="kanban-top-bar__right">
-                    <span className="kanban-counter-chip">
-                        <span className="kanban-counter-dot" />
-                        {tasks.length} Tugas
-                    </span>
-
-                    <Tooltip title="Segarkan Data">
-                        <Button
-                            icon={<ReloadOutlined spin={loading} />}
-                            onClick={() => { fetchTasks(); fetchGroups(); }}
-                            disabled={loading}
-                            style={{ height: 32, borderRadius: 6 }}
-                        />
-                    </Tooltip>
-
-                    <Radio.Group
-                        value={viewMode}
-                        onChange={(e) => setViewMode(e.target.value)}
-                        className="kanban-view-toggle"
-                    >
-                        <Radio.Button value="board" title="Tampilan Papan Kanban"><AppstoreOutlined /></Radio.Button>
-                        <Radio.Button value="table" title="Tampilan Tabel"><UnorderedListOutlined /></Radio.Button>
-                    </Radio.Group>
-
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => handleOpenCreate('todo')}
-                        className="kanban-primary-btn"
-                    >
-                        Buat Tugas
-                    </Button>
-                </div>
-            </div>
-
-            {/* ── 2. MAIN LAYOUT: LEFT SIDEBAR + RIGHT KANBAN CANVAS ── */}
-            <div className="kanban-layout-container">
-                {/* ── LEFT GROUPING / CHANNEL NAVIGATOR (Discord & Layanan Mandiri Style) ── */}
-                <div className="kanban-group-sidebar">
-                    <div className="kanban-group-sidebar__header">
-                        <span className="kanban-group-sidebar__title">
-                            <TeamOutlined /> Ruang Kerja ({groups.length})
-                        </span>
+        <div className="flow-workspace-root">
+            <div className="flow-workspace">
+                {/* ── 1. UNIFIED COMMAND & NAVIGATION TOPBAR ── */}
+                <header className="flow-topbar">
+                    <div className="flow-topbar__left">
                         <Button
                             type="text"
-                            icon={<PlusOutlined />}
-                            className="kanban-group-sidebar__create-btn"
-                            onClick={handleOpenCreateGroup}
+                            icon={<ArrowLeftOutlined />}
+                            onClick={() => navigate('/app/layanan-mandiri')}
+                            className="flow-topbar__toggle-btn"
+                            title="Kembali ke Layanan Mandiri"
+                        />
+                        <Button
+                            type="text"
+                            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            className="flow-topbar__toggle-btn"
+                            title={sidebarCollapsed ? "Buka Panel Saluran" : "Tutup Panel Saluran"}
+                        />
+
+                        {/* Workspace / Channel Switcher Dropdown */}
+                        <Dropdown
+                            menu={{
+                                items: [
+                                    {
+                                        key: 'all',
+                                        label: (
+                                            <span style={{ fontWeight: activeGroupId === 'all' ? 700 : 500 }}>
+                                                🌐 Semua Ruang Kerja (Global)
+                                            </span>
+                                        ),
+                                        onClick: () => setActiveGroupId('all'),
+                                    },
+                                    { type: 'divider' },
+                                    ...groups.map((g) => ({
+                                        key: String(g.id),
+                                        label: (
+                                            <span style={{ fontWeight: String(activeGroupId) === String(g.id) ? 700 : 500 }}>
+                                                {g.type === 'private' ? '🔒' : '#'} {g.name} ({g.tasks_count || 0})
+                                            </span>
+                                        ),
+                                        onClick: () => setActiveGroupId(String(g.id)),
+                                    })),
+                                    { type: 'divider' },
+                                    {
+                                        key: 'create-group',
+                                        label: '+ Buat Ruang Kerja Baru',
+                                        icon: <PlusOutlined />,
+                                        onClick: handleOpenCreateGroup,
+                                    },
+                                ],
+                            }}
+                            trigger={['click']}
                         >
-                            Buat
-                        </Button>
+                            <div className="flow-workspace-pill">
+                                <span className="flow-workspace-pill__icon">
+                                    {activeGroupObj ? (activeGroupObj.type === 'private' ? '🔒' : '#') : '🌐'}
+                                </span>
+                                <span className="flow-workspace-pill__name">
+                                    {activeGroupObj ? formatChannelName(activeGroupObj.name) : 'semua-ruang-kerja'}
+                                </span>
+                                <DownOutlined className="flow-workspace-pill__arrow" />
+                            </div>
+                        </Dropdown>
+
+                        <span className="flow-topbar__count-badge">
+                            {tasks.length} Tugas
+                        </span>
                     </div>
 
-                    <div className="kanban-group-sidebar__search">
+                    {/* Center: Sleek Unified Search Input */}
+                    <div className="flow-topbar__center">
                         <Input
-                            size="small"
-                            placeholder="Cari ruang kerja..."
+                            placeholder="Cari tugas, PIC, tahapan..."
                             prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                            value={groupSearch}
-                            onChange={(e) => setGroupSearch(e.target.value)}
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                             allowClear
-                            style={{ borderRadius: 6 }}
+                            className="flow-search-input"
                         />
                     </div>
 
-                    <div className="kanban-group-sidebar__list">
-                        {/* Channel Option 0: Semua Ruang Kerja */}
-                        <div
-                            className={`kanban-group-channel-item ${activeGroupId === 'all' ? 'kanban-group-channel-item--active' : ''}`}
-                            onClick={() => setActiveGroupId('all')}
-                        >
-                            <div className="kanban-group-channel-item__left">
-                                <span className="kanban-group-channel-dot" style={{ background: '#0F5B99' }} />
-                                <div className="kanban-group-channel-item__meta">
-                                    <span className="kanban-group-channel-item__name">🌐 Semua Ruang Kerja</span>
-                                    <span className="kanban-group-channel-item__sub">Semua tugas saya</span>
-                                </div>
-                            </div>
-                            <div className="kanban-group-channel-item__right">
-                                <span className="kanban-group-channel-badge">{tasks.length}</span>
-                            </div>
-                        </div>
-
-                        {/* Channel Groups List */}
-                        {filteredGroups.map((g) => {
-                            const isActive = String(activeGroupId) === String(g.id);
-                            return (
-                                <div
-                                    key={g.id}
-                                    className={`kanban-group-channel-item ${isActive ? 'kanban-group-channel-item--active' : ''}`}
-                                    onClick={() => setActiveGroupId(String(g.id))}
-                                >
-                                    <div className="kanban-group-channel-item__left">
-                                        <span className="kanban-group-channel-dot" style={{ background: g.color || '#0F5B99' }} />
-                                        <div className="kanban-group-channel-item__meta">
-                                            <span className="kanban-group-channel-item__name">
-                                                {g.name}
-                                            </span>
-                                            <span className="kanban-group-channel-item__sub">
-                                                {g.is_public ? 'Publik' : (g.type === 'private' ? 'Pribadi' : `${(g.members ?? []).length} Pegawai`)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="kanban-group-channel-item__right">
-                                        <span className="kanban-group-channel-badge">{g.tasks_count || 0}</span>
-                                        {g.is_creator && (
-                                            <Dropdown
-                                                menu={{
-                                                    items: [
-                                                        {
-                                                            key: 'edit',
-                                                            label: 'Kelola / Edit',
-                                                            icon: <EditOutlined />,
-                                                            onClick: (e) => handleOpenEditGroup(g, e),
-                                                        },
-                                                        ...(!g.is_public || g.name.toLowerCase() !== 'umum' ? [
-                                                            { type: 'divider' },
-                                                            {
-                                                                key: 'delete',
-                                                                label: <span style={{ color: '#ef4444' }}>Hapus</span>,
-                                                                icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
-                                                                onClick: (e) => {
-                                                                    Modal.confirm({
-                                                                        title: 'Hapus Grouping',
-                                                                        content: `Hapus ruang kerja "${g.name}"? Tugas di dalamnya akan tetap aman.`,
-                                                                        okText: 'Hapus',
-                                                                        cancelText: 'Batal',
-                                                                        okButtonProps: { danger: true },
-                                                                        onOk: () => handleDeleteGroup(g),
-                                                                    });
-                                                                },
-                                                            },
-                                                        ] : []),
-                                                    ],
-                                                }}
-                                                trigger={['click']}
-                                                placement="bottomRight"
-                                            >
-                                                <Button
-                                                    type="text"
-                                                    size="small"
-                                                    shape="circle"
-                                                    icon={<MoreOutlined style={{ fontSize: 13, color: '#94a3b8' }} />}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                            </Dropdown>
+                    {/* Right: Smart Filter Popover, View Mode Switcher, Activity Log, and Primary CTA */}
+                    <div className="flow-topbar__right">
+                        {/* Smart Filter Popover */}
+                        <Popover
+                            trigger="click"
+                            open={filterPopoverOpen}
+                            onOpenChange={setFilterPopoverOpen}
+                            placement="bottomRight"
+                            content={
+                                <div className="flow-filter-popover">
+                                    <div className="flow-filter-popover__header">
+                                        <strong>Filter Papan</strong>
+                                        {hasActiveFilters && (
+                                          <Button
+                                              type="link"
+                                              size="small"
+                                              onClick={handleResetAllFilters}
+                                              style={{ padding: 0, height: 'auto', color: '#ef4444' }}
+                                          >
+                                              Reset Semua
+                                          </Button>
                                         )}
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
 
-                {/* ── RIGHT MAIN CANVAS (Active Group Header + Board / Table) ── */}
-                <div className="kanban-main-content">
-                    {/* Active Group Banner */}
-                    <div className="kanban-active-group-banner">
-                        <div className="kanban-active-group-banner__left">
-                            <div
-                                className="kanban-group-avatar-icon"
-                                style={{ background: activeGroupObj ? activeGroupObj.color : '#0F5B99' }}
-                            >
-                                {activeGroupObj ? getGroupIcon(activeGroupObj.icon) : <AppstoreOutlined />}
-                            </div>
-                            <div className="kanban-active-group-banner__meta">
-                                <div className="kanban-active-group-banner__title-row">
-                                    <h2 className="kanban-active-group-banner__title">
-                                        {activeGroupObj ? activeGroupObj.name : 'Semua Ruang Kerja (Semua Grouping)'}
-                                    </h2>
-                                    {activeGroupObj && (
-                                        <Tag color={activeGroupObj.is_public ? 'blue' : (activeGroupObj.type === 'private' ? 'default' : 'cyan')}>
-                                            {activeGroupObj.is_public ? 'Publik' : (activeGroupObj.type === 'private' ? 'Pribadi' : 'Tim')}
-                                        </Tag>
-                                    )}
+                                    <div className="flow-filter-popover__field">
+                                        <label>Prioritas</label>
+                                        <Select
+                                            value={priorityFilter}
+                                            onChange={setPriorityFilter}
+                                            style={{ width: '100%' }}
+                                            size="small"
+                                        >
+                                            <Select.Option value="all">Semua Prioritas</Select.Option>
+                                            <Select.Option value="urgent">🔴 Mendesak</Select.Option>
+                                            <Select.Option value="high">🟠 Tinggi</Select.Option>
+                                            <Select.Option value="medium">🟡 Sedang</Select.Option>
+                                            <Select.Option value="low">⚪ Rendah</Select.Option>
+                                        </Select>
+                                    </div>
+
+                                    <div className="flow-filter-popover__field">
+                                        <label>Kategori</label>
+                                        <Select
+                                            value={categoryFilter}
+                                            onChange={setCategoryFilter}
+                                            style={{ width: '100%' }}
+                                            size="small"
+                                        >
+                                            <Select.Option value="all">Semua Kategori</Select.Option>
+                                            {categories.map((cat) => (
+                                                <Select.Option key={cat} value={cat}>{cat}</Select.Option>
+                                            ))}
+                                        </Select>
+                                    </div>
+
+                                    <div className="flow-filter-popover__field">
+                                        <label>Tugaskan Kepada / PIC</label>
+                                        <Select
+                                            value={employeeFilter}
+                                            onChange={setEmployeeFilter}
+                                            style={{ width: '100%' }}
+                                            size="small"
+                                            showSearch
+                                            optionFilterProp="children"
+                                        >
+                                            <Select.Option value="all">Semua Pegawai</Select.Option>
+                                            <Select.Option value="my">★ Tugas Saya</Select.Option>
+                                            {employees.map((emp) => (
+                                                <Select.Option key={emp.id} value={String(emp.id)}>{emp.name}</Select.Option>
+                                            ))}
+                                        </Select>
+                                    </div>
                                 </div>
-                                <p className="kanban-active-group-banner__desc">
-                                    {activeGroupObj
-                                        ? (activeGroupObj.description || 'Papan kanban tugas dan pengerjaan tahapan bersama tim')
-                                        : 'Menampilkan seluruh tugas dari semua grouping ruang kerja yang dapat Anda akses'}
-                                </p>
-                            </div>
+                            }
+                        >
+                            <Button
+                                icon={<FilterOutlined />}
+                                className={`flow-topbar__btn ${hasActiveFilters ? 'flow-topbar__btn--active' : ''}`}
+                            >
+                                Filter {hasActiveFilters && <span className="flow-filter-count-badge">{activeFilterCount}</span>}
+                            </Button>
+                        </Popover>
+
+                        {/* Segmented View Mode */}
+                        <div className="flow-view-switcher">
+                            <button
+                                type="button"
+                                className={`flow-view-btn ${viewMode === 'board' ? 'flow-view-btn--active' : ''}`}
+                                onClick={() => setViewMode('board')}
+                                title="Tampilan Papan Kanban"
+                            >
+                                <AppstoreOutlined />
+                            </button>
+                            <button
+                                type="button"
+                                className={`flow-view-btn ${viewMode === 'table' ? 'flow-view-btn--active' : ''}`}
+                                onClick={() => setViewMode('table')}
+                                title="Tampilan Tabel Database"
+                            >
+                                <UnorderedListOutlined />
+                            </button>
                         </div>
 
-                        <div className="kanban-active-group-banner__right">
-                            {activeGroupObj && (activeGroupObj.members ?? []).length > 0 && (
-                                <div className="kanban-group-members-stack">
-                                    {activeGroupObj.members.slice(0, 6).map((m) => (
-                                        <Tooltip key={m.id} title={`${m.name} (${m.department || 'Pegawai'})`}>
-                                            <div className="kanban-member-avatar-mini" style={{ background: activeGroupObj.color }}>
-                                                {getInitials(m.name)}
-                                            </div>
-                                        </Tooltip>
-                                    ))}
-                                    {activeGroupObj.members.length > 6 && (
-                                        <div className="kanban-member-avatar-mini" style={{ background: '#475569' }}>
-                                            +{activeGroupObj.members.length - 6}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {activeGroupObj && activeGroupObj.is_creator && (
+                        {/* Expand / Minimize All */}
+                        {viewMode === 'board' && (
+                            <Tooltip title={expandedTaskIds.size > 0 ? "Tutup Semua Rincian Kartu" : "Buka Semua Rincian Kartu"}>
                                 <Button
-                                    type="default"
-                                    size="small"
-                                    icon={<SettingOutlined />}
-                                    onClick={(e) => handleOpenEditGroup(activeGroupObj, e)}
-                                    style={{ borderRadius: 6, fontSize: 12 }}
-                                >
-                                    Kelola Anggota
-                                </Button>
-                            )}
+                                    type="text"
+                                    icon={expandedTaskIds.size > 0 ? <CompressOutlined /> : <ExpandOutlined />}
+                                    onClick={handleToggleExpandAll}
+                                    className="flow-topbar__icon-btn"
+                                />
+                            </Tooltip>
+                        )}
 
+                        {/* Activity Logs */}
+                        <Tooltip title="Log Aktivitas & Audit">
                             <Button
-                                type="default"
-                                size="small"
+                                type="text"
                                 icon={<HistoryOutlined />}
                                 onClick={() => handleOpenActivityLogs(activeGroupId)}
-                                style={{ borderRadius: 6, fontSize: 12 }}
-                            >
-                                Log Aktivitas
-                            </Button>
-                        </div>
-                    </div>
+                                className="flow-topbar__icon-btn"
+                            />
+                        </Tooltip>
 
-                    {/* ── KANBAN BOARD OR TABLE VIEW ── */}
-                    {viewMode === 'board' ? (
-                        <div className="kanban-board-canvas">
-                            {COLUMNS.map((col) => {
-                                const colTasks = tasks.filter((t) => t.status === col.key);
-                                return (
-                                    <div key={col.key} className="kanban-column">
-                                        <div className="kanban-column__header">
-                                            <div className="kanban-column__title-wrap">
-                                                <span className={`kanban-column-dot ${col.dotClass}`} />
-                                                <h3 className="kanban-column__title">{col.title}</h3>
-                                                <span className="kanban-column__badge">{colTasks.length}</span>
+                        {/* Reload */}
+                        <Tooltip title="Segarkan Data">
+                            <Button
+                                type="text"
+                                icon={<ReloadOutlined spin={loading} />}
+                                onClick={() => { fetchTasks(); fetchGroups(); }}
+                                className="flow-topbar__icon-btn"
+                            />
+                        </Tooltip>
+
+                        {/* Primary Action Button */}
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleOpenCreate('todo')}
+                            className="flow-btn-primary"
+                        >
+                            Tugas Baru
+                        </Button>
+                    </div>
+                </header>
+
+                {/* ── 2. WORKSPACE BODY (UNIFIED SIDEBAR + CANVAS) ── */}
+                <div className="flow-workspace__body">
+                    {/* Seamless Left Channel Sidebar */}
+                    {!sidebarCollapsed && (
+                        <aside className="flow-sidebar">
+                            <div className="flow-sidebar__search">
+                                <Input
+                                    size="small"
+                                    placeholder="Cari ruang kerja..."
+                                    prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                                    value={groupSearch}
+                                    onChange={(e) => setGroupSearch(e.target.value)}
+                                    allowClear
+                                    className="flow-sidebar__search-input"
+                                />
+                            </div>
+
+                            <div className="flow-sidebar__scroll">
+                                {/* Section 1: RUANG KERJA UTAMA */}
+                                <div className="flow-sidebar__section">
+                                    <div className="flow-sidebar__section-title">
+                                        <span>RUANG KERJA UTAMA</span>
+                                    </div>
+
+                                    <div
+                                        className={`flow-channel-item ${activeGroupId === 'all' ? 'flow-channel-item--active' : ''}`}
+                                        onClick={() => setActiveGroupId('all')}
+                                    >
+                                        <div className="flow-channel-item__main">
+                                            <span className="flow-channel-item__icon">🌐</span>
+                                            <span className="flow-channel-item__name">semua-ruang-kerja</span>
+                                        </div>
+                                        <span className="flow-channel-item__count">{tasks.length}</span>
+                                    </div>
+
+                                    {mainChannels.map((g) => {
+                                        const isActive = String(activeGroupId) === String(g.id);
+                                        return (
+                                            <div
+                                                key={g.id}
+                                                className={`flow-channel-item ${isActive ? 'flow-channel-item--active' : ''}`}
+                                                onClick={() => setActiveGroupId(String(g.id))}
+                                            >
+                                                <div className="flow-channel-item__main">
+                                                    <span className="flow-channel-item__hash">#</span>
+                                                    <span className="flow-channel-item__name">{formatChannelName(g.name)}</span>
+                                                </div>
+                                                <div className="flow-channel-item__actions">
+                                                    <span className="flow-channel-item__count">{g.tasks_count || 0}</span>
+                                                    {g.is_creator && (
+                                                        <Button
+                                                            type="text"
+                                                            size="small"
+                                                            icon={<SettingOutlined />}
+                                                            className="flow-channel-item__gear"
+                                                            onClick={(e) => handleOpenEditGroup(g, e)}
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Section 2: TIM & PROYEK */}
+                                <div className="flow-sidebar__section">
+                                    <div className="flow-sidebar__section-title">
+                                        <span>TIM & PROYEK ({projectChannels.length})</span>
+                                        <Tooltip title="Buat Ruang Kerja Baru">
                                             <Button
                                                 type="text"
                                                 size="small"
                                                 icon={<PlusOutlined />}
-                                                className="kanban-column__quick-add"
-                                                onClick={() => handleOpenCreate(col.key)}
-                                                title={`Tambah tugas ke ${col.title}`}
+                                                onClick={handleOpenCreateGroup}
+                                                className="flow-sidebar__add-btn"
                                             />
-                                        </div>
+                                        </Tooltip>
+                                    </div>
 
-                                        <div className="kanban-column__body">
-                                            {colTasks.length === 0 ? (
-                                                <div className="kanban-column__empty">
-                                                    Belum ada tugas di kolom ini
+                                    {projectChannels.map((g) => {
+                                        const isActive = String(activeGroupId) === String(g.id);
+                                        return (
+                                            <div
+                                                key={g.id}
+                                                className={`flow-channel-item ${isActive ? 'flow-channel-item--active' : ''}`}
+                                                onClick={() => setActiveGroupId(String(g.id))}
+                                            >
+                                                <div className="flow-channel-item__main">
+                                                    <span className="flow-channel-item__hash">{g.type === 'private' ? '🔒' : '#'}</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                        <span className="flow-channel-item__name">{formatChannelName(g.name)}</span>
+                                                        <span className="flow-channel-item__sub">
+                                                            {g.type === 'private' ? 'Pribadi' : `${(g.members ?? []).length} Anggota`}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            ) : (
-                                                colTasks.map((task) => {
-                                                    const pConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-                                                    const isOverdue = task.due_date && dayjs(task.due_date).isBefore(dayjs(), 'day') && task.status !== 'done';
-                                                    const isToday = task.due_date && dayjs(task.due_date).isSame(dayjs(), 'day') && task.status !== 'done';
-
-                                                    return (
-                                                        <div
-                                                            key={task.id}
-                                                            className="kanban-card"
-                                                            onClick={() => handleOpenDetail(task)}
+                                                <div className="flow-channel-item__actions">
+                                                    <span className="flow-channel-item__count">{g.tasks_count || 0}</span>
+                                                    {g.is_creator && (
+                                                        <Dropdown
+                                                            menu={{
+                                                                items: [
+                                                                    {
+                                                                        key: 'edit',
+                                                                        label: 'Kelola / Edit',
+                                                                        icon: <EditOutlined />,
+                                                                        onClick: (e) => handleOpenEditGroup(g, e),
+                                                                    },
+                                                                    { type: 'divider' },
+                                                                    {
+                                                                        key: 'delete',
+                                                                        label: <span style={{ color: '#ef4444' }}>Hapus Ruang Kerja</span>,
+                                                                        icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+                                                                        onClick: () => {
+                                                                            Modal.confirm({
+                                                                                title: 'Hapus Ruang Kerja',
+                                                                                content: `Hapus ruang kerja "${g.name}"? Tugas di dalamnya akan tetap aman.`,
+                                                                                okText: 'Hapus',
+                                                                                cancelText: 'Batal',
+                                                                                okButtonProps: { danger: true },
+                                                                                onOk: () => handleDeleteGroup(g),
+                                                                            });
+                                                                        },
+                                                                    },
+                                                                ],
+                                                            }}
+                                                            trigger={['click']}
+                                                            placement="bottomRight"
                                                         >
-                                                            {/* Card Tags & Move Action */}
-                                                            <div className="kanban-card__top">
-                                                                <div className="kanban-card__tags">
-                                                                    <span className={`kanban-badge-priority ${pConfig.className}`}>
-                                                                        {pConfig.label}
-                                                                    </span>
-                                                                    {activeGroupId === 'all' && task.group && (
-                                                                        <span className="kanban-badge-category" style={{ borderColor: task.group.color, color: task.group.color }}>
-                                                                            {task.group.name}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="kanban-badge-category">
-                                                                        {task.category || 'Umum'}
-                                                                    </span>
-                                                                </div>
+                                                            <Button
+                                                                type="text"
+                                                                size="small"
+                                                                shape="circle"
+                                                                icon={<SettingOutlined />}
+                                                                className="flow-channel-item__gear"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        </Dropdown>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
-                                                                {/* Quick Move Status */}
-                                                                <div onClick={(e) => e.stopPropagation()}>
-                                                                    <Dropdown
-                                                                        menu={{
-                                                                            items: [
-                                                                                {
-                                                                                    key: 'shift-header',
-                                                                                    label: <strong style={{ fontSize: 11, color: '#64748b' }}>Pindahkan Status:</strong>,
-                                                                                    disabled: true,
-                                                                                },
-                                                                                ...COLUMNS.map((c) => ({
-                                                                                    key: c.key,
-                                                                                    label: (
-                                                                                        <span style={{ fontWeight: task.status === c.key ? 700 : 400 }}>
-                                                                                            <span className={`kanban-column-dot ${c.dotClass}`} style={{ display: 'inline-block', marginRight: 6 }} />
-                                                                                            {c.title}
-                                                                                        </span>
-                                                                                    ),
-                                                                                    onClick: () => handleMoveStatus(task.id, c.key),
-                                                                                })),
-                                                                                { type: 'divider' },
-                                                                                {
-                                                                                    key: 'edit',
-                                                                                    label: 'Edit Tugas',
-                                                                                    icon: <EditOutlined />,
-                                                                                    onClick: () => handleOpenEdit(task),
-                                                                                },
-                                                                                {
-                                                                                    key: 'delete',
-                                                                                    label: <span style={{ color: '#ef4444' }}>Hapus Tugas</span>,
-                                                                                    icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
-                                                                                    onClick: () => {
-                                                                                        Modal.confirm({
-                                                                                            title: 'Hapus Tugas',
-                                                                                            content: `Hapus tugas "${task.title}" beserta seluruh berkas bukti Nextcloud?`,
-                                                                                            okText: 'Hapus',
-                                                                                            cancelText: 'Batal',
-                                                                                            okButtonProps: { danger: true },
-                                                                                            onOk: () => handleDeleteTask(task.id),
-                                                                                        });
-                                                                                    },
-                                                                                },
-                                                                            ],
-                                                                        }}
-                                                                        trigger={['click']}
-                                                                        placement="bottomRight"
-                                                                    >
+                            {/* Sidebar Footer: User Profile */}
+                            <div className="flow-sidebar__footer">
+                                <div className="flow-sidebar__user-avatar">
+                                    {getInitials(user?.name)}
+                                </div>
+                                <div className="flow-sidebar__user-meta">
+                                    <span className="flow-sidebar__user-name">{user?.name || 'Pegawai'}</span>
+                                    <span className="flow-sidebar__user-dept">{user?.position || user?.department || 'Staff'}</span>
+                                </div>
+                            </div>
+                        </aside>
+                    )}
+
+                    {/* Main Board / Table Canvas */}
+                    <main className="flow-canvas">
+                        {viewMode === 'board' ? (
+                            <div className="flow-board">
+                                {COLUMNS.map((col) => {
+                                    const colTasks = tasks.filter((t) => t.status === col.key);
+                                    const totalColSubtasks = colTasks.reduce((acc, t) => acc + (t.subtasks_count || 0), 0);
+                                    const completedColSubtasks = colTasks.reduce((acc, t) => acc + (t.completed_subtasks_count || 0), 0);
+
+                                    return (
+                                        <div key={col.key} className="flow-column">
+                                            <div className="flow-column__header">
+                                                <div className="flow-column__header-left">
+                                                    <span className={`flow-column__dot flow-column__dot--${col.key}`} />
+                                                    <span className="flow-column__title">{col.title}</span>
+                                                    <span className="flow-column__badge">{colTasks.length}</span>
+                                                </div>
+                                                <div className="flow-column__header-right">
+                                                    {totalColSubtasks > 0 && (
+                                                        <Tooltip title={`${completedColSubtasks} dari ${totalColSubtasks} tahapan selesai`}>
+                                                            <span className="flow-column__subtask-counter">
+                                                                {completedColSubtasks}/{totalColSubtasks} ✓
+                                                            </span>
+                                                        </Tooltip>
+                                                    )}
+                                                    <Button
+                                                        type="text"
+                                                        size="small"
+                                                        icon={<PlusOutlined />}
+                                                        className="flow-column__quick-add"
+                                                        onClick={() => handleOpenCreate(col.key)}
+                                                        title={`Tambah tugas ke ${col.title}`}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flow-column__body">
+                                                {colTasks.length === 0 ? (
+                                                    <div className="flow-column__empty">
+                                                        Belum ada tugas di kolom ini
+                                                    </div>
+                                                ) : (
+                                                    colTasks.map((task) => {
+                                                        const isExpanded = expandedTaskIds.has(task.id);
+                                                        const pConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+                                                        const isOverdue = task.due_date && dayjs(task.due_date).isBefore(dayjs(), 'day') && task.status !== 'done';
+                                                        const isToday = task.due_date && dayjs(task.due_date).isSame(dayjs(), 'day') && task.status !== 'done';
+                                                        const groupAvailableEmployees = getAvailableEmployeesForTask(task);
+
+                                                        return (
+                                                            <div
+                                                                key={task.id}
+                                                                className={`flow-card ${isExpanded ? 'flow-card--expanded' : ''}`}
+                                                                onClick={() => handleOpenDetail(task)}
+                                                            >
+                                                                {/* Card Top: Priority, Category, and Action Menu */}
+                                                                <div className="flow-card__top">
+                                                                    <div className="flow-card__meta">
+                                                                        <span className={`flow-priority-dot flow-priority-dot--${task.priority || 'medium'}`} />
+                                                                        <span className="flow-priority-text">{pConfig.label}</span>
+                                                                        {task.category && (
+                                                                            <>
+                                                                                <span className="flow-card__meta-sep">•</span>
+                                                                                <span className="flow-category-text">{task.category}</span>
+                                                                            </>
+                                                                        )}
+                                                                        {activeGroupId === 'all' && task.group && (
+                                                                            <>
+                                                                                <span className="flow-card__meta-sep">•</span>
+                                                                                <span className="flow-group-text">#{formatChannelName(task.group.name)}</span>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="flow-card__actions" onClick={(e) => e.stopPropagation()}>
                                                                         <Button
                                                                             type="text"
                                                                             size="small"
-                                                                            shape="circle"
-                                                                            icon={<MoreOutlined style={{ fontSize: 15, color: '#64748b' }} />}
+                                                                            icon={isExpanded ? <DownOutlined /> : <RightOutlined />}
+                                                                            className="flow-card__toggle-btn"
+                                                                            onClick={(e) => toggleTaskExpand(task.id, e)}
+                                                                            title={isExpanded ? "Tutup Rincian" : "Buka Rincian"}
                                                                         />
-                                                                    </Dropdown>
-                                                                </div>
-                                                            </div>
 
-                                                            {/* Card Title & Desc */}
-                                                            <h4 className="kanban-card__title">{task.title}</h4>
-                                                            {task.description && (
-                                                                <p className="kanban-card__desc">{task.description}</p>
-                                                            )}
-
-                                                            {/* Live Direct Subtasks Checklist & Nextcloud Upload */}
-                                                            <div className="kanban-card-subtasks" onClick={(e) => e.stopPropagation()}>
-                                                                <div className="kanban-card-subtasks__header">
-                                                                    <span>Tahapan ({task.completed_subtasks_count}/{task.subtasks_count})</span>
-                                                                    <div className="kanban-progress-bar-bg">
-                                                                        <div
-                                                                            className="kanban-progress-bar-fill"
-                                                                            style={{ width: `${task.progress_percentage}%` }}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-
-                                                                {(task.subtasks ?? []).map((st) => (
-                                                                    <div key={st.id} className="kanban-card-subtask-item">
-                                                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, flex: 1, minWidth: 0 }}>
-                                                                            <Checkbox
-                                                                                checked={st.status === 'completed'}
-                                                                                onChange={() => handleToggleSubtask(st, task.id)}
-                                                                                style={{ marginTop: 2 }}
-                                                                            />
-                                                                            <span className={`kanban-card-subtask-title ${st.status === 'completed' ? 'kanban-card-subtask-item--done' : ''}`}>
-                                                                                {st.title}
-                                                                            </span>
-                                                                        </div>
-
-                                                                        <div className="kanban-card-subtask-item__actions">
-                                                                            {st.attachment_path ? (
-                                                                                <Tooltip title={`Berkas Bukti: ${st.attachment_name} (Klik untuk unduh)`}>
-                                                                                    <Button
-                                                                                        type="text"
-                                                                                        size="small"
-                                                                                        icon={<PaperClipOutlined style={{ color: '#0F5B99', fontSize: 13 }} />}
-                                                                                        onClick={() => window.open(getSubtaskFileUrl(st.id), '_blank')}
-                                                                                    />
-                                                                                </Tooltip>
-                                                                            ) : (
-                                                                                <Upload
-                                                                                    showUploadList={false}
-                                                                                    accept={ALLOWED_UPLOAD_ACCEPT}
-                                                                                    beforeUpload={(file) => {
-                                                                                        if (!isAllowedFileType(file)) {
-                                                                                            notification.error({
-                                                                                                message: 'Format Berkas Tidak Didukung',
-                                                                                                description: 'Hanya berkas berformat PDF, PNG, JPG, dan JPEG yang dapat diunggah.',
+                                                                        <Dropdown
+                                                                            menu={{
+                                                                                items: [
+                                                                                    {
+                                                                                        key: 'shift-header',
+                                                                                        label: <strong style={{ fontSize: 11, color: '#64748b' }}>Pindahkan Status:</strong>,
+                                                                                        disabled: true,
+                                                                                    },
+                                                                                    ...COLUMNS.map((c) => ({
+                                                                                        key: c.key,
+                                                                                        label: (
+                                                                                            <span style={{ fontWeight: task.status === c.key ? 700 : 400 }}>
+                                                                                                <span className={`flow-column__dot flow-column__dot--${c.key}`} style={{ display: 'inline-block', marginRight: 6 }} />
+                                                                                                {c.title}
+                                                                                            </span>
+                                                                                        ),
+                                                                                        onClick: () => handleMoveStatus(task.id, c.key),
+                                                                                    })),
+                                                                                    { type: 'divider' },
+                                                                                    {
+                                                                                        key: 'edit',
+                                                                                        label: 'Edit Tugas',
+                                                                                        icon: <EditOutlined />,
+                                                                                        onClick: () => handleOpenEdit(task),
+                                                                                    },
+                                                                                    {
+                                                                                        key: 'delete',
+                                                                                        label: <span style={{ color: '#ef4444' }}>Hapus Tugas</span>,
+                                                                                        icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+                                                                                        onClick: () => {
+                                                                                            Modal.confirm({
+                                                                                                title: 'Hapus Tugas',
+                                                                                                content: `Hapus tugas "${task.title}" beserta seluruh berkas bukti Nextcloud?`,
+                                                                                                okText: 'Hapus',
+                                                                                                cancelText: 'Batal',
+                                                                                                okButtonProps: { danger: true },
+                                                                                                onOk: () => handleDeleteTask(task.id),
                                                                                             });
-                                                                                            return Upload.LIST_IGNORE;
-                                                                                        }
-                                                                                        handleUploadEvidence(st.id, file, task.id);
-                                                                                        return false;
-                                                                                    }}
-                                                                                >
-                                                                                    <Tooltip title="Upload Bukti Proses ke Nextcloud">
-                                                                                        <Button
-                                                                                            type="text"
-                                                                                            size="small"
-                                                                                            icon={<UploadOutlined style={{ color: '#64748b', fontSize: 12 }} />}
-                                                                                            loading={uploadingSubtaskId === st.id}
-                                                                                        />
-                                                                                    </Tooltip>
-                                                                                </Upload>
-                                                                            )}
+                                                                                        },
+                                                                                    },
+                                                                                ],
+                                                                            }}
+                                                                            trigger={['click']}
+                                                                            placement="bottomRight"
+                                                                        >
+                                                                            <Button
+                                                                                type="text"
+                                                                                size="small"
+                                                                                shape="circle"
+                                                                                icon={<MoreOutlined />}
+                                                                                className="flow-card__menu-btn"
+                                                                            />
+                                                                        </Dropdown>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Card Title */}
+                                                                <h4 className="flow-card__title">{task.title}</h4>
+
+                                                                {/* Subtasks Progress Summary */}
+                                                                {task.subtasks_count > 0 && (
+                                                                    <div className="flow-card__progress">
+                                                                        <div className="flow-card__progress-info" onClick={(e) => toggleTaskExpand(task.id, e)}>
+                                                                            <span>{task.completed_subtasks_count}/{task.subtasks_count} Tahap Selesai</span>
+                                                                            <span className="flow-progress-percent">{task.progress_percentage}%</span>
+                                                                        </div>
+                                                                        <div className="flow-progress-track">
+                                                                            <div
+                                                                                className={`flow-progress-fill ${task.progress_percentage === 100 ? 'flow-progress-fill--done' : ''}`}
+                                                                                style={{ width: `${task.progress_percentage}%` }}
+                                                                            />
                                                                         </div>
                                                                     </div>
-                                                                ))}
-
-                                                                {/* Inline Quick Add Subtask */}
-                                                                {addingSubtaskTaskId === task.id ? (
-                                                                    <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                                                                        <Input
-                                                                            size="small"
-                                                                            placeholder="Tulis tahapan..."
-                                                                            value={cardSubtaskInput}
-                                                                            onChange={(e) => setCardSubtaskInput(e.target.value)}
-                                                                            onPressEnter={() => handleAddSubtaskFromCard(task.id)}
-                                                                            autoFocus
-                                                                        />
-                                                                        <Button size="small" type="primary" onClick={() => handleAddSubtaskFromCard(task.id)}>
-                                                                            OK
-                                                                        </Button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <Button
-                                                                        type="dashed"
-                                                                        size="small"
-                                                                        icon={<PlusOutlined />}
-                                                                        onClick={() => {
-                                                                            setAddingSubtaskTaskId(task.id);
-                                                                            setCardSubtaskInput('');
-                                                                        }}
-                                                                        style={{ fontSize: 11, width: '100%', marginTop: 2, height: 24 }}
-                                                                    >
-                                                                        + Tambah Tahap
-                                                                    </Button>
                                                                 )}
-                                                            </div>
 
-                                                            {/* Card Footer (Deadline & Assigned Pegawai & Riwayat Button) */}
-                                                            <div className="kanban-card__footer">
-                                                                <div className="kanban-card__meta-left">
-                                                                    {task.due_date && (
-                                                                        <span className={`kanban-date-chip ${isOverdue ? 'kanban-date-chip--overdue' : (isToday ? 'kanban-date-chip--today' : '')}`}>
-                                                                            <ClockCircleOutlined style={{ fontSize: 11 }} />
-                                                                            {dayjs(task.due_date).format(DATE_UI)}
-                                                                        </span>
-                                                                    )}
-                                                                    {task.attachments_count > 0 && (
-                                                                        <span className="kanban-date-chip">
-                                                                            <PaperClipOutlined style={{ fontSize: 11 }} />
-                                                                            {task.attachments_count}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="kanban-report-quick-btn"
-                                                                        onClick={(e) => handleOpenReportsModal(task, e)}
-                                                                        title="Buka riwayat pengerjaan & tambah laporan"
-                                                                    >
-                                                                        <CommentOutlined style={{ fontSize: 11.5 }} />
-                                                                        <span>{task.reports_count > 0 ? `${task.reports_count} Riwayat` : '+ Riwayat'}</span>
-                                                                        {isTaskReportUnread(task) && (
-                                                                            <Tooltip title="Ada riwayat/laporan baru">
-                                                                                <span className="kanban-unread-dot" />
-                                                                            </Tooltip>
+                                                                {/* Expanded Content: Subtask checklist & Form */}
+                                                                {isExpanded && (
+                                                                    <div className="flow-card__expanded" onClick={(e) => e.stopPropagation()}>
+                                                                        {task.description && (
+                                                                            <p className="flow-card__desc">{task.description}</p>
                                                                         )}
-                                                                    </button>
 
-                                                                    {(task.assignees ?? []).length > 0 && (
-                                                                        <div className="kanban-card__assignees">
-                                                                            {task.assignees.slice(0, 3).map((emp) => (
-                                                                                <Tooltip key={emp.id} title={`${emp.name} (${emp.nip || 'Pegawai'})`}>
-                                                                                    <div className="kanban-assignee-avatar">
-                                                                                        {getInitials(emp.name)}
+                                                                        <div className="flow-subtasks-list">
+                                                                            {(task.subtasks ?? []).map((st) => {
+                                                                                const isStOverdue = st.due_date && dayjs(st.due_date).isBefore(dayjs(), 'day') && st.status !== 'completed';
+                                                                                const isStToday = st.due_date && dayjs(st.due_date).isSame(dayjs(), 'day') && st.status !== 'completed';
+                                                                                const canEditThisTask = canEditTaskPicAndDeadline(task);
+
+                                                                                return (
+                                                                                    <div key={st.id} className="flow-subtask-row">
+                                                                                        <Checkbox
+                                                                                            checked={st.status === 'completed'}
+                                                                                            onChange={() => handleToggleSubtask(st, task.id)}
+                                                                                            className="flow-subtask-check"
+                                                                                        />
+                                                                                        <div className="flow-subtask-body">
+                                                                                            <span className={`flow-subtask-text ${st.status === 'completed' ? 'flow-subtask-text--done' : ''}`}>
+                                                                                                {st.title}
+                                                                                            </span>
+
+                                                                                            <div className="flow-subtask-meta">
+                                                                                                {canEditThisTask ? (
+                                                                                                    <>
+                                                                                                        <Select
+                                                                                                            size="small"
+                                                                                                            placeholder="+ PIC"
+                                                                                                            allowClear
+                                                                                                            value={st.assigned_employee_id || undefined}
+                                                                                                            onChange={(val) => handleUpdateSubtaskField(st.id, { assigned_employee_id: val || null }, task.id)}
+                                                                                                            className="flow-subtask-pic-select"
+                                                                                                            showSearch
+                                                                                                            options={groupAvailableEmployees.map((emp) => ({
+                                                                                                                value: emp.id,
+                                                                                                                label: emp.name,
+                                                                                                            }))}
+                                                                                                        />
+                                                                                                        <DatePicker
+                                                                                                            size="small"
+                                                                                                            placeholder="Deadline"
+                                                                                                            format="DD/MM/YY"
+                                                                                                            value={st.due_date ? dayjs(st.due_date) : null}
+                                                                                                            onChange={(date) => handleUpdateSubtaskField(st.id, { due_date: date ? date.format(DATE_API) : null }, task.id)}
+                                                                                                            className={`flow-subtask-date-select ${isStOverdue ? 'flow-subtask-date-select--overdue' : ''}`}
+                                                                                                            allowClear
+                                                                                                        />
+                                                                                                    </>
+                                                                                                ) : (
+                                                                                                    <>
+                                                                                                        {st.assigned_employee && (
+                                                                                                            <span className="flow-subtask-readonly-chip">
+                                                                                                                👤 {st.assigned_employee.name}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                        {st.due_date && (
+                                                                                                            <span className={`flow-subtask-readonly-chip ${isStOverdue ? 'flow-subtask-readonly-chip--overdue' : ''}`}>
+                                                                                                                📅 {dayjs(st.due_date).format('DD/MM/YY')}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        <div className="flow-subtask-actions">
+                                                                                            {st.attachment_path ? (
+                                                                                                <Tooltip title={`Bukti: ${st.attachment_name}`}>
+                                                                                                    <Button
+                                                                                                        type="text"
+                                                                                                        size="small"
+                                                                                                        icon={<PaperClipOutlined style={{ color: '#0284c7' }} />}
+                                                                                                        onClick={() => window.open(getSubtaskFileUrl(st.id), '_blank')}
+                                                                                                    />
+                                                                                                </Tooltip>
+                                                                                            ) : (
+                                                                                                <Upload
+                                                                                                    showUploadList={false}
+                                                                                                    accept={ALLOWED_UPLOAD_ACCEPT}
+                                                                                                    beforeUpload={(file) => {
+                                                                                                        if (!isAllowedFileType(file)) {
+                                                                                                            notification.error({
+                                                                                                                message: 'Format Berkas Tidak Didukung',
+                                                                                                                description: 'Hanya berkas berformat PDF, PNG, JPG, dan JPEG yang dapat diunggah.',
+                                                                                                            });
+                                                                                                            return Upload.LIST_IGNORE;
+                                                                                                        }
+                                                                                                        handleUploadEvidence(st.id, file, task.id);
+                                                                                                        return false;
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <Tooltip title="Upload Bukti">
+                                                                                                        <Button
+                                                                                                            type="text"
+                                                                                                            size="small"
+                                                                                                            icon={<UploadOutlined />}
+                                                                                                            loading={uploadingSubtaskId === st.id}
+                                                                                                        />
+                                                                                                    </Tooltip>
+                                                                                                </Upload>
+                                                                                            )}
+
+                                                                                            <Popconfirm
+                                                                                                title="Hapus tahapan ini?"
+                                                                                                onConfirm={() => handleDeleteSubtask(st.id, task.id)}
+                                                                                                okText="Hapus"
+                                                                                                cancelText="Batal"
+                                                                                            >
+                                                                                                <Button type="text" size="small" danger icon={<DeleteOutlined style={{ fontSize: 11 }} />} />
+                                                                                            </Popconfirm>
+                                                                                        </div>
                                                                                     </div>
-                                                                                </Tooltip>
-                                                                            ))}
-                                                                            {task.assignees.length > 3 && (
-                                                                                <div className="kanban-assignee-avatar" style={{ background: '#475569' }}>
-                                                                                    +{(task.assignees.length - 3)}
+                                                                                );
+                                                                            })}
+
+                                                                            {/* Inline Add Subtask */}
+                                                                            {addingSubtaskTaskId === task.id ? (
+                                                                                <div className="flow-subtask-inline-add">
+                                                                                    <Input
+                                                                                        size="small"
+                                                                                        placeholder="Nama tahapan baru..."
+                                                                                        value={cardSubtaskInput}
+                                                                                        onChange={(e) => setCardSubtaskInput(e.target.value)}
+                                                                                        onPressEnter={() => handleAddSubtaskFromCard(task)}
+                                                                                        autoFocus
+                                                                                    />
+                                                                                    {canEditTaskPicAndDeadline(task) && (
+                                                                                        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                                                                                            <Select
+                                                                                                size="small"
+                                                                                                placeholder="Pilih PIC..."
+                                                                                                allowClear
+                                                                                                value={cardSubtaskPic}
+                                                                                                onChange={setCardSubtaskPic}
+                                                                                                style={{ flex: 1 }}
+                                                                                                showSearch
+                                                                                                options={groupAvailableEmployees.map((emp) => ({
+                                                                                                    value: emp.id,
+                                                                                                    label: emp.name,
+                                                                                                }))}
+                                                                                            />
+                                                                                            <DatePicker
+                                                                                                size="small"
+                                                                                                placeholder="Deadline"
+                                                                                                format="DD/MM/YY"
+                                                                                                value={cardSubtaskDueDate}
+                                                                                                onChange={setCardSubtaskDueDate}
+                                                                                                style={{ width: 110 }}
+                                                                                                allowClear
+                                                                                            />
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 6 }}>
+                                                                                        <Button size="small" onClick={() => setAddingSubtaskTaskId(null)}>Batal</Button>
+                                                                                        <Button size="small" type="primary" onClick={() => handleAddSubtaskFromCard(task)}>Simpan</Button>
+                                                                                    </div>
                                                                                 </div>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    type="dashed"
+                                                                                    size="small"
+                                                                                    icon={<PlusOutlined />}
+                                                                                    onClick={() => {
+                                                                                        setAddingSubtaskTaskId(task.id);
+                                                                                        setCardSubtaskInput('');
+                                                                                        setCardSubtaskPic(undefined);
+                                                                                        setCardSubtaskDueDate(null);
+                                                                                    }}
+                                                                                    className="flow-subtask-add-trigger"
+                                                                                >
+                                                                                    + Tambah Tahapan
+                                                                                </Button>
                                                                             )}
                                                                         </div>
-                                                                    )}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Card Footer: Riwayat, Deadline, Assignees */}
+                                                                <div className="flow-card__footer" onClick={(e) => e.stopPropagation()}>
+                                                                    <div className="flow-card__footer-left">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="flow-report-btn"
+                                                                            onClick={(e) => handleOpenReportsModal(task, e)}
+                                                                            title="Buka riwayat laporan"
+                                                                        >
+                                                                            <CommentOutlined />
+                                                                            <span>{task.reports_count > 0 ? `${task.reports_count} Riwayat` : '+ Riwayat'}</span>
+                                                                            {isTaskReportUnread(task) && <span className="flow-unread-dot" />}
+                                                                        </button>
+
+                                                                        {task.due_date && (
+                                                                            <span className={`flow-date-chip ${isOverdue ? 'flow-date-chip--overdue' : (isToday ? 'flow-date-chip--today' : '')}`}>
+                                                                                <ClockCircleOutlined style={{ fontSize: 10 }} />
+                                                                                {dayjs(task.due_date).format(DATE_UI)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="flow-card__footer-right">
+                                                                        {(task.assignees ?? []).length > 0 ? (
+                                                                            <div className="flow-assignees-stack">
+                                                                                {task.assignees.slice(0, 3).map((emp) => (
+                                                                                    <Tooltip key={emp.id} title={`PIC: ${emp.name}`}>
+                                                                                        <div className="flow-avatar-pill">
+                                                                                            {getInitials(emp.name)}
+                                                                                        </div>
+                                                                                    </Tooltip>
+                                                                                ))}
+                                                                                {task.assignees.length > 3 && (
+                                                                                    <div className="flow-avatar-pill flow-avatar-pill--more">
+                                                                                        +{task.assignees.length - 3}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ) : null}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
+                                                        );
+                                                    })
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    className="flow-column__ghost-add"
+                                                    onClick={() => handleOpenCreate(col.key)}
+                                                >
+                                                    + Tambah kartu...
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div style={{ background: '#ffffff', borderRadius: 8, padding: 12, border: '1px solid #e2e8f0' }}>
-                            <Table
-                                rowKey="id"
-                                columns={tableColumns}
-                                dataSource={tasks}
-                                loading={loading}
-                                pagination={{ pageSize: 15, showTotal: (total) => `Total ${total} tugas` }}
-                                size="middle"
-                            />
-                        </div>
-                    )}
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            /* Table View */
+                            <div className="flow-table-wrapper">
+                                <Table
+                                    rowKey="id"
+                                    columns={tableColumns}
+                                    dataSource={tasks}
+                                    loading={loading}
+                                    pagination={{ pageSize: 15, showTotal: (total) => `Total ${total} tugas` }}
+                                    size="middle"
+                                />
+                            </div>
+                        )}
+                    </main>
                 </div>
             </div>
 
@@ -1800,8 +2188,13 @@ function KanbanWorkInner() {
                         <Form.Item
                             name="due_date"
                             label="Batas Waktu (Deadline)"
+                            help={modalMode === 'edit' && editingTask && !canEditTaskPicAndDeadline(editingTask) ? 'Hanya pembuat tugas yang dapat mengubah batas waktu.' : undefined}
                         >
-                            <DatePicker format={DATE_UI} style={{ width: '100%' }} />
+                            <DatePicker
+                                format={DATE_UI}
+                                style={{ width: '100%' }}
+                                disabled={modalMode === 'edit' && editingTask && !canEditTaskPicAndDeadline(editingTask)}
+                            />
                         </Form.Item>
 
                         <Form.Item
@@ -1811,6 +2204,7 @@ function KanbanWorkInner() {
                             {({ getFieldValue }) => {
                                 const selectedGId = getFieldValue('group_id');
                                 const selectedG = groups.find((g) => g.id === selectedGId);
+                                const isRestrictedInEdit = modalMode === 'edit' && editingTask && !canEditTaskPicAndDeadline(editingTask);
 
                                 let availableEmployees = employees;
                                 if (selectedG && !selectedG.is_public && selectedG.type !== 'public') {
@@ -1826,9 +2220,11 @@ function KanbanWorkInner() {
                                         name="assignee_ids"
                                         label="Tag Pegawai Bertugas"
                                         help={
-                                            selectedG && !selectedG.is_public && selectedG.type !== 'public'
-                                                ? `Hanya ${availableEmployees.length} pegawai anggota "${selectedG.name}" yang dapat ditugaskan.`
-                                                : undefined
+                                            isRestrictedInEdit
+                                                ? 'Hanya pembuat tugas yang dapat mengubah pegawai bertugas.'
+                                                : (selectedG && !selectedG.is_public && selectedG.type !== 'public'
+                                                    ? `Hanya ${availableEmployees.length} pegawai anggota "${selectedG.name}" yang dapat ditugaskan.`
+                                                    : undefined)
                                         }
                                     >
                                         <Select
@@ -1837,6 +2233,7 @@ function KanbanWorkInner() {
                                             optionFilterProp="children"
                                             showSearch
                                             style={{ width: '100%' }}
+                                            disabled={isRestrictedInEdit}
                                         >
                                             {availableEmployees.map((emp) => (
                                                 <Select.Option key={emp.id} value={emp.id}>
@@ -1859,41 +2256,130 @@ function KanbanWorkInner() {
 
                     {/* Initial Subtasks input for Create mode */}
                     {modalMode === 'create' && (
-                        <div style={{ marginBottom: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                <label style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
-                                    Rincian Tahapan Pekerjaan (Checklist)
-                                </label>
-                                <Button
-                                    type="link"
-                                    size="small"
-                                    onClick={() => setInitialSubtasks((prev) => [...prev, { id: Date.now(), title: '' }])}
-                                >
-                                    + Tambah Tahap
-                                </Button>
-                            </div>
+                        <Form.Item
+                            noStyle
+                            shouldUpdate={(prev, cur) => prev.group_id !== cur.group_id}
+                        >
+                            {({ getFieldValue }) => {
+                                const currentGId = getFieldValue('group_id');
+                                const availableForCreate = getAvailableEmployeesForGroup(currentGId);
 
-                            {initialSubtasks.map((st, idx) => (
-                                <div key={st.id} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                                    <Input
-                                        placeholder={`Tahap ${idx + 1}...`}
-                                        value={st.title}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setInitialSubtasks((prev) => prev.map((item) => (item.id === st.id ? { ...item, title: val } : item)));
-                                        }}
-                                    />
-                                    {initialSubtasks.length > 1 && (
-                                        <Button
-                                            type="text"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            onClick={() => setInitialSubtasks((prev) => prev.filter((item) => item.id !== st.id))}
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                return (
+                                    <div style={{ marginBottom: 16, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                            <div>
+                                                <label style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+                                                    Rincian Tahapan Pekerjaan & PIC
+                                                </label>
+                                                <div style={{ fontSize: 11, color: '#64748b' }}>
+                                                    Tentukan alur tahapan, penunjukan PIC tahapan, dan batas waktu target.
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="link"
+                                                size="small"
+                                                onClick={() => setInitialSubtasks((prev) => [
+                                                    ...prev,
+                                                    { id: Date.now() + Math.random(), title: '', assigned_employee_id: undefined, due_date: null }
+                                                ])}
+                                            >
+                                                + Tambah Tahap
+                                            </Button>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {initialSubtasks.map((st, idx) => (
+                                                <div key={st.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                                    <Input
+                                                        placeholder={`Tahap ${idx + 1} (misal: Pengumpulan berkas...)`}
+                                                        value={st.title}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setInitialSubtasks((prev) => prev.map((item) => (item.id === st.id ? { ...item, title: val } : item)));
+                                                        }}
+                                                        style={{ flex: 1 }}
+                                                    />
+                                                    <Select
+                                                        placeholder="PIC Tahap"
+                                                        allowClear
+                                                        value={st.assigned_employee_id}
+                                                        onChange={(val) => {
+                                                            setInitialSubtasks((prev) => prev.map((item) => (item.id === st.id ? { ...item, assigned_employee_id: val } : item)));
+                                                        }}
+                                                        style={{ width: 170 }}
+                                                        popupMatchSelectWidth={false}
+                                                        dropdownMatchSelectWidth={false}
+                                                        dropdownStyle={{ minWidth: 250, maxWidth: 380 }}
+                                                        popupClassName="kanban-pic-select-popup"
+                                                        optionFilterProp="filterText"
+                                                        showSearch
+                                                        options={availableForCreate.map((emp) => ({
+                                                            value: emp.id,
+                                                            label: emp.name,
+                                                            name: emp.name,
+                                                            nip: emp.nip,
+                                                            position: emp.position,
+                                                            department: emp.department,
+                                                            filterText: `${emp.name} ${emp.nip || ''} ${emp.position || ''}`,
+                                                        }))}
+                                                        optionRender={(option) => {
+                                                            const emp = option.data;
+                                                            return (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                                                                    <div style={{
+                                                                        width: 22,
+                                                                        height: 22,
+                                                                        borderRadius: '50%',
+                                                                        background: '#0F5B99',
+                                                                        color: '#ffffff',
+                                                                        fontSize: 9,
+                                                                        fontWeight: 700,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        flexShrink: 0
+                                                                    }}>
+                                                                        {getInitials(emp.name || emp.label)}
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                                        <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                                                            {emp.name || emp.label}
+                                                                        </span>
+                                                                        {(emp.position || emp.department) && (
+                                                                            <span style={{ fontSize: 10.5, color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                                                {emp.position || emp.department}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }}
+                                                    />
+                                                    <DatePicker
+                                                        placeholder="Deadline"
+                                                        format={DATE_UI}
+                                                        value={st.due_date}
+                                                        onChange={(val) => {
+                                                            setInitialSubtasks((prev) => prev.map((item) => (item.id === st.id ? { ...item, due_date: val } : item)));
+                                                        }}
+                                                        style={{ width: 130 }}
+                                                        allowClear
+                                                    />
+                                                    {initialSubtasks.length > 1 && (
+                                                        <Button
+                                                            type="text"
+                                                            danger
+                                                            icon={<DeleteOutlined />}
+                                                            onClick={() => setInitialSubtasks((prev) => prev.filter((item) => item.id !== st.id))}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                        </Form.Item>
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
@@ -1914,7 +2400,7 @@ function KanbanWorkInner() {
                 onCancel={() => setIsDetailOpen(false)}
                 footer={null}
                 className="kanban-modal"
-                width={700}
+                width={720}
                 destroyOnClose
             >
                 {detailTask && (
@@ -2015,97 +2501,286 @@ function KanbanWorkInner() {
                                             </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
-                                                {(detailTask.subtasks ?? []).map((st) => (
-                                                    <div key={st.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                                                                <Checkbox
-                                                                    checked={st.status === 'completed'}
-                                                                    onChange={() => handleToggleSubtask(st, detailTask.id)}
-                                                                />
-                                                                <span style={{ fontSize: 13, fontWeight: 600, color: st.status === 'completed' ? '#94a3b8' : '#0f172a', textDecoration: st.status === 'completed' ? 'line-through' : 'none' }}>
-                                                                    {st.title}
-                                                                </span>
-                                                            </div>
+                                                {(detailTask.subtasks ?? []).map((st) => {
+                                                    const isStOverdue = st.due_date && dayjs(st.due_date).isBefore(dayjs(), 'day') && st.status !== 'completed';
+                                                    const isStToday = st.due_date && dayjs(st.due_date).isSame(dayjs(), 'day') && st.status !== 'completed';
+                                                    const availableForDetail = getAvailableEmployeesForTask(detailTask);
 
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                {st.attachment_path ? (
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                                        <Button
-                                                                            type="text"
-                                                                            size="small"
-                                                                            icon={<PaperClipOutlined style={{ color: '#0F5B99' }} />}
-                                                                            onClick={() => window.open(getSubtaskFileUrl(st.id), '_blank')}
-                                                                            style={{ fontSize: 12, color: '#0F5B99', fontWeight: 600 }}
-                                                                        >
-                                                                            {st.attachment_name || 'Berkas Bukti'}
-                                                                        </Button>
-                                                                        <Popconfirm
-                                                                            title="Hapus berkas ini dari Nextcloud?"
-                                                                            onConfirm={() => handleDeleteEvidence(st.id, detailTask.id)}
-                                                                            okText="Hapus"
-                                                                            cancelText="Batal"
-                                                                        >
-                                                                            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                                                        </Popconfirm>
+                                                    return (
+                                                        <div key={st.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
+                                                                    <Checkbox
+                                                                        checked={st.status === 'completed'}
+                                                                        onChange={() => handleToggleSubtask(st, detailTask.id)}
+                                                                        style={{ marginTop: 2 }}
+                                                                    />
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                                                                        <span style={{ fontSize: 13, fontWeight: 600, color: st.status === 'completed' ? '#94a3b8' : '#0f172a', textDecoration: st.status === 'completed' ? 'line-through' : 'none' }}>
+                                                                            {st.title}
+                                                                        </span>
+
+                                                                        {/* Subtask Meta: PIC & Batas Waktu */}
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                            {canEditTaskPicAndDeadline(detailTask) ? (
+                                                                                <>
+                                                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                                                        <UserOutlined style={{ fontSize: 11, color: '#64748b' }} />
+                                                                                        <Select
+                                                                                            size="small"
+                                                                                            placeholder="Tunjuk PIC..."
+                                                                                            allowClear
+                                                                                            value={st.assigned_employee_id || undefined}
+                                                                                            onChange={(val) => handleUpdateSubtaskField(st.id, { assigned_employee_id: val || null }, detailTask.id)}
+                                                                                            style={{ width: 170 }}
+                                                                                            popupMatchSelectWidth={false}
+                                                                                            dropdownMatchSelectWidth={false}
+                                                                                            dropdownStyle={{ minWidth: 250, maxWidth: 380 }}
+                                                                                            popupClassName="kanban-pic-select-popup"
+                                                                                            optionFilterProp="filterText"
+                                                                                            showSearch
+                                                                                            options={availableForDetail.map((emp) => ({
+                                                                                                value: emp.id,
+                                                                                                label: emp.name,
+                                                                                                name: emp.name,
+                                                                                                nip: emp.nip,
+                                                                                                position: emp.position,
+                                                                                                department: emp.department,
+                                                                                                filterText: `${emp.name} ${emp.nip || ''} ${emp.position || ''}`,
+                                                                                            }))}
+                                                                                            optionRender={(option) => {
+                                                                                                const emp = option.data;
+                                                                                                return (
+                                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                                                                                                        <div style={{
+                                                                                                            width: 22,
+                                                                                                            height: 22,
+                                                                                                            borderRadius: '50%',
+                                                                                                            background: '#0F5B99',
+                                                                                                            color: '#ffffff',
+                                                                                                            fontSize: 9,
+                                                                                                            fontWeight: 700,
+                                                                                                            display: 'flex',
+                                                                                                            alignItems: 'center',
+                                                                                                            justifyContent: 'center',
+                                                                                                            flexShrink: 0
+                                                                                                        }}>
+                                                                                                            {getInitials(emp.name || emp.label)}
+                                                                                                        </div>
+                                                                                                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                                                                            <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                                                                                                {emp.name || emp.label}
+                                                                                                            </span>
+                                                                                                            {(emp.position || emp.department) && (
+                                                                                                                <span style={{ fontSize: 10.5, color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                                                                                    {emp.position || emp.department}
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                );
+                                                                                            }}
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                                                        <CalendarOutlined style={{ fontSize: 11, color: isStOverdue ? '#ef4444' : '#64748b' }} />
+                                                                                        <DatePicker
+                                                                                            size="small"
+                                                                                            placeholder="Batas Waktu"
+                                                                                            format={DATE_UI}
+                                                                                            value={st.due_date ? dayjs(st.due_date) : null}
+                                                                                            onChange={(date) => handleUpdateSubtaskField(st.id, { due_date: date ? date.format(DATE_API) : null }, detailTask.id)}
+                                                                                            style={{ width: 130 }}
+                                                                                            className={isStOverdue ? 'kanban-datepicker-overdue' : ''}
+                                                                                            allowClear
+                                                                                        />
+                                                                                        {isStOverdue && (
+                                                                                            <span style={{ fontSize: 10.5, color: '#ef4444', fontWeight: 600 }}>Terlewat</span>
+                                                                                        )}
+                                                                                        {isStToday && (
+                                                                                            <span style={{ fontSize: 10.5, color: '#f59e0b', fontWeight: 600 }}>Hari Ini</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Tooltip title="Hanya pembuat tugas yang berhak mengubah PIC">
+                                                                                        <span className="kanban-subtask-readonly-pic">
+                                                                                            <UserOutlined style={{ fontSize: 10, color: '#64748b' }} />
+                                                                                            {st.assigned_employee?.name || 'Belum ada PIC'}
+                                                                                        </span>
+                                                                                    </Tooltip>
+                                                                                    {st.due_date && (
+                                                                                        <Tooltip title="Hanya pembuat tugas yang berhak mengubah Batas Waktu">
+                                                                                            <span className={`kanban-subtask-readonly-date ${isStOverdue ? 'kanban-subtask-readonly-date--overdue' : (isStToday ? 'kanban-subtask-readonly-date--today' : '')}`}>
+                                                                                                <CalendarOutlined style={{ fontSize: 10 }} />
+                                                                                                {dayjs(st.due_date).format(DATE_UI)}
+                                                                                                {isStOverdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>● Terlewat</span>}
+                                                                                                {isStToday && <span style={{ marginLeft: 4, fontWeight: 700 }}>● Hari Ini</span>}
+                                                                                            </span>
+                                                                                        </Tooltip>
+                                                                                    )}
+                                                                                </>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                ) : (
-                                                                    <Upload
-                                                                        showUploadList={false}
-                                                                        accept={ALLOWED_UPLOAD_ACCEPT}
-                                                                        beforeUpload={(file) => {
-                                                                            if (!isAllowedFileType(file)) {
-                                                                                notification.error({
-                                                                                    message: 'Format Berkas Tidak Didukung',
-                                                                                    description: 'Hanya berkas berformat PDF, PNG, JPG, dan JPEG yang dapat diunggah.',
-                                                                                });
-                                                                                return Upload.LIST_IGNORE;
-                                                                            }
-                                                                            handleUploadEvidence(st.id, file, detailTask.id);
-                                                                            return false;
-                                                                        }}
-                                                                    >
-                                                                        <Button
-                                                                            size="small"
-                                                                            icon={<UploadOutlined />}
-                                                                            loading={uploadingSubtaskId === st.id}
-                                                                            style={{ fontSize: 11.5 }}
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                    {st.attachment_path ? (
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                            <Button
+                                                                                type="text"
+                                                                                size="small"
+                                                                                icon={<PaperClipOutlined style={{ color: '#0F5B99' }} />}
+                                                                                onClick={() => window.open(getSubtaskFileUrl(st.id), '_blank')}
+                                                                                style={{ fontSize: 12, color: '#0F5B99', fontWeight: 600 }}
+                                                                            >
+                                                                                {st.attachment_name || 'Berkas Bukti'}
+                                                                            </Button>
+                                                                            <Popconfirm
+                                                                                title="Hapus berkas ini dari Nextcloud?"
+                                                                                onConfirm={() => handleDeleteEvidence(st.id, detailTask.id)}
+                                                                                okText="Hapus"
+                                                                                cancelText="Batal"
+                                                                            >
+                                                                                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                                                                            </Popconfirm>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Upload
+                                                                            showUploadList={false}
+                                                                            accept={ALLOWED_UPLOAD_ACCEPT}
+                                                                            beforeUpload={(file) => {
+                                                                                if (!isAllowedFileType(file)) {
+                                                                                    notification.error({
+                                                                                        message: 'Format Berkas Tidak Didukung',
+                                                                                        description: 'Hanya berkas berformat PDF, PNG, JPG, dan JPEG yang dapat diunggah.',
+                                                                                    });
+                                                                                    return Upload.LIST_IGNORE;
+                                                                                }
+                                                                                handleUploadEvidence(st.id, file, detailTask.id);
+                                                                                return false;
+                                                                            }}
                                                                         >
-                                                                            Upload Bukti (Nextcloud)
-                                                                        </Button>
-                                                                    </Upload>
-                                                                )}
+                                                                            <Button
+                                                                                size="small"
+                                                                                icon={<UploadOutlined />}
+                                                                                loading={uploadingSubtaskId === st.id}
+                                                                                style={{ fontSize: 11.5 }}
+                                                                            >
+                                                                                Upload Bukti (Nextcloud)
+                                                                            </Button>
+                                                                        </Upload>
+                                                                    )}
 
-                                                                <Popconfirm
-                                                                    title="Hapus tahapan ini?"
-                                                                    onConfirm={() => handleDeleteSubtask(st.id, detailTask.id)}
-                                                                    okText="Hapus"
-                                                                    cancelText="Batal"
-                                                                >
-                                                                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                                                </Popconfirm>
+                                                                    <Popconfirm
+                                                                        title="Hapus tahapan ini?"
+                                                                        onConfirm={() => handleDeleteSubtask(st.id, detailTask.id)}
+                                                                        okText="Hapus"
+                                                                        cancelText="Batal"
+                                                                    >
+                                                                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                                                                    </Popconfirm>
+                                                                </div>
                                                             </div>
+
+                                                            {st.completed_by_name && (
+                                                                <div style={{ fontSize: 11, color: '#10b981', paddingLeft: 28 }}>
+                                                                    ✓ Diselesaikan oleh: <strong>{st.completed_by_name}</strong> {st.completed_at ? `(${dayjs(st.completed_at).format('DD/MM/YYYY HH:mm')})` : ''}
+                                                                </div>
+                                                            )}
                                                         </div>
-
-                                                        {st.completed_by_name && (
-                                                            <div style={{ fontSize: 11, color: '#10b981', paddingLeft: 24 }}>
-                                                                ✓ Diselesaikan oleh: <strong>{st.completed_by_name}</strong> {st.completed_at ? `(${dayjs(st.completed_at).format('DD/MM/YYYY HH:mm')})` : ''}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
 
                                                 {/* Add New Subtask Input inside Modal */}
-                                                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                                <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: 6, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>Tambah Tahapan Baru</span>
                                                     <Input
-                                                        placeholder="Tambah rincian tahapan pekerjaan baru..."
+                                                        placeholder="Tulis rincian tahapan pekerjaan baru..."
                                                         value={newSubtaskTitle}
                                                         onChange={(e) => setNewSubtaskTitle(e.target.value)}
                                                         onPressEnter={handleAddSubtaskInDetail}
                                                     />
-                                                    <Button type="primary" onClick={handleAddSubtaskInDetail} className="kanban-primary-btn">
-                                                        Tambah
-                                                    </Button>
+                                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                                                        {canEditTaskPicAndDeadline(detailTask) ? (
+                                                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                                                <Select
+                                                                    size="small"
+                                                                    placeholder="Pilih PIC Tahapan..."
+                                                                    allowClear
+                                                                    value={newSubtaskPic}
+                                                                    onChange={setNewSubtaskPic}
+                                                                    style={{ width: 180 }}
+                                                                    popupMatchSelectWidth={false}
+                                                                    dropdownMatchSelectWidth={false}
+                                                                    dropdownStyle={{ minWidth: 250, maxWidth: 380 }}
+                                                                    popupClassName="kanban-pic-select-popup"
+                                                                    optionFilterProp="filterText"
+                                                                    showSearch
+                                                                    options={getAvailableEmployeesForTask(detailTask).map((emp) => ({
+                                                                        value: emp.id,
+                                                                        label: emp.name,
+                                                                        name: emp.name,
+                                                                        nip: emp.nip,
+                                                                        position: emp.position,
+                                                                        department: emp.department,
+                                                                        filterText: `${emp.name} ${emp.nip || ''} ${emp.position || ''}`,
+                                                                    }))}
+                                                                    optionRender={(option) => {
+                                                                        const emp = option.data;
+                                                                        return (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                                                                                <div style={{
+                                                                                    width: 22,
+                                                                                    height: 22,
+                                                                                    borderRadius: '50%',
+                                                                                    background: '#0F5B99',
+                                                                                    color: '#ffffff',
+                                                                                    fontSize: 9,
+                                                                                    fontWeight: 700,
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'center',
+                                                                                    flexShrink: 0
+                                                                                }}>
+                                                                                    {getInitials(emp.name || emp.label)}
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                                                                        {emp.name || emp.label}
+                                                                                    </span>
+                                                                                    {(emp.position || emp.department) && (
+                                                                                        <span style={{ fontSize: 10.5, color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                                                            {emp.position || emp.department}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }}
+                                                                />
+                                                                <DatePicker
+                                                                    size="small"
+                                                                    placeholder="Batas Waktu"
+                                                                    format={DATE_UI}
+                                                                    value={newSubtaskDueDate}
+                                                                    onChange={setNewSubtaskDueDate}
+                                                                    style={{ width: 130 }}
+                                                                    allowClear
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ fontSize: 11, color: '#64748b' }}>
+                                                                <em>* Penunjukan PIC & Batas Waktu hanya dapat diatur oleh pembuat tugas.</em>
+                                                            </div>
+                                                        )}
+                                                        <Button type="primary" onClick={handleAddSubtaskInDetail} className="kanban-primary-btn" size="small">
+                                                            + Tambah Tahap
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -2120,107 +2795,123 @@ function KanbanWorkInner() {
                                         </span>
                                     ),
                                     children: (
-                                        <div className="kanban-report-chat-container">
-                                            {/* Top: Report History Timeline */}
-                                            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b' }}>
-                                                Riwayat Perkembangan ({reports.length})
+                                        <div className="flow-feed-container" style={{ marginTop: 0 }}>
+                                            <div className="flow-feed-title">
+                                                <span>Riwayat & Catatan Perkembangan ({reports.length})</span>
                                             </div>
 
                                             {reportsLoading ? (
-                                                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                                                <div className="flow-feed-loading">
                                                     <Spin size="small" />
                                                 </div>
                                             ) : reports.length === 0 ? (
-                                                <Empty
-                                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                                    description="Belum ada catatan laporan perkembangan untuk tugas ini"
-                                                />
+                                                <div className="flow-feed-empty">
+                                                    <CommentOutlined style={{ fontSize: 24, color: '#cbd5e1', marginBottom: 6 }} />
+                                                    <p>Belum ada catatan riwayat perkembangan.</p>
+                                                    <span>Tulis catatan progres pertama pada kolom di bawah.</span>
+                                                </div>
                                             ) : (
-                                                <div className="kanban-report-timeline">
+                                                <div className="flow-feed-list" style={{ maxHeight: 260 }}>
                                                     {reports.map((rep) => (
-                                                        <div key={rep.id} className="kanban-report-card">
-                                                            <div className="kanban-report-card__header">
-                                                                <div className="kanban-report-card__author">
-                                                                    <div className="kanban-report-card__avatar">
-                                                                        {getInitials(rep.employee?.name || rep.user?.name || 'Admin')}
-                                                                    </div>
-                                                                    <div className="kanban-report-card__author-info">
-                                                                        <span className="kanban-report-card__name">
+                                                        <div key={rep.id} className="flow-feed-item">
+                                                            <div className="flow-feed-avatar">
+                                                                {getInitials(rep.employee?.name || rep.user?.name || 'Admin')}
+                                                            </div>
+                                                            <div className="flow-feed-content-wrapper">
+                                                                <div className="flow-feed-item-header">
+                                                                    <div className="flow-feed-author-meta">
+                                                                        <span className="flow-feed-author-name">
                                                                             {rep.employee?.name || rep.user?.name || 'Pegawai'}
                                                                         </span>
-                                                                        <span className="kanban-report-card__time">
+                                                                        <span className="flow-feed-timestamp">
                                                                             {rep.employee?.department ? `${rep.employee.department} • ` : ''}
                                                                             {dayjs(rep.created_at).format('DD MMM YYYY, HH:mm')}
                                                                         </span>
                                                                     </div>
+
+                                                                    <div className="flow-feed-header-actions">
+                                                                        {rep.status_update && (
+                                                                            <span className="flow-feed-status-badge">
+                                                                                ● {COLUMNS.find((c) => c.key === rep.status_update)?.title || rep.status_update}
+                                                                            </span>
+                                                                        )}
+                                                                        <Popconfirm
+                                                                            title="Hapus riwayat laporan ini?"
+                                                                            onConfirm={() => handleDeleteReport(rep.id)}
+                                                                            okText="Hapus"
+                                                                            cancelText="Batal"
+                                                                        >
+                                                                            <Button type="text" size="small" className="flow-feed-delete-btn" icon={<DeleteOutlined />} />
+                                                                        </Popconfirm>
+                                                                    </div>
                                                                 </div>
 
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                    {rep.status_update && (
-                                                                        <Tag color="processing" style={{ margin: 0, fontSize: 11 }}>
-                                                                            Status: {COLUMNS.find((c) => c.key === rep.status_update)?.title || rep.status_update}
-                                                                        </Tag>
-                                                                    )}
-                                                                    <Popconfirm
-                                                                        title="Hapus riwayat laporan ini?"
-                                                                        onConfirm={() => handleDeleteReport(rep.id)}
-                                                                        okText="Hapus"
-                                                                        cancelText="Batal"
-                                                                    >
-                                                                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                                                    </Popconfirm>
+                                                                <div className="flow-feed-body">
+                                                                    {rep.content}
                                                                 </div>
+
+                                                                {rep.attachment_path && (
+                                                                    <div className="flow-feed-attachment">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="flow-feed-file-chip"
+                                                                            onClick={() => window.open(getReportFileUrl(rep.id), '_blank')}
+                                                                        >
+                                                                            <PaperClipOutlined style={{ color: '#0F5B99' }} />
+                                                                            <span className="flow-feed-file-name">{rep.attachment_name || 'Berkas Lampiran'}</span>
+                                                                            {rep.attachment_size && (
+                                                                                <span className="flow-feed-file-size">({Math.round(rep.attachment_size / 1024)} KB)</span>
+                                                                            )}
+                                                                            <DownloadOutlined style={{ marginLeft: 'auto', color: '#64748b' }} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
-
-                                                            <div className="kanban-report-card__body">
-                                                                {rep.content}
-                                                            </div>
-
-                                                            {rep.attachment_path && (
-                                                                <div className="kanban-report-card__footer">
-                                                                    <Button
-                                                                        type="text"
-                                                                        size="small"
-                                                                        className="kanban-report-card__file-btn"
-                                                                        icon={<PaperClipOutlined />}
-                                                                        onClick={() => window.open(getReportFileUrl(rep.id), '_blank')}
-                                                                    >
-                                                                        {rep.attachment_name || 'Berkas Lampiran'}
-                                                                        {rep.attachment_size ? ` (${Math.round(rep.attachment_size / 1024)} KB)` : ''}
-                                                                    </Button>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
 
-                                            {/* Bottom: Report Input Bar */}
-                                            <div className="kanban-report-input-bar">
-                                                <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <SendOutlined style={{ color: '#0F5B99' }} />
-                                                    Tambah Riwayat / Catatan Pengerjaan
-                                                </div>
+                                            {/* Modern Integrated Composer */}
+                                            <div className="flow-composer">
                                                 <Input.TextArea
-                                                    rows={3}
+                                                    rows={2}
+                                                    autoSize={{ minRows: 2, maxRows: 5 }}
                                                     placeholder="Tuliskan catatan, hasil pelaksanaan pekerjaan, kendala, atau progres terbaru..."
                                                     value={reportContent}
                                                     onChange={(e) => setReportContent(e.target.value)}
+                                                    className="flow-composer-textarea"
                                                 />
 
-                                                <div className="kanban-report-input-bar__controls">
-                                                    <div className="kanban-report-input-bar__left">
+                                                {reportFile && (
+                                                    <div className="flow-composer-file-preview">
+                                                        <PaperClipOutlined style={{ color: '#0F5B99' }} />
+                                                        <span className="flow-composer-file-name">{reportFile.name}</span>
+                                                        <span className="flow-composer-file-size">({Math.round(reportFile.size / 1024)} KB)</span>
+                                                        <Button
+                                                            type="text"
+                                                            size="small"
+                                                            icon={<CloseOutlined />}
+                                                            onClick={() => setReportFile(null)}
+                                                            className="flow-composer-file-remove"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="flow-composer-toolbar">
+                                                    <div className="flow-composer-toolbar-left">
                                                         <Select
-                                                            placeholder="Ubah Status Kolom (Opsional)"
+                                                            placeholder="Ubah Status (Opsional)"
                                                             allowClear
                                                             value={reportStatusUpdate}
                                                             onChange={setReportStatusUpdate}
                                                             style={{ width: 170 }}
                                                             size="small"
+                                                            className="flow-composer-select"
                                                         >
                                                             {COLUMNS.map((c) => (
                                                                 <Select.Option key={c.key} value={c.key}>
-                                                                    <span className={`kanban-column-dot ${c.dotClass}`} style={{ display: 'inline-block', marginRight: 6 }} />
+                                                                    <span className={`flow-column__dot flow-column__dot--${c.key}`} style={{ display: 'inline-block', marginRight: 6 }} />
                                                                     {c.title}
                                                                 </Select.Option>
                                                             ))}
@@ -2239,12 +2930,11 @@ function KanbanWorkInner() {
                                                                 setReportFile(file);
                                                                 return false;
                                                             }}
-                                                            onRemove={() => setReportFile(null)}
-                                                            fileList={reportFile ? [reportFile] : []}
+                                                            showUploadList={false}
                                                             maxCount={1}
                                                         >
-                                                            <Button size="small" icon={<PaperClipOutlined />} style={{ fontSize: 12 }}>
-                                                                {reportFile ? 'Ganti Lampiran' : 'Upload Berkas Bukti (Nextcloud)'}
+                                                            <Button size="small" icon={<PaperClipOutlined />} className="flow-composer-attach-btn">
+                                                                {reportFile ? 'Ganti Lampiran' : 'Lampirkan Berkas'}
                                                             </Button>
                                                         </Upload>
                                                     </div>
@@ -2255,7 +2945,7 @@ function KanbanWorkInner() {
                                                         icon={<SendOutlined />}
                                                         loading={reportSubmitting}
                                                         onClick={handleSubmitReport}
-                                                        className="kanban-primary-btn"
+                                                        className="flow-composer-send-btn"
                                                     >
                                                         Kirim Riwayat
                                                     </Button>
@@ -2307,44 +2997,58 @@ function KanbanWorkInner() {
                 )}
             </Modal>
 
-            {/* ── MODAL: DEDICATED RIWAYAT & PELAPORAN MODAL (DARI TOMBOL CARD KANAN BAWAH) ── */}
+            {/* ── MODAL: DEDICATED RIWAYAT & PELAPORAN MODAL (ULTRA CLEAN FLOW REDESIGN) ── */}
             <Modal
                 title={
                     reportingTask ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <CommentOutlined style={{ color: '#0F5B99', fontSize: 16 }} />
-                            <span>Riwayat & Pelaporan Pengerjaan</span>
-                            <Tag color="geekblue">{reportingTask.category || 'Umum'}</Tag>
-                            <span className={`kanban-badge-priority ${PRIORITY_CONFIG[reportingTask.priority]?.className}`}>
-                                {PRIORITY_CONFIG[reportingTask.priority]?.label}
-                            </span>
+                        <div className="flow-report-modal-header">
+                            <div className="flow-report-modal-context">
+                                <span className="flow-context-channel">
+                                    {reportingTask.group ? `#${formatChannelName(reportingTask.group.name)}` : '# umum'}
+                                </span>
+                                {reportingTask.category && (
+                                    <span className="flow-context-chip">{reportingTask.category}</span>
+                                )}
+                                <span className="flow-context-priority">
+                                    <span className={`flow-priority-dot flow-priority-dot--${reportingTask.priority || 'medium'}`} />
+                                    <span>{PRIORITY_CONFIG[reportingTask.priority]?.label}</span>
+                                </span>
+                            </div>
+                            <h3 className="flow-report-modal-task-title">{reportingTask.title}</h3>
                         </div>
                     ) : 'Riwayat & Pelaporan'
                 }
                 open={isReportModalOpen}
                 onCancel={() => setIsReportModalOpen(false)}
                 footer={null}
-                className="kanban-modal"
-                width={720}
+                className="kanban-modal flow-report-modal"
+                width={680}
                 destroyOnClose
             >
                 {reportingTask && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {/* Task Brief Info Banner */}
-                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                            <div>
-                                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
-                                    {reportingTask.title}
-                                </div>
-                                {reportingTask.due_date && (
-                                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {/* Task Meta & Quick Status Toolbar */}
+                        <div className="flow-report-modal-meta-bar">
+                            <div className="flow-report-modal-meta-left">
+                                {reportingTask.due_date ? (
+                                    <span className={`flow-date-chip ${dayjs(reportingTask.due_date).isBefore(dayjs(), 'day') ? 'flow-date-chip--overdue' : ''}`}>
                                         <ClockCircleOutlined style={{ marginRight: 4 }} />
                                         Batas Waktu: <strong>{dayjs(reportingTask.due_date).format(DATE_UI)}</strong>
-                                    </div>
+                                    </span>
+                                ) : (
+                                    <span className="flow-date-chip" style={{ color: '#94a3b8' }}>
+                                        <ClockCircleOutlined style={{ marginRight: 4 }} />
+                                        Tanpa batas waktu
+                                    </span>
+                                )}
+                                {reportingTask.subtasks_count > 0 && (
+                                    <span className="flow-subtasks-summary-chip">
+                                        ✓ {reportingTask.completed_subtasks_count || 0}/{reportingTask.subtasks_count} Tahapan ({reportingTask.progress_percentage || 0}%)
+                                    </span>
                                 )}
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div className="flow-report-modal-meta-right">
                                 <Select
                                     size="small"
                                     value={reportingTask.status}
@@ -2352,12 +3056,12 @@ function KanbanWorkInner() {
                                         handleMoveStatus(reportingTask.id, val);
                                         setReportingTask((prev) => prev ? { ...prev, status: val } : null);
                                     }}
-                                    style={{ width: 140 }}
-                                    className="kanban-select"
+                                    className="flow-modal-status-select"
+                                    style={{ width: 145 }}
                                 >
                                     {COLUMNS.map((c) => (
                                         <Select.Option key={c.key} value={c.key}>
-                                            <span className={`kanban-column-dot ${c.dotClass}`} style={{ display: 'inline-block', marginRight: 6 }} />
+                                            <span className={`flow-column__dot flow-column__dot--${c.key}`} style={{ display: 'inline-block', marginRight: 6 }} />
                                             {c.title}
                                         </Select.Option>
                                     ))}
@@ -2365,96 +3069,113 @@ function KanbanWorkInner() {
                             </div>
                         </div>
 
-                        {/* Top: Riwayat Timeline List */}
-                        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b' }}>
-                            Daftar Riwayat & Progres Pengerjaan ({reports.length})
+                        {/* Riwayat Timeline Feed */}
+                        <div className="flow-feed-container">
+                            <div className="flow-feed-title">
+                                <span>Daftar Riwayat & Catatan Pengerjaan ({reports.length})</span>
+                            </div>
+
+                            {reportsLoading ? (
+                                <div className="flow-feed-loading">
+                                    <Spin size="small" />
+                                </div>
+                            ) : reports.length === 0 ? (
+                                <div className="flow-feed-empty">
+                                    <CommentOutlined style={{ fontSize: 24, color: '#cbd5e1', marginBottom: 6 }} />
+                                    <p>Belum ada riwayat pengerjaan.</p>
+                                    <span>Tulis catatan perkembangan, kendala, atau update pengerjaan pertama di bawah ini.</span>
+                                </div>
+                            ) : (
+                                <div className="flow-feed-list">
+                                    {reports.map((rep) => (
+                                        <div key={rep.id} className="flow-feed-item">
+                                            <div className="flow-feed-avatar">
+                                                {getInitials(rep.employee?.name || rep.user?.name || 'Admin')}
+                                            </div>
+                                            <div className="flow-feed-content-wrapper">
+                                                <div className="flow-feed-item-header">
+                                                    <div className="flow-feed-author-meta">
+                                                        <span className="flow-feed-author-name">
+                                                            {rep.employee?.name || rep.user?.name || 'Pegawai'}
+                                                        </span>
+                                                        <span className="flow-feed-timestamp">
+                                                            {rep.employee?.department ? `${rep.employee.department} • ` : ''}
+                                                            {dayjs(rep.created_at).format('DD MMM YYYY, HH:mm')}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flow-feed-header-actions">
+                                                        {rep.status_update && (
+                                                            <span className="flow-feed-status-badge">
+                                                                ● {COLUMNS.find((c) => c.key === rep.status_update)?.title || rep.status_update}
+                                                            </span>
+                                                        )}
+                                                        <Popconfirm
+                                                            title="Hapus riwayat laporan ini?"
+                                                            onConfirm={() => handleDeleteReport(rep.id)}
+                                                            okText="Hapus"
+                                                            cancelText="Batal"
+                                                        >
+                                                            <Button type="text" size="small" className="flow-feed-delete-btn" icon={<DeleteOutlined />} />
+                                                        </Popconfirm>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flow-feed-body">
+                                                    {rep.content}
+                                                </div>
+
+                                                {rep.attachment_path && (
+                                                    <div className="flow-feed-attachment">
+                                                        <button
+                                                            type="button"
+                                                            className="flow-feed-file-chip"
+                                                            onClick={() => window.open(getReportFileUrl(rep.id), '_blank')}
+                                                        >
+                                                            <PaperClipOutlined style={{ color: '#0F5B99' }} />
+                                                            <span className="flow-feed-file-name">{rep.attachment_name || 'Berkas Lampiran'}</span>
+                                                            {rep.attachment_size && (
+                                                                <span className="flow-feed-file-size">({Math.round(rep.attachment_size / 1024)} KB)</span>
+                                                            )}
+                                                            <DownloadOutlined style={{ marginLeft: 'auto', color: '#64748b' }} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
-                        {reportsLoading ? (
-                            <div style={{ textAlign: 'center', padding: '28px 0' }}>
-                                <Spin size="small" />
-                            </div>
-                        ) : reports.length === 0 ? (
-                            <Empty
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="Belum ada riwayat pengerjaan yang dicatat. Ketik catatan perkembangan pertama di bawah ini."
-                            />
-                        ) : (
-                            <div className="kanban-report-timeline">
-                                {reports.map((rep) => (
-                                    <div key={rep.id} className="kanban-report-card">
-                                        <div className="kanban-report-card__header">
-                                            <div className="kanban-report-card__author">
-                                                <div className="kanban-report-card__avatar">
-                                                    {getInitials(rep.employee?.name || rep.user?.name || 'Admin')}
-                                                </div>
-                                                <div className="kanban-report-card__author-info">
-                                                    <span className="kanban-report-card__name">
-                                                        {rep.employee?.name || rep.user?.name || 'Pegawai'}
-                                                    </span>
-                                                    <span className="kanban-report-card__time">
-                                                        {rep.employee?.department ? `${rep.employee.department} • ` : ''}
-                                                        {dayjs(rep.created_at).format('DD MMM YYYY, HH:mm')}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                {rep.status_update && (
-                                                    <Tag color="processing" style={{ margin: 0, fontSize: 11 }}>
-                                                        Status: {COLUMNS.find((c) => c.key === rep.status_update)?.title || rep.status_update}
-                                                    </Tag>
-                                                )}
-                                                <Popconfirm
-                                                    title="Hapus riwayat laporan ini?"
-                                                    onConfirm={() => handleDeleteReport(rep.id)}
-                                                    okText="Hapus"
-                                                    cancelText="Batal"
-                                                >
-                                                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                                </Popconfirm>
-                                            </div>
-                                        </div>
-
-                                        <div className="kanban-report-card__body">
-                                            {rep.content}
-                                        </div>
-
-                                        {rep.attachment_path && (
-                                            <div className="kanban-report-card__footer">
-                                                <Button
-                                                    type="text"
-                                                    size="small"
-                                                    className="kanban-report-card__file-btn"
-                                                    icon={<PaperClipOutlined />}
-                                                    onClick={() => window.open(getReportFileUrl(rep.id), '_blank')}
-                                                >
-                                                    {rep.attachment_name || 'Berkas Lampiran'}
-                                                    {rep.attachment_size ? ` (${Math.round(rep.attachment_size / 1024)} KB)` : ''}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Bottom: Input Bar for Adding New Report */}
-                        <div className="kanban-report-input-bar">
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <SendOutlined style={{ color: '#0F5B99' }} />
-                                Tambah Riwayat / Catatan Pengerjaan
-                            </div>
-
+                        {/* Modern Integrated Composer */}
+                        <div className="flow-composer">
                             <Input.TextArea
-                                rows={3}
+                                rows={2}
+                                autoSize={{ minRows: 2, maxRows: 5 }}
                                 placeholder="Ketik riwayat atau catatan perkembangan pengerjaan tugas di sini..."
                                 value={reportContent}
                                 onChange={(e) => setReportContent(e.target.value)}
+                                className="flow-composer-textarea"
                             />
 
-                            <div className="kanban-report-input-bar__controls">
-                                <div className="kanban-report-input-bar__left">
+                            {reportFile && (
+                                <div className="flow-composer-file-preview">
+                                    <PaperClipOutlined style={{ color: '#0F5B99' }} />
+                                    <span className="flow-composer-file-name">{reportFile.name}</span>
+                                    <span className="flow-composer-file-size">({Math.round(reportFile.size / 1024)} KB)</span>
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<CloseOutlined />}
+                                        onClick={() => setReportFile(null)}
+                                        className="flow-composer-file-remove"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flow-composer-toolbar">
+                                <div className="flow-composer-toolbar-left">
                                     <Select
                                         placeholder="Ubah Status (Opsional)"
                                         allowClear
@@ -2462,10 +3183,11 @@ function KanbanWorkInner() {
                                         onChange={setReportStatusUpdate}
                                         style={{ width: 170 }}
                                         size="small"
+                                        className="flow-composer-select"
                                     >
                                         {COLUMNS.map((c) => (
                                             <Select.Option key={c.key} value={c.key}>
-                                                <span className={`kanban-column-dot ${c.dotClass}`} style={{ display: 'inline-block', marginRight: 6 }} />
+                                                <span className={`flow-column__dot flow-column__dot--${c.key}`} style={{ display: 'inline-block', marginRight: 6 }} />
                                                 {c.title}
                                             </Select.Option>
                                         ))}
@@ -2484,12 +3206,11 @@ function KanbanWorkInner() {
                                             setReportFile(file);
                                             return false;
                                         }}
-                                        onRemove={() => setReportFile(null)}
-                                        fileList={reportFile ? [reportFile] : []}
+                                        showUploadList={false}
                                         maxCount={1}
                                     >
-                                        <Button size="small" icon={<PaperClipOutlined />} style={{ fontSize: 12 }}>
-                                            {reportFile ? 'Ganti Lampiran' : 'Upload Berkas Bukti (Nextcloud)'}
+                                        <Button size="small" icon={<PaperClipOutlined />} className="flow-composer-attach-btn">
+                                            {reportFile ? 'Ganti Lampiran' : 'Lampirkan Berkas'}
                                         </Button>
                                     </Upload>
                                 </div>
@@ -2500,7 +3221,7 @@ function KanbanWorkInner() {
                                     icon={<SendOutlined />}
                                     loading={reportSubmitting}
                                     onClick={handleSubmitReport}
-                                    className="kanban-primary-btn"
+                                    className="flow-composer-send-btn"
                                 >
                                     Kirim Riwayat
                                 </Button>

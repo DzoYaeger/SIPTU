@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class KanbanTaskController extends Controller
 {
@@ -101,6 +102,13 @@ class KanbanTaskController extends Controller
                         ->update(['group_id' => $g->id]);
                 }
                 KanbanTask::whereNull('group_id')->update(['group_id' => $defaultGroup->id]);
+            }
+
+            // Auto-check and add due_date column in kanban_task_subtasks if not yet present
+            if (Schema::hasTable('kanban_task_subtasks') && !Schema::hasColumn('kanban_task_subtasks', 'due_date')) {
+                Schema::table('kanban_task_subtasks', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->date('due_date')->nullable()->after('status');
+                });
             }
         } catch (\Throwable $e) {
             // Ignore if table not yet migrated
@@ -427,6 +435,7 @@ class KanbanTaskController extends Controller
             'subtasks' => 'nullable|array',
             'subtasks.*.title' => 'required|string|max:255',
             'subtasks.*.notes' => 'nullable|string',
+            'subtasks.*.due_date' => 'nullable|date',
             'subtasks.*.assigned_employee_id' => 'nullable|exists:employees,id',
         ]);
 
@@ -469,6 +478,7 @@ class KanbanTaskController extends Controller
                         'title' => $st['title'],
                         'notes' => $st['notes'] ?? null,
                         'status' => 'pending',
+                        'due_date' => $st['due_date'] ?? null,
                         'assigned_employee_id' => $st['assigned_employee_id'] ?? null,
                         'position' => $idx + 1,
                     ]);
@@ -519,11 +529,37 @@ class KanbanTaskController extends Controller
     }
 
     /**
+     * Check if user is the creator of the task or an administrator.
+     */
+    protected function isTaskCreatorOrAdmin($user, ?KanbanTask $task): bool
+    {
+        if (!$user || !$task) {
+            return false;
+        }
+
+        if ($user->role === 'admin' || $user->role === 'superadmin' || !empty($user->is_admin)) {
+            return true;
+        }
+
+        if ($task->created_by_user_id && (int)$task->created_by_user_id === (int)$user->id) {
+            return true;
+        }
+
+        if ($task->created_by_employee_id && $user->employee_id && (int)$task->created_by_employee_id === (int)$user->employee_id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Update the specified kanban task.
      */
     public function update(Request $request, int $id): JsonResponse
     {
         $task = KanbanTask::findOrFail($id);
+        $user = $request->user();
+        $isCreator = $this->isTaskCreatorOrAdmin($user, $task);
 
         $validated = $request->validate([
             'group_id' => 'nullable|exists:kanban_groups,id',
@@ -537,7 +573,7 @@ class KanbanTaskController extends Controller
             'assignee_ids.*' => 'exists:employees,id',
         ]);
 
-        return DB::transaction(function () use ($task, $validated) {
+        return DB::transaction(function () use ($task, $validated, $isCreator, $user) {
             $groupId = array_key_exists('group_id', $validated) ? $validated['group_id'] : $task->group_id;
             if (!$groupId) {
                 $defaultGroup = KanbanGroup::where('slug', 'umum')->orWhere('name', 'Umum')->first();
@@ -546,21 +582,27 @@ class KanbanTaskController extends Controller
             $group = $groupId ? KanbanGroup::find($groupId) : null;
             $categoryName = $group ? $group->name : ($validated['category'] ?? $task->category ?? 'Umum');
 
-            $task->update([
+            $updateData = [
                 'group_id' => $groupId,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'status' => $validated['status'] ?? $task->status,
                 'priority' => $validated['priority'] ?? $task->priority,
                 'category' => $categoryName,
-                'due_date' => $validated['due_date'] ?? null,
-            ]);
+            ];
 
-            if (isset($validated['assignee_ids'])) {
+            // Only task creator/admin can update main task deadline
+            if ($isCreator && array_key_exists('due_date', $validated)) {
+                $updateData['due_date'] = $validated['due_date'];
+            }
+
+            $task->update($updateData);
+
+            // Only task creator/admin can update main task assignees
+            if ($isCreator && isset($validated['assignee_ids'])) {
                 $task->assignees()->sync($validated['assignee_ids']);
             }
 
-            $user = request()->user();
             $userName = $user ? ($user->employee?->name ?? $user->name) : 'Pengguna';
             $this->recordActivity($task->group_id, $task->id, $user, 'task_updated', "{$userName} memperbarui rincian tugas: \"{$task->title}\"", [
                 'task_title' => $task->title,
@@ -657,10 +699,13 @@ class KanbanTaskController extends Controller
     public function storeSubtask(Request $request, int $taskId): JsonResponse
     {
         $task = KanbanTask::findOrFail($taskId);
+        $user = $request->user();
+        $isCreator = $this->isTaskCreatorOrAdmin($user, $task);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'notes' => 'nullable|string',
+            'due_date' => 'nullable|date',
             'assigned_employee_id' => 'nullable|exists:employees,id',
         ]);
 
@@ -671,11 +716,11 @@ class KanbanTaskController extends Controller
             'title' => $validated['title'],
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
-            'assigned_employee_id' => $validated['assigned_employee_id'] ?? null,
+            'due_date' => $isCreator ? ($validated['due_date'] ?? null) : null,
+            'assigned_employee_id' => $isCreator ? ($validated['assigned_employee_id'] ?? null) : null,
             'position' => $maxPos + 1,
         ]);
 
-        $user = $request->user();
         $userName = $user ? ($user->employee?->name ?? $user->name) : 'Pengguna';
         $this->recordActivity($task->group_id, $task->id, $user, 'subtask_added', "{$userName} menambahkan tahapan \"{$subtask->title}\" pada tugas \"{$task->title}\"", [
             'task_title'    => $task->title,
@@ -690,23 +735,33 @@ class KanbanTaskController extends Controller
     }
 
     /**
-     * Update a subtask (title, notes, status).
+     * Update a subtask (title, notes, status, due_date, assigned_employee_id).
      */
     public function updateSubtask(Request $request, int $subtaskId): JsonResponse
     {
-        $subtask = KanbanTaskSubtask::findOrFail($subtaskId);
+        $subtask = KanbanTaskSubtask::with('task')->findOrFail($subtaskId);
         $user = $request->user();
+        $isCreator = $this->isTaskCreatorOrAdmin($user, $subtask->task);
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'notes' => 'nullable|string',
             'status' => 'sometimes|required|in:pending,in_progress,completed',
+            'due_date' => 'nullable|date',
             'assigned_employee_id' => 'nullable|exists:employees,id',
         ]);
 
+        if ((array_key_exists('assigned_employee_id', $validated) || array_key_exists('due_date', $validated)) && !$isCreator) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya pembuat tugas yang berhak mengubah penunjukan PIC dan batas waktu (deadline) tahapan.',
+            ], 403);
+        }
+
         if (isset($validated['title'])) $subtask->title = $validated['title'];
         if (array_key_exists('notes', $validated)) $subtask->notes = $validated['notes'];
-        if (isset($validated['assigned_employee_id'])) $subtask->assigned_employee_id = $validated['assigned_employee_id'];
+        if ($isCreator && array_key_exists('due_date', $validated)) $subtask->due_date = $validated['due_date'];
+        if ($isCreator && array_key_exists('assigned_employee_id', $validated)) $subtask->assigned_employee_id = $validated['assigned_employee_id'];
 
         if (isset($validated['status'])) {
             $subtask->status = $validated['status'];

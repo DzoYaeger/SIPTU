@@ -393,6 +393,7 @@ function AestheticHeaderWidget() {
       <div className="widget-item time-box">
         <ClockCircleOutlined className="clock-icon" />
         <span className="clock-time">{timeStr}</span>
+        <span className="clock-sep">•</span>
         <span className="clock-date">{dateStr}</span>
       </div>
     </div>
@@ -1065,8 +1066,17 @@ function AppLayout() {
     };
   }, [fetchBadgeCounts]);
 
+  const isKanban = location.pathname.includes("kanban-work");
+
   return (
-    <Layout className="app-layout-sidebar-root" style={{ minHeight: "100vh" }}>
+    <Layout
+      className={`app-layout-sidebar-root ${isKanban ? "app-layout--kanban-lock" : ""}`}
+      style={{
+        minHeight: "100vh",
+        height: isKanban ? "100vh" : "auto",
+        overflow: isKanban ? "hidden" : "visible"
+      }}
+    >
       {/* Top Navbar Header - Clean White Header */}
       <Header
         className="app-top-header"
@@ -1166,7 +1176,17 @@ function AppLayout() {
       </Header>
 
       {/* Main Container below Header: Sidebar + Content */}
-      <Layout className="app-main-layout" style={{ display: "flex", flexDirection: "row", minHeight: "calc(100vh - 48px)" }}>
+      <Layout
+        className={`app-main-layout ${isKanban ? "app-main-layout--kanban-fullscreen" : ""}`}
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          minHeight: "calc(100vh - 48px)",
+          height: isKanban ? "calc(100vh - 48px)" : "auto",
+          maxHeight: isKanban ? "calc(100vh - 48px)" : "none",
+          overflow: isKanban ? "hidden" : "visible"
+        }}
+      >
         <SidebarMenu
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -1179,8 +1199,8 @@ function AppLayout() {
           badgeCounts={badgeCounts}
         />
 
-        <Content className="app-content">
-          <div className="page-shell">
+        <Content className={`app-content ${isKanban ? "app-content--kanban-fullscreen" : ""}`}>
+          <div className={`page-shell ${isKanban ? "page-shell--kanban-fullscreen" : ""}`}>
             {routesNode}
           </div>
         </Content>

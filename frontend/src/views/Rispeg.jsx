@@ -178,6 +178,17 @@ const Rispeg = () => {
     });
   }, [data, isItemChanged, searchTerm]);
 
+  // Memoized employee options for Select with search
+  const employeeOptions = useMemo(() => {
+    return data.map((emp) => ({
+      value: emp.employee_id,
+      name: emp.name,
+      nip: emp.nip || "",
+      label: `${emp.name} (${emp.nip || "Tanpa NIP"})`,
+      filterLabel: `${emp.name} ${emp.nip || ""}`,
+    }));
+  }, [data]);
+
   // Open Fullscreen Batch Entry Modal
   const handleOpenBatchModal = () => {
     if (violatingList.length > 0) {
@@ -761,31 +772,40 @@ const Rispeg = () => {
               <tbody>
                 {batchRows.map((row, index) => {
                   const points = calculatePoints(row);
-                  const availableEmployees = data.map((emp) => ({
-                    value: emp.name,
-                    employee_id: emp.employee_id,
-                    label: `${emp.name} (${emp.nip || "No NIP"})`,
-                  }));
 
                   return (
                     <tr key={row.rowId}>
                       <td style={{ textAlign: "center", fontWeight: 600, color: "#64748b" }}>{index + 1}</td>
                       
-                      {/* Pegawai AutoComplete */}
+                      {/* Pegawai Select Search */}
                       <td>
-                        <AutoComplete
+                        <Select
+                          showSearch
                           style={{ width: "100%" }}
-                          options={availableEmployees}
-                          value={row.employee_name}
-                          onChange={(val) => {
-                            handleUpdateBatchRow(row.rowId, { employee_name: val });
-                            const match = data.find((d) => d.name.toLowerCase() === val.toLowerCase());
-                            if (match) {
-                              handleUpdateBatchRow(row.rowId, { employee_id: match.employee_id, employee_name: match.name, employee_nip: match.nip });
-                            }
+                          placeholder="Ketik nama atau NIP pegawai..."
+                          value={row.employee_id || undefined}
+                          allowClear
+                          optionFilterProp="filterLabel"
+                          filterOption={(input, option) => {
+                            if (!input) return true;
+                            const term = input.toLowerCase().trim();
+                            return (
+                              (option?.name || "").toLowerCase().includes(term) ||
+                              (option?.nip || "").toLowerCase().includes(term) ||
+                              (option?.filterLabel || "").toLowerCase().includes(term) ||
+                              (option?.label || "").toLowerCase().includes(term)
+                            );
                           }}
-                          onSelect={(val, option) => {
-                            const emp = data.find((d) => d.employee_id === option.employee_id);
+                          onChange={(val) => {
+                            if (!val) {
+                              handleUpdateBatchRow(row.rowId, {
+                                employee_id: null,
+                                employee_name: "",
+                                employee_nip: "",
+                              });
+                              return;
+                            }
+                            const emp = data.find((d) => d.employee_id === val);
                             if (emp) {
                               handleUpdateBatchRow(row.rowId, {
                                 employee_id: emp.employee_id,
@@ -794,10 +814,9 @@ const Rispeg = () => {
                               });
                             }
                           }}
-                          placeholder="Ketik nama atau NIP..."
-                        >
-                          <Input size="middle" allowClear style={{ borderRadius: 6 }} />
-                        </AutoComplete>
+                          options={employeeOptions}
+                          dropdownStyle={{ maxHeight: 320 }}
+                        />
                       </td>
 
                       {/* Seragam */}

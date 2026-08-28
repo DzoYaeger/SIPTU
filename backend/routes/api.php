@@ -421,6 +421,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/medical-checkup/my-balance', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'myBalance']);
     Route::get('/medical-checkup/my-requests', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'myRequests']);
     Route::post('/medical-checkup/requests', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'store']);
+    Route::put('/medical-checkup/requests/{id}', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'updateMyRequest']);
     Route::delete('/medical-checkup/requests/{id}/cancel', [\App\Http\Controllers\Api\MedicalCheckupController::class, 'cancelMyRequest']);
 
     // Admin Medical Check-Up routes

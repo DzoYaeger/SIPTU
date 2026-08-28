@@ -30,6 +30,7 @@ import {
   ReloadOutlined,
   RocketOutlined,
   SafetyOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   UserOutlined,
@@ -316,19 +317,15 @@ function AdminDashboard() {
         </div>
         <Space wrap>
           <Button
-            icon={<FilePdfOutlined />}
+            icon={<FilePdfOutlined style={{ color: "#ef4444" }} />}
             onClick={() => setReportModalOpen(true)}
-            danger
-            type="primary"
           >
             Cetak Laporan PDF
           </Button>
           <Button
-            icon={<SafetyOutlined />}
+            icon={<SafetyCertificateOutlined style={{ color: "#0F5B99" }} />}
             onClick={fetchAiAudit}
             loading={auditLoading}
-            type="primary"
-            style={{ background: "#4f46e5", borderColor: "#4f46e5" }}
           >
             AI Audit Data
           </Button>
@@ -337,7 +334,7 @@ function AdminDashboard() {
             onClick={fetchDashboard}
             loading={loading}
           >
-            Refresh
+            Segarkan
           </Button>
         </Space>
       </div>
@@ -593,17 +590,19 @@ function AdminDashboard() {
                 <Text type="secondary">Distribusi seluruh aktivitas layanan SIPTU.</Text>
               </div>
               <div className="dashboard-donut-wrap">
-                <ResponsiveContainer width="58%" height={220} minWidth={0}>
-                  <PieChart>
-                    <Pie data={globalStatusData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} stroke="none">
-                      {globalStatusData.map((item) => <Cell key={item.name} fill={item.color} />)}
-                    </Pie>
-                    <RechartsTooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: 10, color: "#fff" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="dashboard-donut-center">
-                  <strong>{globalStatusData.reduce((sum, item) => sum + item.value, 0)}</strong>
-                  <span>Total Aktivitas</span>
+                <div style={{ width: "55%", height: 220, position: "relative", minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <PieChart>
+                      <Pie data={globalStatusData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={84} paddingAngle={4} stroke="none">
+                        {globalStatusData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: 10, color: "#fff" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="dashboard-donut-center">
+                    <strong>{globalStatusData.reduce((sum, item) => sum + item.value, 0)}</strong>
+                    <span>Total Aktivitas</span>
+                  </div>
                 </div>
                 <div className="dashboard-legend-list">
                   {globalStatusData.map((item) => <div className="dashboard-legend-row" key={item.name}><i style={{ background: item.color }} /><span>{item.name}</span><strong>{item.value}</strong></div>)}
@@ -617,10 +616,10 @@ function AdminDashboard() {
                 <Title level={4}><TeamOutlined style={{ marginRight: 8 }} />Distribusi Role</Title>
                 <Text type="secondary">Komposisi akun pengguna.</Text>
               </div>
-              <div className="dashboard-role-chart">
-                <ResponsiveContainer width="100%" height={190} minWidth={0}>
+              <div className="dashboard-role-chart" style={{ width: "100%", height: 180, position: "relative", minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
-                    <Pie data={roleChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={76} paddingAngle={3} stroke="none">
+                    <Pie data={roleChartData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={72} paddingAngle={3} stroke="none">
                       {roleChartData.map((item) => <Cell key={item.name} fill={item.color} />)}
                     </Pie>
                     <RechartsTooltip contentStyle={{ background: "#0f172a", border: "none", borderRadius: 10, color: "#fff" }} />

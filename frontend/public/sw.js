@@ -3,7 +3,7 @@
 // Strategy: Cache First for static, Network First for API
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'siptu-v2';
+const CACHE_VERSION = 'siptu-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 

@@ -14,6 +14,7 @@ class KanbanTaskSubtask extends Model
         'title',
         'notes',
         'status',
+        'due_date',
         'assigned_employee_id',
         'completed_by_employee_id',
         'completed_by_name',
@@ -26,6 +27,7 @@ class KanbanTaskSubtask extends Model
     ];
 
     protected $casts = [
+        'due_date' => 'date:Y-m-d',
         'completed_at' => 'datetime',
         'attachment_size' => 'integer',
         'position' => 'integer',
